@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 6/32 features passing (19%) · Last: #6 Code Chunking (FR-004) · Next: #7 Embedding Generation
+Progress: 7/32 features passing (22%) · Last: #7 Embedding Generation (FR-004/009) · Next: #8 Keyword Retrieval
 
 ---
 

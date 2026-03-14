@@ -199,7 +199,9 @@
       "title": "Embedding Generation and Index Writing",
       "description": "M2: Generate embeddings for code chunks using bge-code model; write chunks to Elasticsearch (content + metadata) and Qdrant (vectors)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-7-embedding-generation.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given 100 code chunks, when embedding generation runs, then 100 embedding vectors are produced with correct dimension",
         "Given embeddings and chunks, when writing to indices, then Elasticsearch contains 100 documents with content, metadata, and chunk_id",

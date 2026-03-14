@@ -58,6 +58,15 @@
   - 19 unit tests (91.34% overall coverage)
   - ST test case document with 4 test cases (all PASS)
   - Example: `examples/06-code-chunking.py`
+- **Feature #7: Embedding Generation and Index Writing (FR-004/FR-009)**
+  - EmbeddingEncoder class using bge-code-v1 model (1024 dimensions)
+  - IndexWriter class for Elasticsearch and Qdrant
+  - Batch embedding generation with lazy model loading
+  - Query encoding with semantic search prefix
+  - Delete-by-repo for re-indexing support
+  - 12 unit tests (92% coverage)
+  - ST test case document with 4 test cases (all PASS)
+  - Example: `examples/07-embedding-generation.py`
   - Duplicate URL detection (409 Conflict)
   - 16 tests (8 unit, 8 integration) - all passing
   - ST test case document with 4 test cases (all PASS)
