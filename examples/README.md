@@ -17,6 +17,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 10 | Rank Fusion (FR-010) | [10-rank-fusion.py](10-rank-fusion.py) | `python examples/10-rank-fusion.py` |
 | 11 | Neural Reranking (FR-011) | [11-neural-reranking.py](11-neural-reranking.py) | `python examples/11-neural-reranking.py` |
 | 12 | Context Response Builder (FR-012) | [12-context-response-builder.py](12-context-response-builder.py) | `python examples/12-context-response-builder.py` |
+| 13 | Query Handler - Natural Language (FR-005) | [13-query-handler-nl.py](13-query-handler-nl.py) | `python examples/13-query-handler-nl.py` |
 
 ## Prerequisites
 
@@ -113,6 +114,17 @@ Demonstrates building API response from ranked candidates:
 - Sort by score descending with stability for equal scores
 - Handle edge cases: empty list, fewer than top_k candidates
 - Map all required fields: repository, file_path, symbol, score, content
+
+## Feature 13: Query Handler - Natural Language (FR-005)
+
+Demonstrates the QueryHandler orchestration:
+- Accept natural language queries and initiate retrieval pipeline
+- Validate non-empty input (empty/whitespace rejection)
+- Execute keyword and semantic retrieval in parallel
+- Apply rank fusion to merge results
+- Apply neural reranking for candidates >= 2
+- Build final response with top-k results and timing
+- Support repo and language filters
 
 ---
 
