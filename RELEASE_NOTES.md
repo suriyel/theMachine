@@ -24,6 +24,15 @@
   - 34 model tests with 96.67% coverage
   - ST test case document with 12 test cases (all PASS)
   - Example: `examples/02-data-models.py`
+- **Feature #3: Repository Registration (FR-001)**
+  - RepoManager service with register, get, get_by_url, list_all, delete operations
+  - Git URL validation via GitHub API (validate_git_url function)
+  - FastAPI endpoints: POST /api/v1/repos, GET /api/v1/repos
+  - skip_validation query parameter to bypass GitHub API validation
+  - Duplicate URL detection (409 Conflict)
+  - 16 tests (8 unit, 8 integration) - all passing
+  - ST test case document with 4 test cases (all PASS)
+  - Example: `examples/03-repository-registration.py`
 
 ### Changed
 - (none yet)

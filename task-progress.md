@@ -1,11 +1,32 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 2/32 features passing (6%) · Last: #2 Data Model and Migrations · Next: #3 Repository Registration (FR-001)
+Progress: 3/32 features passing (9%) · Last: #3 Repository Registration · Next: #4 Index Configuration (FR-002)
 
 ---
 
 ## Session Log
+
+### Session 3 — 2026-03-14 (Feature #3)
+**Focus**: Repository Registration (FR-001) (M2: Core Indexing)
+**Completed**:
+- Implemented RepoManager service with register, get, get_by_url, list_all, delete operations
+- Implemented Git URL validation via GitHub API (validate_git_url function)
+- Implemented FastAPI endpoints: POST /api/v1/repos, GET /api/v1/repos
+- Added skip_validation query parameter to bypass GitHub API validation
+- Created SQLAlchemy async operations for Repository model
+- Created 16 tests (8 unit for RepoManager, 8 integration for API endpoints)
+- Generated ST test case document with 4 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/03-repository-registration.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (8 real tests, 8 unit tests)
+- Gate 1 (Coverage): PASS (95% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (16 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #4 — Index Configuration (FR-002) (M2: Core Indexing)
+**Git Commits**: 073e713
 
 ### Session 2 — 2026-03-14 (Feature #2)
 **Focus**: Data Model and Migrations (M1: Foundation)
@@ -27,7 +48,7 @@ Progress: 2/32 features passing (6%) · Last: #2 Data Model and Migrations · Ne
 - Gate 3 (Verify): PASS (34 tests)
 **Issues**: Minor - datetime.utcnow() deprecation warnings (non-blocking)
 **Next Priority**: Feature #3 — Repository Registration (FR-001) (M2: Core Indexing)
-**Git Commits**: (pending)
+**Git Commits**: 7685d0e
 
 ### Session 1 — 2026-03-14 (Feature #1)
 **Focus**: Project Skeleton and CI (Infrastructure)
