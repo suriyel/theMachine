@@ -119,6 +119,13 @@
   - 12 unit tests (96% coverage)
   - ST test case document with 3 test cases (all PASS)
   - Example: `examples/13-query-handler-nl.py`
+- **Feature #14: Query Handler - Symbol Query (FR-006)**
+  - Symbol query support (query_type="symbol")
+  - Validation same as NL - rejects empty/whitespace queries
+  - Retrieval pipeline executes identically for all query types
+  - 10 unit tests (100% coverage on handler module)
+  - ST test case document with 2 test cases (all PASS)
+  - Example: `examples/14-query-handler-symbol.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

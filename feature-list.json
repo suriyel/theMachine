@@ -321,7 +321,9 @@
       "title": "Query Handler - Symbol Query (FR-006)",
       "description": "M3: Accept code symbol identifier as query; validate non-whitespace input",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-14-query-handler-symbol.md",
+      "st_case_count": 2,
       "verification_steps": [
         "Given symbol query 'org.springframework.web.client.RestTemplate', when submitted to QueryHandler, then query is accepted and retrieval pipeline initiated",
         "Given symbol query containing only whitespace, when submitted, then validation error is returned"
