@@ -14,6 +14,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 07 | Embedding Generation (FR-004/009) | [07-embedding-generation.py](07-embedding-generation.py) | `python examples/07-embedding-generation.py` |
 | 08 | Keyword Retrieval (FR-008) | [08-keyword-retrieval.py](08-keyword-retrieval.py) | `python examples/08-keyword-retrieval.py` |
 | 09 | Semantic Retrieval (FR-009) | [09-semantic-retrieval.py](09-semantic-retrieval.py) | `python examples/09-semantic-retrieval.py` |
+| 10 | Rank Fusion (FR-010) | [10-rank-fusion.py](10-rank-fusion.py) | `python examples/10-rank-fusion.py` |
 
 ## Prerequisites
 
@@ -83,6 +84,15 @@ Demonstrates vector-based semantic search:
 - Language filter to scope results to a specific programming language
 - Combined filters for precise retrieval
 - Returns ranked results with similarity scores
+
+## Feature 10: Rank Fusion (FR-010)
+
+Demonstrates Reciprocal Rank Fusion (RRF) for merging search results:
+- Merge keyword and semantic retrieval results
+- RRF algorithm with configurable k parameter (default 60)
+- Duplicate deduplication by chunk_id
+- Handles edge cases: empty lists, partial empty
+- Preserves original Candidate metadata
 
 ---
 
