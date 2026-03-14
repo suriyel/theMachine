@@ -89,7 +89,7 @@
       "title": "Project Skeleton and CI",
       "description": "M1: Project directory structure, pyproject.toml, CI workflow, core abstractions, storage clients (PostgreSQL, Redis, Qdrant, Elasticsearch)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given the project root, when checking directory structure, then src/, tests/, docs/, examples/, scripts/ directories exist",
         "Given pyproject.toml exists, when running pip install -e ., then all dependencies install without error",

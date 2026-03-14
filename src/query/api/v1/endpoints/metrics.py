@@ -2,8 +2,6 @@
 
 from fastapi import APIRouter, Response
 
-from src.shared.clients import get_metrics
-
 router = APIRouter()
 
 
