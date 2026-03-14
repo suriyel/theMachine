@@ -353,7 +353,7 @@
       "title": "API Key Authentication (FR-018)",
       "description": "M4: Verify valid API key before processing queries; return 401 for invalid/missing keys",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given request with valid API key in X-API-Key header, when auth middleware checks, then request proceeds to handler",
         "Given request with invalid API key, when auth middleware checks, then 401 Unauthorized is returned",
@@ -361,7 +361,9 @@
         "Given request with revoked API key, when auth middleware checks, then 401 Unauthorized is returned"
       ],
       "dependencies": [2],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-16-api-key-authentication.md",
+      "st_case_count": 7
     },
     {
       "id": 17,

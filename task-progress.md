@@ -1,11 +1,30 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 15/32 features passing (47%) · Last: #15 Query Handler - Repository Scoped (FR-007) · Next: #16 API Key Authentication (FR-018)
+Progress: 16/32 features passing (50%) · Last: #16 API Key Authentication (FR-018) · Next: #17 REST API Endpoints
 
 ---
 
 ## Session Log
+
+### Session 15 — 2026-03-15 (Feature #16)
+**Focus**: API Key Authentication (FR-018) (M4: Interface)
+**Completed**:
+- Implemented AuthMiddleware class for API key verification
+- verify_api_key() - hashes key using SHA-256, queries DB for ACTIVE status
+- require_auth() - extracts X-API-Key header, returns 401 for invalid/missing/revoked keys
+- Created 8 unit tests covering valid/invalid/missing/revoked scenarios
+- Generated ST test case document with 7 test cases (FUNC, BNDRY, SEC)
+- Passed spec & design compliance review
+- Created example: examples/16-api-key-authentication.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (mock appropriate for DB dependency)
+- Gate 1 (Coverage): PASS (auth.py: 100%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation)
+- Gate 3 (Verify): PASS (8 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #17 — REST API Endpoints (M4: Interface)
+**Git Commits**: 55b69b4
 
 ### Session 14 — 2026-03-15 (Feature #15)
 **Focus**: Query Handler - Repository Scoped (FR-007) (M3: Query Pipeline)

@@ -134,6 +134,13 @@
   - 3 unit tests (96% handler module coverage)
   - ST test case document with 2 test cases (FUNC, BNDRY - all PASS)
   - Example: `examples/15-query-handler-repo-scoped.py`
+- **Feature #16: API Key Authentication (FR-018)**
+  - AuthMiddleware class for API key verification
+  - verify_api_key() - hashes key, queries DB for ACTIVE status
+  - require_auth() - extracts X-API-Key header, returns 401 for invalid/missing/revoked
+  - 8 unit tests (100% coverage)
+  - ST test case document with 7 test cases (FUNC, BNDRY, SEC - all PASS)
+  - Example: `examples/16-api-key-authentication.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files
