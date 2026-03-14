@@ -18,6 +18,8 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 11 | Neural Reranking (FR-011) | [11-neural-reranking.py](11-neural-reranking.py) | `python examples/11-neural-reranking.py` |
 | 12 | Context Response Builder (FR-012) | [12-context-response-builder.py](12-context-response-builder.py) | `python examples/12-context-response-builder.py` |
 | 13 | Query Handler - Natural Language (FR-005) | [13-query-handler-nl.py](13-query-handler-nl.py) | `python examples/13-query-handler-nl.py` |
+| 14 | Query Handler - Symbol Query (FR-006) | [14-query-handler-symbol.py](14-query-handler-symbol.py) | `python examples/14-query-handler-symbol.py` |
+| 15 | Query Handler - Repository Scoped (FR-007) | [15-query-handler-repo-scoped.py](15-query-handler-repo-scoped.py) | `python examples/15-query-handler-repo-scoped.py` |
 
 ## Prerequisites
 
@@ -125,6 +127,22 @@ Demonstrates the QueryHandler orchestration:
 - Apply neural reranking for candidates >= 2
 - Build final response with top-k results and timing
 - Support repo and language filters
+
+## Feature 14: Query Handler - Symbol Query (FR-006)
+
+Demonstrates symbol query handling:
+- Accept code symbol identifiers as queries (e.g., org.springframework.web.client.RestTemplate)
+- Validate non-whitespace input
+- Execute retrieval pipeline for symbol lookups
+- Support dot-notation for fully qualified names
+
+## Feature 15: Query Handler - Repository Scoped (FR-007)
+
+Demonstrates repository-scoped query filtering:
+- Accept queries with target repository filter
+- Restrict retrieval to specified repository only
+- Handle non-existent repository gracefully (returns empty, no error)
+- Support combined repo + language filters
 
 ---
 
