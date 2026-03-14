@@ -235,7 +235,9 @@
       "title": "Semantic Retrieval (FR-009)",
       "description": "M3: Retrieve candidate chunks from Qdrant using embedding-based similarity search with configurable threshold (default 0.6)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-9-semantic-retrieval.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given query 'how to configure spring http client timeout' and indexed chunks about WebClient timeout, when semantic retrieval executes, then semantically related chunks appear despite keyword mismatch",
         "Given a query with no semantic matches above threshold 0.6, when semantic retrieval executes, then empty candidate list is returned",

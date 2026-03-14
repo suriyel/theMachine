@@ -76,6 +76,14 @@
   - ST test case document with 4 test cases (all PASS)
   - Example: `examples/08-keyword-retrieval.py`
   - Bug fix: Added missing language field to CodeChunker
+- **Feature #9: Semantic Retrieval (FR-009)**
+  - SemanticRetriever class for vector-based similarity search
+  - Uses Qdrant for semantic vector storage and retrieval
+  - Configurable similarity threshold (default 0.6)
+  - Supports repo_filter and language_filter parameters
+  - 13 unit tests (100% coverage)
+  - ST test case document with 4 test cases (2 PASS, 2 PENDING - require indexed data)
+  - Example: `examples/09-semantic-retrieval.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files
