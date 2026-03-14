@@ -128,7 +128,9 @@
       "title": "Repository Registration (FR-001)",
       "description": "M2: Admin API to register Git repositories with URL, name, and target languages; store metadata in PostgreSQL",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-3-repository-registration.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given a valid Git repository URL https://github.com/example/repo.git, when POST /api/v1/repos with url, name, languages=[Java], then response 201 with repository object having status registered",
         "Given an invalid Git URL (not reachable), when POST /api/v1/repos, then response 400 with error message indicating URL is invalid or unreachable",
