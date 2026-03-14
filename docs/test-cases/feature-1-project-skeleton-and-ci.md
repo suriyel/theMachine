@@ -415,7 +415,7 @@ No resources left open
 | ST-FUNC-001-004 | Infrastructure | Given storage clients module, when testing PostgreSQL connection with valid DATABASE_URL, then connection succeeds | test_storage_clients.py | PASS |
 | ST-FUNC-001-005 | Infrastructure | Given storage clients module, when testing Redis connection with valid REDIS_URL, then ping returns PONG | test_storage_clients.py | PASS |
 | ST-FUNC-001-006 | Infrastructure | Given storage clients module, when testing Qdrant connection with valid QDRANT_URL, then health check returns 200 | test_storage_clients.py | SKIP |
-| ST-FUNC-001-007 | Infrastructure | Given storage clients module, when testing Elasticsearch connection with valid ELASTICSEARCH_URL, then cluster health returns green/yellow | test_storage_clients.py | SKIP |
+| ST-FUNC-001-007 | Infrastructure | Given storage clients module, when testing Elasticsearch connection with valid ELASTICSEARCH_URL, then cluster health returns green/yellow | test_storage_clients.py | PASS |
 | ST-BNDRY-001-001 | Infrastructure | Given storage clients module, when testing PostgreSQL connection with invalid DATABASE_URL, then ConnectionError is raised | test_storage_clients.py | PASS |
 | ST-BNDRY-001-002 | Infrastructure | Given storage clients module, when testing Redis connection with invalid REDIS_URL, then ConnectionError is raised | test_storage_clients.py | PASS |
 | ST-BNDRY-001-003 | Infrastructure | Given storage clients module, when testing Qdrant connection with invalid QDRANT_URL, then ConnectionError is raised | test_storage_clients.py | PASS |
