@@ -126,6 +126,14 @@
   - 10 unit tests (100% coverage on handler module)
   - ST test case document with 2 test cases (all PASS)
   - Example: `examples/14-query-handler-symbol.py`
+- **Feature #15: Query Handler - Repository Scoped (FR-007)**
+  - Repository-scoped query filtering (repo parameter)
+  - QueryHandler._build_filters() passes repo_filter to retrievers
+  - Both KeywordRetriever and SemanticRetriever apply repo filter
+  - Non-existent repository returns empty results without error
+  - 3 unit tests (96% handler module coverage)
+  - ST test case document with 2 test cases (FUNC, BNDRY - all PASS)
+  - Example: `examples/15-query-handler-repo-scoped.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

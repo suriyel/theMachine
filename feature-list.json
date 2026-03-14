@@ -337,13 +337,15 @@
       "title": "Query Handler - Repository Scoped (FR-007)",
       "description": "M3: Accept query with target repository filter; restrict retrieval to that repository",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given query 'timeout' scoped to repository 'spring-framework', when retrieval executes, then only chunks from spring-framework are processed",
         "Given query scoped to non-existent repository, when retrieval executes, then empty result set is returned with no error"
       ],
       "dependencies": [12],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-15-query-handler-repo-scoped.md",
+      "st_case_count": 2
     },
     {
       "id": 16,

@@ -1,11 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 14/32 features passing (44%) · Last: #14 Query Handler - Symbol Query (FR-006) · Next: #15 Query Handler - Repository Scoped
+Progress: 15/32 features passing (47%) · Last: #15 Query Handler - Repository Scoped (FR-007) · Next: #16 API Key Authentication (FR-018)
 
 ---
 
 ## Session Log
+
+### Session 14 — 2026-03-15 (Feature #15)
+**Focus**: Query Handler - Repository Scoped (FR-007) (M3: Query Pipeline)
+**Completed**:
+- Implemented repository-scoped query filtering
+- QueryHandler._build_filters() passes repo_filter to retrievers
+- Both KeywordRetriever and SemanticRetriever apply repo filter
+- Non-existent repository returns empty results without error
+- Created 3 unit tests in TestQueryHandlerRepoScoped class
+- Generated ST test case document with 2 test cases (FUNC, BNDRY - all PASS)
+- Passed spec & design compliance review
+- Created example: examples/15-query-handler-repo-scoped.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure function)
+- Gate 1 (Coverage): PASS (handler: 96%, overall: 89.32%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation)
+- Gate 3 (Verify): PASS (3 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #16 — API Key Authentication (FR-018) (M4: Interface)
+**Git Commits**: b21464c
 
 ### Session 13 — 2026-03-15 (Feature #14)
 **Focus**: Query Handler - Symbol Query (FR-006) (M3: Query Pipeline)
