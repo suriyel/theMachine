@@ -92,6 +92,14 @@
   - 9 unit tests (100% coverage)
   - ST test case document with 6 test cases (all PASS)
   - Example: `examples/10-rank-fusion.py`
+- **Feature #11: Neural Reranking (FR-011)**
+  - NeuralReranker class using bge-reranker-v2-m3 cross-encoder
+  - Reorder fused candidates by neural relevance score
+  - Handles edge cases: empty list, single item (pass-through)
+  - GPU acceleration via CUDA when available
+  - 9 unit tests (100% coverage)
+  - ST test case document with 5 test cases (4 PASS, 1 PENDING - requires evaluation dataset)
+  - Example: `examples/11-neural-reranking.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

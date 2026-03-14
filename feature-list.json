@@ -270,7 +270,9 @@
       "title": "Neural Reranking (FR-011)",
       "description": "M3: Reorder fused candidates using bge-reranker cross-encoder; achieve nDCG@3 >= 0.7",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-11-neural-reranking.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given a fused candidate list with >= 2 items, when reranking executes, then candidates are reordered by neural relevance score",
         "Given a fused candidate list with < 2 items, when reranking executes, then items are returned in current order without model invocation",
