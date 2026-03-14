@@ -108,6 +108,17 @@
   - 8 unit tests (90% coverage)
   - ST test case document with 6 test cases (all PASS)
   - Example: `examples/12-context-response-builder.py`
+- **Feature #13: Query Handler - Natural Language (FR-005)**
+  - QueryHandler class orchestrating full retrieval pipeline
+  - Validates non-empty input (empty/whitespace rejection)
+  - Executes keyword and semantic retrieval in parallel via asyncio.gather
+  - Applies RankFusion (RRF with k=60) to merge results
+  - Applies NeuralReranker when >= 2 candidates
+  - Builds final response with top-k results and timing
+  - Supports repo and language filters
+  - 12 unit tests (96% coverage)
+  - ST test case document with 3 test cases (all PASS)
+  - Example: `examples/13-query-handler-nl.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

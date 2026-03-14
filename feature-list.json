@@ -304,7 +304,9 @@
       "title": "Query Handler - Natural Language (FR-005)",
       "description": "M3: Accept natural language query text and initiate retrieval pipeline; validate non-empty input",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-13-query-handler-nl.md",
+      "st_case_count": 3,
       "verification_steps": [
         "Given natural language query 'how to use spring WebClient timeout', when submitted to QueryHandler, then query is accepted and retrieval pipeline initiated",
         "Given empty query string, when submitted to QueryHandler, then validation error is returned indicating query must not be empty",
