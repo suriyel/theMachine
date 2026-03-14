@@ -100,6 +100,14 @@
   - 9 unit tests (100% coverage)
   - ST test case document with 5 test cases (4 PASS, 1 PENDING - requires evaluation dataset)
   - Example: `examples/11-neural-reranking.py`
+- **Feature #12: Context Response Builder (FR-012)**
+  - ContextResponseBuilder class for transforming candidates to API response
+  - Maps Candidate fields to ContextResult: repository, file_path, symbol, score, content
+  - Limits results to top_k (default 3), sorted by score descending
+  - Handles edge cases: empty list, fewer than top_k candidates
+  - 8 unit tests (90% coverage)
+  - ST test case document with 6 test cases (all PASS)
+  - Example: `examples/12-context-response-builder.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

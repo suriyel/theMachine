@@ -287,7 +287,9 @@
       "title": "Context Response Builder (FR-012)",
       "description": "M3: Build top-3 response with repository, path, symbol, score, and content for each result",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-12-context-response-builder.md",
+      "st_case_count": 6,
       "verification_steps": [
         "Given 50 ranked candidates after reranking, when response is built, then exactly 3 results are returned with fields: repository, path, symbol, score, content",
         "Given zero candidates after full pipeline, when response is built, then empty results array is returned with no error",

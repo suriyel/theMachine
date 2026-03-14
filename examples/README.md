@@ -16,6 +16,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 09 | Semantic Retrieval (FR-009) | [09-semantic-retrieval.py](09-semantic-retrieval.py) | `python examples/09-semantic-retrieval.py` |
 | 10 | Rank Fusion (FR-010) | [10-rank-fusion.py](10-rank-fusion.py) | `python examples/10-rank-fusion.py` |
 | 11 | Neural Reranking (FR-011) | [11-neural-reranking.py](11-neural-reranking.py) | `python examples/11-neural-reranking.py` |
+| 12 | Context Response Builder (FR-012) | [12-context-response-builder.py](12-context-response-builder.py) | `python examples/12-context-response-builder.py` |
 
 ## Prerequisites
 
@@ -103,6 +104,15 @@ Demonstrates cross-encoder neural reranking:
 - Handles edge cases: empty list, single item (pass-through)
 - GPU acceleration when available (CUDA)
 - Updates candidate scores with neural relevance scores
+
+## Feature 12: Context Response Builder (FR-012)
+
+Demonstrates building API response from ranked candidates:
+- Transform Candidate objects to ContextResult format
+- Limit results to top-k (default 3)
+- Sort by score descending with stability for equal scores
+- Handle edge cases: empty list, fewer than top_k candidates
+- Map all required fields: repository, file_path, symbol, score, content
 
 ---
 

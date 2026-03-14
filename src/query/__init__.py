@@ -8,5 +8,6 @@ except Exception:
 
 # Export retriever classes
 from src.query.retriever import KeywordRetriever, Candidate
+from src.query.response_builder import ContextResponseBuilder
 
-__all__ = ["KeywordRetriever", "Candidate"]
+__all__ = ["KeywordRetriever", "Candidate", "ContextResponseBuilder"]

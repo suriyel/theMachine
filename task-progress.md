@@ -1,11 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 11/32 features passing (34%) · Last: #11 Neural Reranking (FR-011) · Next: #12 Context Response Builder
+Progress: 12/32 features passing (38%) · Last: #12 Context Response Builder (FR-012) · Next: #13 Query Handler - Natural Language
 
 ---
 
 ## Session Log
+
+### Session 11 — 2026-03-15 (Feature #12)
+**Focus**: Context Response Builder (FR-012) (M3: Query Pipeline)
+**Completed**:
+- Implemented ContextResponseBuilder class for transforming candidates to API response
+- Maps Candidate fields to ContextResult: repository, file_path, symbol, score, content
+- Limits results to top_k (default 3), sorted by score descending
+- Handles edge cases: empty list, fewer than top_k candidates
+- Created 8 unit tests (90% coverage)
+- Generated ST test case document with 6 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/12-context-response-builder.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure function exemption)
+- Gate 1 (Coverage): PASS (90% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (8 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #13 — Query Handler - Natural Language (FR-005) (M3: Query Pipeline)
+**Git Commits**: 333d489
 
 ### Session 10 — 2026-03-15 (Feature #11)
 **Focus**: Neural Reranking (FR-011) (M3: Query Pipeline)
