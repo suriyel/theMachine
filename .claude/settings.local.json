@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"d:/03PyDemo/theMachine/docs/plans\")",
+      "Bash(mkdir -p \"d:/03PyDemo/theMachine/docs/templates\")",
+      "Bash(python scripts/init_project.py code-context-retrieval --path . --lang python)",
+      "Bash(python scripts/get_tool_commands.py feature-list.json)"
+    ]
+  }
+}

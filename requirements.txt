@@ -1,0 +1,51 @@
+# Core dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+gunicorn>=23.0.0
+celery[redis]>=5.4.0
+redis>=5.2.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30.0
+alembic>=1.14.0
+
+# Search engines
+qdrant-client>=1.12.0
+elasticsearch[async]>=8.17.0
+
+# ML models
+sentence-transformers>=3.3.0
+torch>=2.5.0
+
+# Code parsing
+tree-sitter>=0.24.0
+tree-sitter-java>=0.23.0
+tree-sitter-python>=0.23.0
+tree-sitter-typescript>=0.23.0
+tree-sitter-c>=0.23.0
+tree-sitter-cpp>=0.23.0
+
+# MCP protocol
+mcp>=1.0.0
+
+# Git operations
+gitpython>=3.1.43
+
+# Web UI
+jinja2>=3.1.4
+
+# Security
+passlib[bcrypt]>=1.7.4
+
+# Data validation
+pydantic>=2.10.0
+
+# Observability
+prometheus-client>=0.21.0
+
+# Config
+python-dotenv>=1.0.0
+
+# HTTP client
+httpx>=0.28.0
