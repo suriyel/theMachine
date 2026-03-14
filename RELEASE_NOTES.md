@@ -28,6 +28,15 @@
   - RepoManager service with register, get, get_by_url, list_all, delete operations
   - Git URL validation via GitHub API (validate_git_url function)
   - FastAPI endpoints: POST /api/v1/repos, GET /api/v1/repos
+- **Feature #4: Git Clone or Update (FR-002)**
+  - GitCloner class for cloning/updating Git repositories
+  - Retry logic with exponential backoff (3 retries, 1s→2s→4s)
+  - Handle auth failures immediately without retry
+  - Workspace directory management
+  - Custom exceptions: GitCloneError, GitCloneFailedError, GitFetchError
+  - 15 unit tests + 2 integration tests (95% coverage)
+  - ST test case document with 4 test cases (all PASS)
+  - Example: `examples/04-git-clone-update.py`
   - skip_validation query parameter to bypass GitHub API validation
   - Duplicate URL detection (409 Conflict)
   - 16 tests (8 unit, 8 integration) - all passing

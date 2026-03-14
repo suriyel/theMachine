@@ -1,11 +1,32 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 3/32 features passing (9%) · Last: #3 Repository Registration · Next: #4 Index Configuration (FR-002)
+Progress: 4/32 features passing (12%) · Last: #4 Git Clone or Update · Next: #5 Content Extraction (FR-003)
 
 ---
 
 ## Session Log
+
+### Session 4 — 2026-03-15 (Feature #4)
+**Focus**: Git Clone or Update (FR-002) (M2: Core Indexing)
+**Completed**:
+- Implemented GitCloner class for cloning/updating Git repositories
+- Implemented retry logic with exponential backoff (3 retries: 1s, 2s, 4s)
+- Implemented auth failure handling (no retry for auth errors)
+- Created workspace directory management
+- Created custom exceptions: GitCloneError, GitCloneFailedError, GitFetchError
+- Created 15 unit tests + 2 integration tests
+- Generated ST test case document with 4 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/04-git-clone-update.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (2 real tests)
+- Gate 1 (Coverage): PASS (95% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (117 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #5 — Content Extraction (FR-003) (M2: Core Indexing)
+**Git Commits**: e23aea0
 
 ### Session 3 — 2026-03-14 (Feature #3)
 **Focus**: Repository Registration (FR-001) (M2: Core Indexing)

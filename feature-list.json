@@ -146,7 +146,9 @@
       "title": "Git Clone or Update (FR-002)",
       "description": "M2: Celery task to clone repository if not exists, or fetch latest changes if already cloned; handle auth failures",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-4-git-clone-update.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given a registered repository not yet cloned, when indexing job runs, then full git clone is performed to workspace directory",
         "Given a previously cloned repository, when indexing job runs, then git fetch retrieves only latest changes",
