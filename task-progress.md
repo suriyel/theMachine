@@ -1,11 +1,33 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 5/32 features passing (16%) · Last: #5 Content Extraction (FR-003) · Next: #6 Code Chunking (FR-004)
+Progress: 6/32 features passing (19%) · Last: #6 Code Chunking (FR-004) · Next: #7 Embedding Generation
 
 ---
 
 ## Session Log
+
+### Session 6 — 2026-03-15 (Feature #6)
+**Focus**: Code Chunking with tree-sitter (FR-004) (M2: Core Indexing)
+**Completed**:
+- Implemented CodeChunker class for multi-granularity code chunking
+- Supports 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+- Extracts file-level, class-level, function-level chunks
+- Supports interface and type symbols for TypeScript
+- Fallback to file-level chunking for unsupported languages
+- Created ChunkType enum and CodeChunk dataclass
+- Created 19 unit tests (91.34% overall coverage)
+- Generated ST test case document with 4 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/06-code-chunking.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure function)
+- Gate 1 (Coverage): PASS (91.34% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (19 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #7 — Embedding Generation (M2: Core Indexing)
+**Git Commits**: ea97506
 
 ### Session 5 — 2026-03-15 (Feature #5)
 **Focus**: Content Extraction (FR-003) (M2: Core Indexing)

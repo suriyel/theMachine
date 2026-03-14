@@ -38,6 +38,26 @@
   - ST test case document with 4 test cases (all PASS)
   - Example: `examples/04-git-clone-update.py`
   - skip_validation query parameter to bypass GitHub API validation
+- **Feature #5: Content Extraction (FR-003)**
+  - ContentExtractor class for extracting indexable content
+  - Identify README, CHANGELOG, documentation, and source files
+  - Support 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+  - Handle edge cases: empty files, large files (>10MB), binary files
+  - Skip hidden directories and common build artifacts
+  - RawContent dataclass and ContentType enum
+  - 19 unit tests covering all verification steps
+  - ST test case document with 3 test cases (all PASS)
+  - Example: `examples/05-content-extraction.py`
+- **Feature #6: Code Chunking with tree-sitter (FR-004)**
+  - CodeChunker class for multi-granularity code chunking
+  - Support 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+  - Extract file-level, class-level, function-level chunks
+  - Support interface and type symbols for TypeScript
+  - Fallback to file-level chunking for unsupported languages
+  - ChunkType enum and CodeChunk dataclass
+  - 19 unit tests (91.34% overall coverage)
+  - ST test case document with 4 test cases (all PASS)
+  - Example: `examples/06-code-chunking.py`
   - Duplicate URL detection (409 Conflict)
   - 16 tests (8 unit, 8 integration) - all passing
   - ST test case document with 4 test cases (all PASS)

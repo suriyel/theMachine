@@ -181,7 +181,9 @@
       "title": "Code Chunking with tree-sitter (FR-004)",
       "description": "M2: Segment source code into multi-granularity chunks (file, class, function, symbol) using tree-sitter parsers for 6 languages",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-6-code-chunking.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given a Java file with 2 classes each containing 3 methods, when chunking executes, then 1 file-level + 2 class-level + 6 method-level chunks are generated",
         "Given a Python file with 4 functions and 2 classes, when chunking executes, then file, class, and function chunks are generated with correct line ranges",
