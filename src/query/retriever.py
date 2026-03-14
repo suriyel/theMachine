@@ -119,3 +119,103 @@ class KeywordRetriever:
             ))
 
         return candidates
+
+
+class SemanticRetriever:
+    """Semantic retrieval using vector similarity via Qdrant.
+
+    Performs semantic search using embedding-based vector similarity with configurable
+    similarity threshold (default 0.6).
+    """
+
+    def __init__(
+        self,
+        qdrant_client: Any,
+        encoder: Any,
+        threshold: float = 0.6,
+        collection_name: str = "code_chunks"
+    ):
+        """Initialize SemanticRetriever.
+
+        Args:
+            qdrant_client: AsyncQdrantClient instance
+            encoder: EmbeddingEncoder instance for query encoding
+            threshold: Minimum similarity score (default 0.6)
+            collection_name: Name of the Qdrant collection
+        """
+        self._qdrant = qdrant_client
+        self._encoder = encoder
+        self._threshold = threshold
+        self._collection_name = collection_name
+
+    async def retrieve(self, query: str, filters: dict) -> list[Candidate]:
+        """Retrieve candidate chunks using semantic vector search.
+
+        Args:
+            query: Search query text
+            filters: Dictionary with optional filters:
+                - repo_filter: Filter by repository name
+                - language_filter: Filter by programming language
+
+        Returns:
+            List of Candidate objects with similarity scores
+
+        Raises:
+            ValueError: If query is empty or whitespace-only
+        """
+        # Validate query
+        if not query or not query.strip():
+            raise ValueError("Query text cannot be empty")
+
+        # Encode query to embedding
+        query_vector = self._encoder.encode_query(query)
+
+        # Build search parameters
+        search_params = {
+            "collection_name": self._collection_name,
+            "query_vector": query_vector,
+            "limit": 100,
+        }
+
+        # Add filters if provided
+        must_filters = []
+        if filters.get("repo_filter"):
+            must_filters.append({
+                "key": "repo_name",
+                "match": {"value": filters["repo_filter"]}
+            })
+        if filters.get("language_filter"):
+            must_filters.append({
+                "key": "language",
+                "match": {"value": filters["language_filter"]}
+            })
+
+        if must_filters:
+            search_params["query_filter"] = {
+                "must": must_filters
+            }
+
+        # Execute vector search
+        response = await self._qdrant.search(
+            **search_params
+        )
+
+        # Parse results and filter by threshold
+        candidates = []
+        for point in response:
+            # Filter by threshold
+            if point.score < self._threshold:
+                continue
+
+            payload = point.payload or {}
+            candidates.append(Candidate(
+                chunk_id=str(point.id),
+                repo_name=payload.get("repo_name", ""),
+                file_path=payload.get("file_path", ""),
+                symbol=payload.get("symbol"),
+                content=payload.get("content", ""),
+                score=point.score,
+                language=payload.get("language")
+            ))
+
+        return candidates

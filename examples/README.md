@@ -13,6 +13,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 06 | Code Chunking (FR-004) | [06-code-chunking.py](06-code-chunking.py) | `python examples/06-code-chunking.py` |
 | 07 | Embedding Generation (FR-004/009) | [07-embedding-generation.py](07-embedding-generation.py) | `python examples/07-embedding-generation.py` |
 | 08 | Keyword Retrieval (FR-008) | [08-keyword-retrieval.py](08-keyword-retrieval.py) | `python examples/08-keyword-retrieval.py` |
+| 09 | Semantic Retrieval (FR-009) | [09-semantic-retrieval.py](09-semantic-retrieval.py) | `python examples/09-semantic-retrieval.py` |
 
 ## Prerequisites
 
@@ -72,6 +73,16 @@ Demonstrates BM25-based keyword search:
 - Language filter to scope results to a specific programming language
 - Combined filters for precise retrieval
 - Returns ranked results with BM25 scores
+
+## Feature 09: Semantic Retrieval (FR-009)
+
+Demonstrates vector-based semantic search:
+- Basic semantic search using Qdrant vector similarity
+- Configurable similarity threshold (default 0.6)
+- Repo filter to scope results to a specific repository
+- Language filter to scope results to a specific programming language
+- Combined filters for precise retrieval
+- Returns ranked results with similarity scores
 
 ---
 
