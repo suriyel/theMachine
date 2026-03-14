@@ -261,6 +261,197 @@ class TestQueryHandlerValidation:
 
         assert "empty" in str(exc_info.value).lower()
 
+
+# ===== Feature #14: Symbol Query Tests =====
+
+class TestQueryHandlerSymbolQuery:
+    """Tests for QueryHandler symbol queries - Feature #14 (FR-006).
+
+    Verification Steps:
+    1. Given symbol query 'org.springframework.web.client.RestTemplate', when submitted to QueryHandler,
+       then query is accepted and retrieval pipeline initiated
+    2. Given symbol query containing only whitespace, when submitted, then validation error is returned
+    """
+
+    @pytest.fixture
+    def mock_keyword_retriever(self):
+        """Create a mock KeywordRetriever."""
+        mock = AsyncMock()
+        mock.retrieve = AsyncMock(return_value=[
+            Candidate(
+                chunk_id="kw_1",
+                repo_name="test-repo",
+                file_path="src/Test.java",
+                symbol="RestTemplate",
+                content="public class RestTemplate { }",
+                score=0.9,
+                language="Java"
+            )
+        ])
+        return mock
+
+    @pytest.fixture
+    def mock_semantic_retriever(self):
+        """Create a mock SemanticRetriever."""
+        mock = AsyncMock()
+        mock.retrieve = AsyncMock(return_value=[
+            Candidate(
+                chunk_id="sem_1",
+                repo_name="test-repo",
+                file_path="src/Test2.java",
+                symbol="RestTemplate",
+                content="public class RestTemplate { }",
+                score=0.8,
+                language="Java"
+            )
+        ])
+        return mock
+
+    @pytest.fixture
+    def mock_rank_fusion(self):
+        """Create a mock RankFusion."""
+        mock = MagicMock()
+        mock.fuse = MagicMock(return_value=[
+            Candidate(
+                chunk_id="fused_1",
+                repo_name="test-repo",
+                file_path="src/Test.java",
+                symbol="RestTemplate",
+                content="public class RestTemplate { }",
+                score=0.9,
+                language="Java"
+            )
+        ])
+        return mock
+
+    @pytest.fixture
+    def mock_reranker(self):
+        """Create a mock NeuralReranker."""
+        mock = MagicMock()
+        mock.rerank = MagicMock(return_value=[
+            Candidate(
+                chunk_id="fused_1",
+                repo_name="test-repo",
+                file_path="src/Test.java",
+                symbol="RestTemplate",
+                content="public class RestTemplate { }",
+                score=0.95,
+                language="Java"
+            )
+        ])
+        return mock
+
+    @pytest.fixture
+    def mock_response_builder(self):
+        """Create a mock ContextResponseBuilder."""
+        from src.query.api.v1.endpoints.query import ContextResult
+
+        mock = MagicMock()
+        mock.build = MagicMock(return_value=[
+            ContextResult(
+                repository="test-repo",
+                file_path="src/Test.java",
+                symbol="RestTemplate",
+                score=0.95,
+                content="public class RestTemplate { }"
+            )
+        ])
+        return mock
+
+    @pytest.fixture
+    def handler(self, mock_keyword_retriever, mock_semantic_retriever,
+                mock_rank_fusion, mock_reranker, mock_response_builder):
+        """Create QueryHandler with mocked dependencies."""
+        from src.query.handler import QueryHandler
+
+        return QueryHandler(
+            keyword_retriever=mock_keyword_retriever,
+            semantic_retriever=mock_semantic_retriever,
+            rank_fusion=mock_rank_fusion,
+            reranker=mock_reranker,
+            response_builder=mock_response_builder,
+        )
+
+    @pytest.mark.asyncio
+    async def test_handle_valid_symbol_query_initiates_pipeline(self, handler, mock_keyword_retriever, mock_semantic_retriever):
+        """[unit] Given valid symbol query, when submitted, then retrieval pipeline is initiated."""
+        request = QueryRequest(
+            query="org.springframework.web.client.RestTemplate",
+            query_type="symbol"
+        )
+
+        response = await handler.handle(request)
+
+        # Verify both retrievers were called
+        mock_keyword_retriever.retrieve.assert_called_once()
+        mock_semantic_retriever.retrieve.assert_called_once()
+
+        # Verify response is returned
+        assert response is not None
+        assert isinstance(response, QueryResponse)
+
+    @pytest.mark.asyncio
+    async def test_handle_symbol_query_with_dot_notation(self, handler, mock_keyword_retriever, mock_semantic_retriever):
+        """[unit] Given symbol query with dot notation, when submitted, then query is accepted."""
+        request = QueryRequest(
+            query="com.example.MyClass.myMethod",
+            query_type="symbol"
+        )
+
+        response = await handler.handle(request)
+
+        # Both retrievers should be called
+        mock_keyword_retriever.retrieve.assert_called_once()
+        mock_semantic_retriever.retrieve.assert_called_once()
+        assert response is not None
+
+    @pytest.mark.asyncio
+    async def test_handle_symbol_query_whitespace_raises_error(self, handler):
+        """[unit] Given symbol query containing only whitespace, when submitted, then validation error is returned."""
+        request = QueryRequest(
+            query="   ",
+            query_type="symbol"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            await handler.handle(request)
+
+        assert "empty" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    async def test_handle_symbol_query_empty_string_raises_error(self, handler):
+        """[unit] Given symbol query with empty string, when submitted, then validation error is returned."""
+        from pydantic import ValidationError
+
+        # Empty string is caught by Pydantic validation
+        with pytest.raises(ValidationError):
+            QueryRequest(
+                query="",
+                query_type="symbol"
+            )
+
+    @pytest.mark.asyncio
+    async def test_handle_symbol_query_with_filters(self, handler, mock_keyword_retriever, mock_semantic_retriever):
+        """[unit] Given symbol query with repo filter, when submitted, then filter is passed to retrievers."""
+        request = QueryRequest(
+            query="org.springframework.web.client.RestTemplate",
+            query_type="symbol",
+            repo="spring-framework"
+        )
+
+        mock_keyword_retriever.retrieve.return_value = []
+        mock_semantic_retriever.retrieve.return_value = []
+
+        await handler.handle(request)
+
+        # Check that repo_filter was passed
+        kw_call_args = mock_keyword_retriever.retrieve.call_args
+        assert kw_call_args is not None
+        args, kwargs = kw_call_args
+        filters = args[1] if len(args) > 1 else kwargs.get('filters', {})
+        assert filters.get('repo_filter') == 'spring-framework'
+
+
     # ===== Edge Case Tests =====
 
     @pytest.mark.asyncio
