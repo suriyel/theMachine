@@ -164,7 +164,9 @@
       "title": "Content Extraction (FR-003)",
       "description": "M2: Identify and extract indexable content from cloned repository: README, source files, CHANGELOG",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-5-content-extraction.md",
+      "st_case_count": 3,
       "verification_steps": [
         "Given a cloned repository with README.md, src/main.java, and CHANGELOG.md, when content extraction runs, then all three content types are identified and queued for chunking",
         "Given a cloned repository with only binary files, when content extraction runs, then warning is logged and job completes with zero chunks",

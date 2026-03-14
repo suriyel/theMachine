@@ -42,6 +42,15 @@
   - 16 tests (8 unit, 8 integration) - all passing
   - ST test case document with 4 test cases (all PASS)
   - Example: `examples/03-repository-registration.py`
+- **Feature #5: Content Extraction (FR-003)**
+  - ContentExtractor class for extracting indexable content
+  - Identifies README, CHANGELOG, documentation, and source files
+  - Supports 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+  - Handles edge cases: empty files, large files (>10MB), binary files
+  - RawContent dataclass and ContentType enum
+  - 19 unit tests (95.49% coverage)
+  - ST test case document with 3 test cases (all PASS)
+  - Example: `examples/05-content-extraction.py`
 
 ### Changed
 - (none yet)
