@@ -15,6 +15,16 @@ class ContentType(str, Enum):
     EXAMPLE = "example"
 
 
+class ChunkType(str, Enum):
+    """Type of code chunk."""
+
+    FILE = "file"
+    CLASS = "class"
+    FUNCTION = "function"
+    INTERFACE = "interface"
+    TYPE = "type"
+
+
 @dataclass
 class RawContent:
     """Raw content extracted from a file for chunking.
@@ -38,3 +48,28 @@ class RawContent:
     def __post_init__(self):
         if self.size_bytes == 0:
             self.size_bytes = len(self.content.encode("utf-8"))
+
+
+@dataclass
+class CodeChunk:
+    """A chunk of code at a specific granularity level.
+
+    Attributes:
+        repo_id: Repository UUID
+        file_path: Path to the source file
+        chunk_type: Granularity level (file, class, function, interface, type)
+        symbol_name: Name of the symbol (class, function, etc.) if applicable
+        symbol_type: Type of symbol (class, function, interface, type)
+        start_line: Starting line number (1-indexed)
+        end_line: Ending line number (1-indexed)
+        content: The actual code content of the chunk
+    """
+
+    repo_id: str
+    file_path: Path
+    chunk_type: ChunkType
+    symbol_name: str | None = None
+    symbol_type: str | None = None
+    start_line: int = 1
+    end_line: int = 1
+    content: str = ""
