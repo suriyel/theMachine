@@ -67,10 +67,15 @@
   - 12 unit tests (92% coverage)
   - ST test case document with 4 test cases (all PASS)
   - Example: `examples/07-embedding-generation.py`
-  - Duplicate URL detection (409 Conflict)
-  - 16 tests (8 unit, 8 integration) - all passing
+- **Feature #8: Keyword Retrieval (FR-008)**
+  - KeywordRetriever class for BM25-based keyword search
+  - Uses Elasticsearch multi_match query for lexical search
+  - Supports repo_filter and language_filter parameters
+  - Candidate dataclass for result representation
+  - 12 unit tests (91.27% overall coverage)
   - ST test case document with 4 test cases (all PASS)
-  - Example: `examples/03-repository-registration.py`
+  - Example: `examples/08-keyword-retrieval.py`
+  - Bug fix: Added missing language field to CodeChunker
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 7/32 features passing (22%) · Last: #7 Embedding Generation (FR-004/009) · Next: #8 Keyword Retrieval
+Progress: 8/32 features passing (25%) · Last: #8 Keyword Retrieval (FR-008) · Next: #9 Semantic Retrieval
 
 ---
 
@@ -28,6 +28,27 @@ Progress: 7/32 features passing (22%) · Last: #7 Embedding Generation (FR-004/0
 **Issues**: None blocking
 **Next Priority**: Feature #7 — Embedding Generation (M2: Core Indexing)
 **Git Commits**: ea97506
+
+### Session 7 — 2026-03-15 (Feature #8)
+**Focus**: Keyword Retrieval (FR-008) (M3: Query Pipeline)
+**Completed**:
+- Implemented KeywordRetriever class for BM25-based keyword search
+- Uses Elasticsearch multi_match query for lexical search
+- Supports repo_filter and language_filter parameters
+- Created Candidate dataclass for result representation
+- Created 12 unit tests covering all verification steps
+- Generated ST test case document with 4 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/08-keyword-retrieval.py
+- Fixed missing language field in CodeChunker (bug fix from smoke test)
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure function)
+- Gate 1 (Coverage): PASS (91.27% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (12 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #9 — Semantic Retrieval (FR-009) (M3: Query Pipeline)
+**Git Commits**: 556e7d6
 
 ### Session 5 — 2026-03-15 (Feature #5)
 **Focus**: Content Extraction (FR-003) (M2: Core Indexing)

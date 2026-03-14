@@ -217,7 +217,9 @@
       "title": "Keyword Retrieval (FR-008)",
       "description": "M3: Retrieve candidate chunks from Elasticsearch using BM25 keyword matching",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-8-keyword-retrieval.md",
+      "st_case_count": 4,
       "verification_steps": [
         "Given query 'WebClient timeout' and indexed chunks containing 'WebClient.builder().responseTimeout()', when keyword retrieval executes, then matching chunks appear in results",
         "Given a query with no keyword matches, when keyword retrieval executes, then empty candidate list is returned",
