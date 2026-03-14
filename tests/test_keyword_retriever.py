@@ -6,11 +6,60 @@ These tests verify BM25-based keyword search against Elasticsearch.
 [integration] — uses real Elasticsearch (if available)
 """
 import pytest
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import asdict
+from elasticsearch import AsyncElasticsearch
 
 # Import the class under test - will fail until implemented
 from src.query.retriever import KeywordRetriever, Candidate
+
+
+# [real_test] — Real Elasticsearch integration test
+@pytest.mark.real_test
+class TestKeywordRetrieverReal:
+    """Real integration tests for KeywordRetriever with actual Elasticsearch."""
+
+    @pytest.fixture
+    def real_retriever(self):
+        """Create KeywordRetriever with real Elasticsearch client."""
+        es_url = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
+        es = AsyncElasticsearch([es_url])
+        retriever = KeywordRetriever(es, index_name="code_chunks")
+        yield retriever
+        # Cleanup handled by test
+
+    @pytest.mark.asyncio
+    async def test_real_es_keyword_search(self, real_retriever):
+        """Given indexed code chunks in Elasticsearch, when keyword search executes, then matching results are returned."""
+        # Search for known indexed content
+        results = await real_retriever.retrieve("WebClient", {})
+
+        # Verify we get results
+        assert isinstance(results, list)
+
+        # If there are results, verify structure
+        for r in results:
+            assert isinstance(r, Candidate)
+            assert r.chunk_id is not None
+            assert r.content is not None
+            assert r.score > 0
+
+    @pytest.mark.asyncio
+    async def test_real_es_language_filter(self, real_retriever):
+        """Given indexed code chunks, when searching with language filter, then only that language is returned."""
+        results = await real_retriever.retrieve("function", {"language_filter": "python"})
+
+        # Verify all results are python
+        for r in results:
+            assert r.language == "python"
+
+    @pytest.mark.asyncio
+    async def test_real_es_no_match_returns_empty(self, real_retriever):
+        """Given no matching content, when keyword search executes, then empty list is returned."""
+        results = await real_retriever.retrieve("xyznonexistentquery12345", {})
+
+        assert results == []
 
 
 class TestKeywordRetrieverUnit:
