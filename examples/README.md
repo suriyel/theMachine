@@ -7,6 +7,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | # | Feature | File | How to run |
 |---|---------|------|------------|
 | 01 | Project Skeleton and CI | [01-storage-clients.py](01-storage-clients.py) | `python examples/01-storage-clients.py` |
+| 02 | Data Model and Migrations | [02-data-models.py](02-data-models.py) | `python examples/02-data-models.py` |
 
 ## Prerequisites
 
@@ -23,6 +24,16 @@ Demonstrates health check functions for all storage services:
 - Redis PING/PONG latency test
 - Qdrant health check
 - Elasticsearch cluster health
+
+## Feature 02: Data Model and Migrations
+
+Demonstrates SQLAlchemy async model usage:
+- Repository: Create and query Git repository metadata
+- IndexJob: Track indexing job status
+- CodeChunk: Store code segments with composite IDs
+- APIKey: Secure API key storage with SHA-256 hashing
+- QueryLog: Query execution logging with correlation IDs
+- ORM relationships: Repository → IndexJob, Repository → CodeChunk
 
 ---
 

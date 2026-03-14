@@ -95,4 +95,4 @@ cython_debug/
 workspace/
 *.log
 data/
-models/
+/models/
