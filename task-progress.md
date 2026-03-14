@@ -1,11 +1,33 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 1/32 features passing (3%) · Last: #1 Project Skeleton and CI · Next: #2 Data Model and Migrations
+Progress: 2/32 features passing (6%) · Last: #2 Data Model and Migrations · Next: #3 Repository Registration (FR-001)
 
 ---
 
 ## Session Log
+
+### Session 2 — 2026-03-14 (Feature #2)
+**Focus**: Data Model and Migrations (M1: Foundation)
+**Completed**:
+- Implemented SQLAlchemy 2.0 async models: Repository, IndexJob, CodeChunk, APIKey, QueryLog
+- Configured Alembic for async PostgreSQL migrations
+- Created initial migration with all 5 tables and enum types
+- Implemented composite primary key for CodeChunk (repo_id:file_path:symbol_hash)
+- Added secure API key storage with SHA-256 hashing
+- Added query correlation ID for request tracing
+- Created 34 model tests with 96.67% coverage
+- Generated ST test case document with 12 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/02-data-models.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (3 real tests, 1 false positive mock warning)
+- Gate 1 (Coverage): PASS (96.67% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (34 tests)
+**Issues**: Minor - datetime.utcnow() deprecation warnings (non-blocking)
+**Next Priority**: Feature #3 — Repository Registration (FR-001) (M2: Core Indexing)
+**Git Commits**: (pending)
 
 ### Session 1 — 2026-03-14 (Feature #1)
 **Focus**: Project Skeleton and CI (Infrastructure)

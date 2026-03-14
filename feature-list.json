@@ -108,7 +108,7 @@
       "title": "Data Model and Migrations",
       "description": "M1: SQLAlchemy models for Repository, IndexJob, CodeChunk, APIKey, QueryLog; Alembic migrations",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a new database, when running alembic upgrade head, then all tables are created (repositories, index_jobs, code_chunks, api_keys, query_logs)",
         "Given the Repository model, when creating a repository record with url, name, languages, then record is persisted and queryable",
@@ -118,7 +118,9 @@
         "Given the QueryLog model, when creating a log entry with api_key_id, query_text, latency_ms, then record is persisted with correlation_id"
       ],
       "dependencies": [1],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-2-data-model-and-migrations.md",
+      "st_case_count": 12
     },
     {
       "id": 3,
