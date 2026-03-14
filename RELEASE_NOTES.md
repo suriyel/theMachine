@@ -84,6 +84,14 @@
   - 13 unit tests (100% coverage)
   - ST test case document with 4 test cases (2 PASS, 2 PENDING - require indexed data)
   - Example: `examples/09-semantic-retrieval.py`
+- **Feature #10: Rank Fusion (FR-010)**
+  - RankFusion class for merging keyword and semantic search results
+  - Reciprocal Rank Fusion (RRF) algorithm with configurable k parameter (default 60)
+  - Handles edge cases: empty lists, duplicates
+  - Deduplicates by chunk_id, preserves original Candidate metadata
+  - 9 unit tests (100% coverage)
+  - ST test case document with 6 test cases (all PASS)
+  - Example: `examples/10-rank-fusion.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

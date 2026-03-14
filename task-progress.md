@@ -1,11 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 9/32 features passing (28%) · Last: #9 Semantic Retrieval (FR-009) · Next: #10 Rank Fusion
+Progress: 10/32 features passing (31%) · Last: #10 Rank Fusion (FR-010) · Next: #11 Neural Reranking
 
 ---
 
 ## Session Log
+
+### Session 9 — 2026-03-15 (Feature #10)
+**Focus**: Rank Fusion (FR-010) (M3: Query Pipeline)
+**Completed**:
+- Implemented RankFusion class for merging keyword and semantic results
+- Uses Reciprocal Rank Fusion (RRF) algorithm with k=60
+- Handles edge cases: empty lists, duplicates
+- Deduplicates by chunk_id, preserves original metadata
+- Created 9 unit tests (100% coverage)
+- Generated ST test case document with 6 test cases (all PASS)
+- Passed spec & design compliance review
+- Created example: examples/10-rank-fusion.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure function exemption)
+- Gate 1 (Coverage): PASS (100% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation - mutmut issue #397)
+- Gate 3 (Verify): PASS (9 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #11 — Neural Reranking (FR-011) (M3: Query Pipeline)
+**Git Commits**: ea7baaa
 
 ### Session 8 — 2026-03-15 (Feature #9)
 **Focus**: Semantic Retrieval (FR-009) (M3: Query Pipeline)

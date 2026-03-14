@@ -253,7 +253,9 @@
       "title": "Rank Fusion (FR-010)",
       "description": "M3: Merge keyword and semantic results using Reciprocal Rank Fusion (RRF) with k=60",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-10-rank-fusion.md",
+      "st_case_count": 6,
       "verification_steps": [
         "Given keyword results [A, B, C] and semantic results [B, D, E], when fusion executes, then merged list contains all 5 unique chunks (A, B, C, D, E) with B benefiting from dual appearance",
         "Given keyword results empty and semantic results [A, B], when fusion executes, then fused list contains [A, B]",
