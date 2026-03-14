@@ -9,6 +9,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 01 | Project Skeleton and CI | [01-storage-clients.py](01-storage-clients.py) | `python examples/01-storage-clients.py` |
 | 02 | Data Model and Migrations | [02-data-models.py](02-data-models.py) | `python examples/02-data-models.py` |
 | 03 | Repository Registration (FR-001) | [03-repository-registration.py](03-repository-registration.py) | `python examples/03-repository-registration.py` |
+| 05 | Content Extraction (FR-003) | [05-content-extraction.py](05-content-extraction.py) | `python examples/05-content-extraction.py` |
 
 ## Prerequisites
 
@@ -35,6 +36,14 @@ Demonstrates SQLAlchemy async model usage:
 - APIKey: Secure API key storage with SHA-256 hashing
 - QueryLog: Query execution logging with correlation IDs
 - ORM relationships: Repository → IndexJob, Repository → CodeChunk
+
+## Feature 05: Content Extraction (FR-003)
+
+Demonstrates the ContentExtractor for extracting indexable content:
+- Identify README, CHANGELOG, and documentation files
+- Extract source code files by language (.java, .py, .ts, .js, .c, .cpp)
+- Filter by target languages
+- Handle edge cases: empty files, large files, binary files
 
 ---
 
