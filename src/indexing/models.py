@@ -57,6 +57,7 @@ class CodeChunk:
     Attributes:
         repo_id: Repository UUID
         file_path: Path to the source file
+        language: Programming language (e.g., Java, Python, TypeScript)
         chunk_type: Granularity level (file, class, function, interface, type)
         symbol_name: Name of the symbol (class, function, etc.) if applicable
         symbol_type: Type of symbol (class, function, interface, type)
@@ -67,6 +68,7 @@ class CodeChunk:
 
     repo_id: str
     file_path: Path
+    language: str
     chunk_type: ChunkType
     symbol_name: str | None = None
     symbol_type: str | None = None

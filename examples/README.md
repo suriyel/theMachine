@@ -10,6 +10,8 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 02 | Data Model and Migrations | [02-data-models.py](02-data-models.py) | `python examples/02-data-models.py` |
 | 03 | Repository Registration (FR-001) | [03-repository-registration.py](03-repository-registration.py) | `python examples/03-repository-registration.py` |
 | 05 | Content Extraction (FR-003) | [05-content-extraction.py](05-content-extraction.py) | `python examples/05-content-extraction.py` |
+| 06 | Code Chunking (FR-004) | [06-code-chunking.py](06-code-chunking.py) | `python examples/06-code-chunking.py` |
+| 07 | Embedding Generation (FR-004/009) | [07-embedding-generation.py](07-embedding-generation.py) | `python examples/07-embedding-generation.py` |
 
 ## Prerequisites
 
@@ -44,6 +46,22 @@ Demonstrates the ContentExtractor for extracting indexable content:
 - Extract source code files by language (.java, .py, .ts, .js, .c, .cpp)
 - Filter by target languages
 - Handle edge cases: empty files, large files, binary files
+
+## Feature 06: Code Chunking (FR-004)
+
+Demonstrates the CodeChunker for segmenting source code:
+- Multi-granularity chunking: file, class, function levels
+- Support for 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+- Interface and type symbol extraction for TypeScript
+- Fallback to file-level chunking for unsupported languages
+
+## Feature 07: Embedding Generation (FR-004/009)
+
+Demonstrates embedding generation and index writing:
+- Generate embeddings using bge-code-v1 model (1024 dimensions)
+- Encode queries with semantic search prefix
+- Write chunks and vectors to Elasticsearch and Qdrant
+- Delete old chunks before re-indexing
 
 ---
 
