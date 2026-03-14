@@ -15,6 +15,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 08 | Keyword Retrieval (FR-008) | [08-keyword-retrieval.py](08-keyword-retrieval.py) | `python examples/08-keyword-retrieval.py` |
 | 09 | Semantic Retrieval (FR-009) | [09-semantic-retrieval.py](09-semantic-retrieval.py) | `python examples/09-semantic-retrieval.py` |
 | 10 | Rank Fusion (FR-010) | [10-rank-fusion.py](10-rank-fusion.py) | `python examples/10-rank-fusion.py` |
+| 11 | Neural Reranking (FR-011) | [11-neural-reranking.py](11-neural-reranking.py) | `python examples/11-neural-reranking.py` |
 
 ## Prerequisites
 
@@ -93,6 +94,15 @@ Demonstrates Reciprocal Rank Fusion (RRF) for merging search results:
 - Duplicate deduplication by chunk_id
 - Handles edge cases: empty lists, partial empty
 - Preserves original Candidate metadata
+
+## Feature 11: Neural Reranking (FR-011)
+
+Demonstrates cross-encoder neural reranking:
+- Reorder fused candidates using bge-reranker-v2-m3 cross-encoder
+- Score query-document pairs for relevance
+- Handles edge cases: empty list, single item (pass-through)
+- GPU acceleration when available (CUDA)
+- Updates candidate scores with neural relevance scores
 
 ---
 
