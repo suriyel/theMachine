@@ -99,6 +99,7 @@ class CodeChunker:
         chunks.append(CodeChunk(
             repo_id=raw_content.repo_id,
             file_path=file_path,
+            language=raw_content.language or "unknown",
             chunk_type=ChunkType.FILE,
             start_line=1,
             end_line=len(raw_content.content.splitlines()),
@@ -125,6 +126,7 @@ class CodeChunker:
         return [CodeChunk(
             repo_id=raw_content.repo_id,
             file_path=raw_content.file_path,
+            language=raw_content.language or "unknown",
             chunk_type=ChunkType.FILE,
             start_line=1,
             end_line=len(lines),
@@ -169,6 +171,7 @@ class CodeChunker:
             chunks.append(CodeChunk(
                 repo_id=raw_content.repo_id,
                 file_path=raw_content.file_path,
+                language=raw_content.language or "unknown",
                 chunk_type=ChunkType.CLASS,
                 symbol_name=class_name,
                 symbol_type="class",
@@ -207,6 +210,7 @@ class CodeChunker:
             chunks.append(CodeChunk(
                 repo_id=raw_content.repo_id,
                 file_path=raw_content.file_path,
+                language=raw_content.language or "unknown",
                 chunk_type=ChunkType.FUNCTION,
                 symbol_name=method_name,
                 symbol_type="method",
@@ -239,6 +243,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=chunk_type,
                         symbol_name=symbol_name,
                         symbol_type="class" if node.type == "class_definition" else "function",
@@ -277,6 +282,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.FUNCTION,
                         symbol_name=symbol_name,
                         symbol_type="function",
@@ -302,6 +308,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.CLASS,
                         symbol_name=class_name,
                         symbol_type="class",
@@ -341,6 +348,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.FUNCTION,
                         symbol_name=method_name,
                         symbol_type="method",
@@ -372,6 +380,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.FUNCTION,
                         symbol_name=method_name,
                         symbol_type="method",
@@ -407,6 +416,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.INTERFACE,
                         symbol_name=symbol_name,
                         symbol_type="interface",
@@ -431,6 +441,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.TYPE,
                         symbol_name=symbol_name,
                         symbol_type="type",
@@ -455,6 +466,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.FUNCTION,
                         symbol_name=symbol_name,
                         symbol_type="function",
@@ -479,6 +491,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.CLASS,
                         symbol_name=symbol_name,
                         symbol_type="class",
@@ -528,6 +541,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.FUNCTION,
                         symbol_name=symbol_name,
                         symbol_type="function",
@@ -552,6 +566,7 @@ class CodeChunker:
                     chunks.append(CodeChunk(
                         repo_id=raw_content.repo_id,
                         file_path=raw_content.file_path,
+                        language=raw_content.language or "unknown",
                         chunk_type=ChunkType.CLASS,
                         symbol_name=symbol_name,
                         symbol_type="class",

@@ -12,6 +12,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 05 | Content Extraction (FR-003) | [05-content-extraction.py](05-content-extraction.py) | `python examples/05-content-extraction.py` |
 | 06 | Code Chunking (FR-004) | [06-code-chunking.py](06-code-chunking.py) | `python examples/06-code-chunking.py` |
 | 07 | Embedding Generation (FR-004/009) | [07-embedding-generation.py](07-embedding-generation.py) | `python examples/07-embedding-generation.py` |
+| 08 | Keyword Retrieval (FR-008) | [08-keyword-retrieval.py](08-keyword-retrieval.py) | `python examples/08-keyword-retrieval.py` |
 
 ## Prerequisites
 
@@ -62,6 +63,15 @@ Demonstrates embedding generation and index writing:
 - Encode queries with semantic search prefix
 - Write chunks and vectors to Elasticsearch and Qdrant
 - Delete old chunks before re-indexing
+
+## Feature 08: Keyword Retrieval (FR-008)
+
+Demonstrates BM25-based keyword search:
+- Basic keyword search across code chunks
+- Repo filter to scope results to a specific repository
+- Language filter to scope results to a specific programming language
+- Combined filters for precise retrieval
+- Returns ranked results with BM25 scores
 
 ---
 

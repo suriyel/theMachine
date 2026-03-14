@@ -5,3 +5,8 @@ try:
     __version__ = version("code-context-retrieval")
 except Exception:
     __version__ = "0.1.0.dev"  # Fallback for development
+
+# Export retriever classes
+from src.query.retriever import KeywordRetriever, Candidate
+
+__all__ = ["KeywordRetriever", "Candidate"]
