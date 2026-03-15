@@ -20,6 +20,8 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 13 | Query Handler - Natural Language (FR-005) | [13-query-handler-nl.py](13-query-handler-nl.py) | `python examples/13-query-handler-nl.py` |
 | 14 | Query Handler - Symbol Query (FR-006) | [14-query-handler-symbol.py](14-query-handler-symbol.py) | `python examples/14-query-handler-symbol.py` |
 | 15 | Query Handler - Repository Scoped (FR-007) | [15-query-handler-repo-scoped.py](15-query-handler-repo-scoped.py) | `python examples/15-query-handler-repo-scoped.py` |
+| 16 | API Key Authentication (FR-018) | [16-api-key-authentication.py](16-api-key-authentication.py) | `python examples/16-api-key-authentication.py` |
+| 17 | REST API Endpoints | [17-rest-api-endpoints.py](17-rest-api-endpoints.py) | `python examples/17-rest-api-endpoints.py` |
 
 ## Prerequisites
 
@@ -143,6 +145,23 @@ Demonstrates repository-scoped query filtering:
 - Restrict retrieval to specified repository only
 - Handle non-existent repository gracefully (returns empty, no error)
 - Support combined repo + language filters
+
+## Feature 16: API Key Authentication (FR-018)
+
+Demonstrates API key authentication:
+- Hash API keys using SHA-256
+- Verify keys against database with ACTIVE status
+- Return 401 for missing/invalid/revoked keys
+- Integration with FastAPI via AuthMiddleware
+
+## Feature 17: REST API Endpoints
+
+Demonstrates the REST API endpoints:
+- POST /api/v1/query - Submit query via JSON body
+- GET /api/v1/query - Submit query via query parameters
+- GET /api/v1/health - Health check (no auth required)
+- GET /api/v1/metrics - Prometheus metrics (no auth required)
+- Error handling: 401 for auth failures, 422 for validation errors
 
 ---
 

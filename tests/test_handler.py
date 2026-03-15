@@ -20,7 +20,7 @@ import asyncio
 import time
 
 from src.query.retriever import Candidate
-from src.query.api.v1.endpoints.query import QueryRequest, QueryResponse
+from src.query.models import QueryRequest, QueryResponse
 
 
 class TestQueryHandlerValidation:
@@ -97,7 +97,7 @@ class TestQueryHandlerValidation:
     @pytest.fixture
     def mock_response_builder(self):
         """Create a mock ContextResponseBuilder."""
-        from src.query.api.v1.endpoints.query import ContextResult
+        from src.query.models import ContextResult
 
         mock = MagicMock()
         mock.build = MagicMock(return_value=[
@@ -344,7 +344,7 @@ class TestQueryHandlerSymbolQuery:
     @pytest.fixture
     def mock_response_builder(self):
         """Create a mock ContextResponseBuilder."""
-        from src.query.api.v1.endpoints.query import ContextResult
+        from src.query.models import ContextResult
 
         mock = MagicMock()
         mock.build = MagicMock(return_value=[
@@ -457,7 +457,7 @@ class TestQueryHandlerSymbolQuery:
     @pytest.mark.asyncio
     async def test_handle_empty_results_returns_empty_list(self, handler, mock_keyword_retriever, mock_semantic_retriever, mock_response_builder):
         """[unit] Given no matching results, when response is built, then empty results array is returned."""
-        from src.query.api.v1.endpoints.query import ContextResult
+        from src.query.models import ContextResult
 
         request = QueryRequest(
             query="xyznotfoundquery",
@@ -639,7 +639,7 @@ class TestQueryHandlerTopKHandling:
     @pytest.fixture
     def mock_response_builder_with_topk(self):
         """Create a mock ContextResponseBuilder with _top_k attribute."""
-        from src.query.api.v1.endpoints.query import ContextResult
+        from src.query.models import ContextResult
 
         mock = MagicMock()
         mock._top_k = 3  # Add the _top_k attribute
@@ -781,7 +781,7 @@ class TestQueryHandlerRepoScoped:
     @pytest.fixture
     def mock_response_builder(self):
         """Create a mock ContextResponseBuilder."""
-        from src.query.api.v1.endpoints.query import ContextResult
+        from src.query.models import ContextResult
 
         mock = MagicMock()
         mock.build = MagicMock(return_value=[

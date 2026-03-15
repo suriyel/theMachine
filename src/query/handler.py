@@ -13,7 +13,7 @@ import time
 from typing import Any, Optional
 
 from src.query.retriever import Candidate
-from src.query.api.v1.endpoints.query import QueryRequest, QueryResponse
+from src.query.models import QueryRequest, QueryResponse
 
 
 class QueryHandler:

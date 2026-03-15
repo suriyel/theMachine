@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List
 
 from src.query.retriever import Candidate
-from src.query.api.v1.endpoints.query import ContextResult
+from src.query.models import ContextResult
 
 
 @dataclass
