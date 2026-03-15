@@ -141,6 +141,17 @@
   - 8 unit tests (100% coverage)
   - ST test case document with 7 test cases (FUNC, BNDRY, SEC - all PASS)
   - Example: `examples/16-api-key-authentication.py`
+- **Feature #17: REST API Endpoints**
+  - POST /api/v1/query - Submit query via JSON body with authentication
+  - GET /api/v1/query - Submit query via query parameters with authentication
+  - GET /api/v1/health - Health check endpoint (no auth required)
+  - GET /api/v1/metrics - Prometheus metrics endpoint (no auth required)
+  - QueryRequest/QueryResponse models in src/query/models.py
+  - Fixed import bugs: dependencies.py now correctly imports get_elasticsearch, get_qdrant
+  - Added ValidationError handling for proper 422 responses
+  - 13 unit tests (92.49% coverage)
+  - ST test case document with 8 test cases (FUNC, BNDRY - all PASS)
+  - Example: `examples/17-rest-api-endpoints.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

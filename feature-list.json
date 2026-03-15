@@ -371,7 +371,7 @@
       "title": "REST API Endpoints",
       "description": "M4: FastAPI routes for POST /api/v1/query, GET /api/v1/query, repo management, health, metrics",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given valid API key, when POST /api/v1/query with query body, then 200 with QueryResponse",
         "Given valid API key, when GET /api/v1/query?text=foo, then 200 with QueryResponse",
@@ -379,7 +379,9 @@
         "Given no auth, when GET /api/v1/metrics, then Prometheus-format metrics returned"
       ],
       "dependencies": [13, 14, 15, 16],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-17-rest-api-endpoints.md",
+      "st_case_count": 8
     },
     {
       "id": 18,

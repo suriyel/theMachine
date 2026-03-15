@@ -1,11 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 16/32 features passing (50%) · Last: #16 API Key Authentication (FR-018) · Next: #17 REST API Endpoints
+Progress: 17/32 features passing (53%) · Last: #17 REST API Endpoints · Next: #18 MCP Server
 
 ---
 
 ## Session Log
+
+### Session 16 — 2026-03-16 (Feature #17)
+**Focus**: REST API Endpoints (M4: Interface)
+**Completed**:
+- Fixed import bug in dependencies.py (get_es_client → get_elasticsearch, get_qdrant_client → get_qdrant)
+- Fixed test mock paths for dependency override pattern
+- Added ValidationError handling in query endpoints
+- Added explicit query param validation for GET endpoint
+- Created 13 unit tests covering POST/GET query, health, metrics, auth failures, validation errors
+- Generated ST test case document with 8 test cases (FUNC, BNDRY - all PASS)
+- Passed spec & design compliance review
+- Created example: examples/17-rest-api-endpoints.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (unit tests with mocks appropriate for API endpoints)
+- Gate 1 (Coverage): PASS (92.49% >= 90%)
+- Gate 2 (Mutation): SKIPPED (Windows limitation)
+- Gate 3 (Verify): PASS (13 tests)
+**Issues**: None blocking
+**Next Priority**: Feature #18 — MCP Server (M4: Interface)
+**Git Commits**: (pending)
 
 ### Session 15 — 2026-03-15 (Feature #16)
 **Focus**: API Key Authentication (FR-018) (M4: Interface)
