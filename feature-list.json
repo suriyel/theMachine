@@ -389,7 +389,7 @@
       "title": "MCP Server (FR-013)",
       "description": "M4: Expose search_code_context tool via MCP protocol (stdio and HTTP SSE transport)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given valid MCP tool-call request with query and api_key, when processed, then structured context results returned as MCP tool response",
         "Given malformed MCP request missing required parameters, when received, then MCP-compliant error response with missing fields indication",
@@ -397,7 +397,9 @@
         "Given MCP client connected via HTTP SSE, when tool call is sent, then response is received via SSE"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-18-mcp-server.md",
+      "st_case_count": 8
     },
     {
       "id": 19,

@@ -152,6 +152,17 @@
   - 13 unit tests (92.49% coverage)
   - ST test case document with 8 test cases (FUNC, BNDRY - all PASS)
   - Example: `examples/17-rest-api-endpoints.py`
+- **Feature #18: MCP Server (FR-013)**
+  - MCPServer class with search_code_context tool
+  - stdio and HTTP SSE transport via FastMCP
+  - Validates required params: query, api_key
+  - Validates query not empty/whitespace
+  - Authenticates via API key
+  - Passes repo and language filters to QueryHandler
+  - Returns structured results: repository, file_path, symbol, score, content
+  - 21 unit tests covering all verification steps
+  - ST test case document with 8 test cases (FUNC, BNDRY, SEC - all PASS)
+  - Example: `examples/18-mcp-server.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files
