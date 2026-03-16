@@ -80,7 +80,7 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["src"]
-omit = ["tests/*", "*/__pycache__/*", "src/indexing/*", "src/shared/utils/git_validator.py"]
+omit = ["tests/*", "*/__pycache__/*", "src/shared/utils/git_validator.py"]
 
 [tool.coverage.report]
 fail_under = 90

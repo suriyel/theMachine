@@ -22,6 +22,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 15 | Query Handler - Repository Scoped (FR-007) | [15-query-handler-repo-scoped.py](15-query-handler-repo-scoped.py) | `python examples/15-query-handler-repo-scoped.py` |
 | 16 | API Key Authentication (FR-018) | [16-api-key-authentication.py](16-api-key-authentication.py) | `python examples/16-api-key-authentication.py` |
 | 17 | REST API Endpoints | [17-rest-api-endpoints.py](17-rest-api-endpoints.py) | `python examples/17-rest-api-endpoints.py` |
+| 18 | MCP Server (FR-013) | [18-mcp-server.py](18-mcp-server.py) | `python -m src.query.mcp` |
 
 ## Prerequisites
 
@@ -162,6 +163,15 @@ Demonstrates the REST API endpoints:
 - GET /api/v1/health - Health check (no auth required)
 - GET /api/v1/metrics - Prometheus metrics (no auth required)
 - Error handling: 401 for auth failures, 422 for validation errors
+
+## Feature 18: MCP Server (FR-013)
+
+Demonstrates the MCP Server:
+- Exposes search_code_context tool via MCP protocol
+- Supports stdio transport for local AI agent integration
+- Supports HTTP SSE transport for remote AI agent integration
+- Tool parameters: query (required), api_key (required), repo (optional), language (optional)
+- Error handling: missing params, invalid auth, empty query
 
 ---
 
