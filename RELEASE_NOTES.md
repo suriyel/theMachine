@@ -163,6 +163,21 @@
   - 21 unit tests covering all verification steps
   - ST test case document with 8 test cases (FUNC, BNDRY, SEC - all PASS)
   - Example: `examples/18-mcp-server.py`
+- **Feature #19: Web UI Search Page (FR-014)**
+  - Interactive search page with Jinja2 + HTMX
+  - Developer Dark theme with syntax highlighting
+  - Language filter chips
+  - Session-based authentication
+  - ST test case document with 1 test case
+  - Example: `examples/19-web-ui-search-page.py`
+- **Feature #20: Language Filter (FR-015)**
+  - LanguageFilter class with validate() and apply() methods
+  - Case-insensitive validation for 6 languages (Java, Python, TypeScript, JavaScript, C, C++)
+  - REST API integration (POST/GET /api/v1/query)
+  - Web UI integration for language filter validation
+  - 22 unit tests with 100% coverage
+  - ST test case document with 5 test cases
+  - Example: `examples/20-language-filter.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

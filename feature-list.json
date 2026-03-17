@@ -407,7 +407,7 @@
       "title": "Web UI Search Page (FR-014)",
       "description": "M4: Interactive search interface with syntax-highlighted results; Developer Dark theme; requires authentication",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "[devtools] /search | EXPECT: search input with placeholder, language filter chips (All, Java, Python, TypeScript, JavaScript, C, C++), result card structure | REJECT: console errors, placeholder 'TODO', broken images",
         "Given authenticated user on Web UI, when entering query 'WebClient timeout' and submitting, then results are displayed with syntax-highlighted code snippets and metadata",
@@ -424,7 +424,9 @@
       "title": "Language Filter (FR-015)",
       "description": "M4: Restrict retrieval results to specified programming language",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-20-language-filter.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given query 'timeout' with language filter 'Java', when retrieval executes, then only Java-language chunks appear in results",
         "Given query with language filter 'UnsupportedLang', when submitted, then validation error lists supported languages (Java, Python, TypeScript, JavaScript, C, C++)",

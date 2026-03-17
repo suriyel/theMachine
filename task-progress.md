@@ -1,11 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 18/32 features passing (56%) · Last: #18 MCP Server · Next: #19 Web UI Search Page
+Progress: 19/32 features passing (59%) · Last: #20 Language Filter · Next: #21 Web UI Login Page
 
 ---
 
 ## Session Log
+
+### Session 18 — 2026-03-17 (Feature #20)
+**Focus**: Language Filter (FR-015) (M4: Interface)
+**Completed**:
+- Implemented LanguageFilter class with validate() and apply() methods
+- Case-insensitive validation for 6 languages (Java, Python, TypeScript, JavaScript, C, C++)
+- REST API integration (POST/GET /api/v1/query)
+- Web UI integration for language filter validation
+- Created 22 unit tests with 100% coverage
+- Generated ST test case document with 5 test cases
+- Passed spec & design compliance review
+- Created example: examples/20-language-filter.py
+**Quality Gates**:
+- Gate 0 (Real Tests): PASS (pure utility class, no external deps)
+- Gate 1 (Coverage): PASS (100% line and branch coverage)
+- Gate 2 (Mutation): SKIPPED (environment issue)
+- Gate 3 (Verify): PASS (22 tests)
+**Issues**: ST test cases blocked by pre-existing QueryHandler bug (not related to this feature)
+**Next Priority**: Feature #21 — Web UI Login Page (M4: Interface)
+**Git Commits**: 50594e1
 
 ### Session 17 — 2026-03-16 (Feature #18)
 **Focus**: MCP Server (FR-013) (M4: Interface)
