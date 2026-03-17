@@ -26,6 +26,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 19 | Web UI Search Page (FR-014) | [19-web-ui-search-page.py](19-web-ui-search-page.py) | `python examples/19-web-ui-search-page.py` |
 | 20 | Language Filter (FR-015) | [20-language-filter.py](20-language-filter.py) | `python examples/20-language-filter.py` |
 | 27 | NFR-002: Query Throughput | [27-query-throughput.py](27-query-throughput.py) | `python examples/27-query-throughput.py --validate-sustained 1200` |
+| 28 | NFR-003: Repository Capacity | [28-nfr03-repository-capacity.py](28-nfr03-repository-capacity.py) | `python examples/28-nfr03-repository-capacity.py` |
 
 ## Prerequisites
 
@@ -204,6 +205,22 @@ Quick validation examples:
 ```bash
 python examples/27-query-throughput.py --validate-sustained 1200  # PASS
 python examples/27-query-throughput.py --validate-burst 2500     # PASS
+```
+
+## Feature 28: NFR-003 Repository Capacity
+
+Demonstrates the capacity test runner for NFR-003:
+- Validate repository count range (100-1000)
+- Validate latency threshold (P95 <= 1000ms, NFR-001 bound)
+- Progressive scale points: [100, 250, 500, 750, 1000]
+- Run full capacity tests (requires services running with indexed data)
+- Quick validation mode for CI/CD pipelines
+
+Quick validation examples:
+```bash
+python examples/28-nfr03-repository-capacity.py  # Validate thresholds
+python scripts/run_capacity_test.py --validate --repos 500 --latency 800   # PASS
+python scripts/run_capacity_test.py --validate --repos 1000 --latency 950  # PASS
 ```
 
 ---
