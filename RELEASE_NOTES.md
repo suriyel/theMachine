@@ -186,6 +186,15 @@
   - 15 unit tests covering validation logic
   - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
   - Example: `examples/27-query-throughput.py`
+- **Feature #28: NFR-003: Repository Capacity**
+  - Capacity test runner script (scripts/run_capacity_test.py)
+  - Repository count range: 100-1000
+  - Latency threshold: P95 <= 1000ms (NFR-001 bound)
+  - Progressive scale points: [100, 250, 500, 750, 1000]
+  - Threshold validation with exit codes (0 = pass, 1 = fail)
+  - 15 unit tests covering validation logic
+  - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
+  - Example: `examples/28-nfr03-repository-capacity.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

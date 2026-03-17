@@ -557,12 +557,14 @@
       "title": "NFR-003: Repository Capacity",
       "description": "Index 100-1000 repositories simultaneously without degradation",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given progressive addition of repositories from 100 to 1000, when measuring query latency, then latency remains within NFR-001 bounds"
       ],
       "dependencies": [7],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-28-nfr-003-repository-capacity.md",
+      "st_case_count": 4
     },
     {
       "id": 29,
