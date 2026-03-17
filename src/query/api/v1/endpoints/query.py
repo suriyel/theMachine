@@ -9,10 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.query.auth import AuthMiddleware
 from src.query.dependencies import get_db, get_query_handler
 from src.query.handler import QueryHandler
+from src.query.language_filter import LanguageFilter
 from src.query.models import QueryRequest, QueryResponse
 from src.shared.models.api_key import APIKey
 
 router = APIRouter()
+
+# Language filter instance for validation
+_language_filter = LanguageFilter()
 
 
 async def require_api_key(request: Request, db: AsyncSession = Depends(get_db)) -> APIKey:
@@ -40,6 +44,13 @@ async def post_query(
     query_handler: QueryHandler = Depends(get_query_handler),
 ) -> QueryResponse:
     """Submit a query and retrieve context results."""
+    # Validate language filter if provided
+    if query_request.language:
+        try:
+            _language_filter.validate(query_request.language)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
     # Authenticate
     auth = AuthMiddleware(db)
     api_key = await auth.require_auth(request)
@@ -67,6 +78,13 @@ async def get_query(
     # Validate query param
     if not query or not query.strip():
         raise HTTPException(status_code=422, detail="Query parameter is required")
+
+    # Validate language filter if provided
+    if language:
+        try:
+            _language_filter.validate(language)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     # Authenticate
     auth = AuthMiddleware(db)

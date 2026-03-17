@@ -23,6 +23,8 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 16 | API Key Authentication (FR-018) | [16-api-key-authentication.py](16-api-key-authentication.py) | `python examples/16-api-key-authentication.py` |
 | 17 | REST API Endpoints | [17-rest-api-endpoints.py](17-rest-api-endpoints.py) | `python examples/17-rest-api-endpoints.py` |
 | 18 | MCP Server (FR-013) | [18-mcp-server.py](18-mcp-server.py) | `python -m src.query.mcp` |
+| 19 | Web UI Search Page (FR-014) | [19-web-ui-search-page.py](19-web-ui-search-page.py) | `python examples/19-web-ui-search-page.py` |
+| 20 | Language Filter (FR-015) | [20-language-filter.py](20-language-filter.py) | `python examples/20-language-filter.py` |
 
 ## Prerequisites
 
@@ -172,6 +174,22 @@ Demonstrates the MCP Server:
 - Supports HTTP SSE transport for remote AI agent integration
 - Tool parameters: query (required), api_key (required), repo (optional), language (optional)
 - Error handling: missing params, invalid auth, empty query
+
+## Feature 19: Web UI Search Page (FR-014)
+
+Demonstrates the Web UI search interface:
+- Interactive search page with syntax-highlighted results
+- Language filter chips (All, Java, Python, TypeScript, JavaScript, C, C++)
+- Developer Dark theme with Prism.js syntax highlighting
+- HTMX for seamless page updates
+
+## Feature 20: Language Filter (FR-015)
+
+Demonstrates the LanguageFilter class:
+- Validate language filters (case-insensitive)
+- Support 6 languages: Java, Python, TypeScript, JavaScript, C, C++
+- Return normalized lowercase language or raise ValueError for unsupported
+- Filter Candidate objects by programming language
 
 ---
 
