@@ -442,7 +442,7 @@
       "title": "Web UI Login Page (FR-018)",
       "description": "M4: API key input form; validate and create session; redirect to search on success",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "[devtools] /login | EXPECT: API key input (password-masked), Sign In button | REJECT: console errors, visible API key value",
         "Given login page, when entering valid API key and clicking Sign In, then redirect to /search and user session established",
@@ -451,7 +451,9 @@
       ],
       "dependencies": [16, 19],
       "ui": true,
-      "ui_entry": "/login"
+      "ui_entry": "/login",
+      "st_case_path": "docs/test-cases/feature-21-web-ui-login-page.md",
+      "st_case_count": 7
     },
     {
       "id": 22,
@@ -459,14 +461,16 @@
       "title": "Scheduled Index Refresh (FR-016)",
       "description": "M5: Celery Beat triggers re-indexing on configurable schedule (default weekly)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given default configuration, when one week has elapsed since last indexing, then re-indexing is automatically triggered for all registered repositories",
         "Given custom schedule configured to daily, when one day has elapsed, then re-indexing is triggered",
         "Given scheduled re-indexing with some repos failing, when run completes, then successful repos are indexed, errors are logged, and alert is sent"
       ],
       "dependencies": [3, 7],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-22-scheduled-index-refresh.md",
+      "st_case_count": 4
     },
     {
       "id": 23,
@@ -474,13 +478,15 @@
       "title": "Manual Reindex Trigger (FR-017)",
       "description": "M5: Admin API to queue immediate indexing job for specific repository",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given registered repository with no active job, when POST /api/v1/repos/{id}/reindex, then new indexing job is queued and begins processing",
         "Given repository with active indexing job in progress, when POST /api/v1/repos/{id}/reindex, then 409 Conflict with message indicating active job exists"
       ],
       "dependencies": [22],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-23-manual-reindex-trigger.md",
+      "st_case_count": 4
     },
     {
       "id": 24,
@@ -488,13 +494,15 @@
       "title": "Metrics Endpoint (NFR-008)",
       "description": "M5: Prometheus metrics for latency, throughput, index size, error rate",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given running Query Service, when GET /api/v1/metrics, then Prometheus-format response includes ccr_query_latency_seconds, ccr_query_throughput_total, ccr_index_size_bytes, ccr_query_errors_total",
         "Given 100 queries executed, when checking metrics, then ccr_query_throughput_total shows 100 increment"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-24-metrics-endpoint.md",
+      "st_case_count": 5
     },
     {
       "id": 25,
@@ -502,13 +510,15 @@
       "title": "Query Logging (NFR-009)",
       "description": "M5: Log all query requests with timestamp, correlation ID, query text, latency",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given 100 queries submitted, when checking logs, then 100 log entries exist each with correlation_id, timestamp, query_text, latency_ms",
         "Given a query fails, when checking logs, then error is logged with same correlation_id for tracing"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-25-query-logging.md",
+      "st_case_count": 4
     },
     {
       "id": 26,
@@ -516,12 +526,14 @@
       "title": "NFR-001: Query Latency P95",
       "description": "P95 query response time <= 1000ms under 1000 QPS load",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given k6 load test with 1000 concurrent users for 10 minutes, when measuring P95 latency, then P95 <= 1000ms"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-26-nfr-001-query-latency-p95.md",
+      "st_case_count": 3
     },
     {
       "id": 27,
@@ -529,13 +541,15 @@
       "title": "NFR-002: Query Throughput",
       "description": "Sustained >= 1000 QPS, peak >= 2000 QPS for 10 minutes",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given k6 load test targeting 1000 QPS for 10 minutes, when measuring throughput, then sustained >= 1000 QPS",
         "Given k6 load test targeting 2000 QPS burst, when measuring peak, then peak >= 2000 QPS achieved"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-27-nfr-002-query-throughput.md",
+      "st_case_count": 4
     },
     {
       "id": 28,

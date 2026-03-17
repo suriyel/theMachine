@@ -178,6 +178,14 @@
   - 22 unit tests with 100% coverage
   - ST test case document with 5 test cases
   - Example: `examples/20-language-filter.py`
+- **Feature #27: NFR-002: Query Throughput**
+  - Throughput test runner script (scripts/run_throughput_test.py)
+  - Sustained load test: >= 1000 QPS for 10 minutes
+  - Burst load test: >= 2000 QPS peak
+  - Threshold validation with exit codes (0 = pass, 1 = fail)
+  - 15 unit tests covering validation logic
+  - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
+  - Example: `examples/27-query-throughput.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files
