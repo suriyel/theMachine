@@ -195,6 +195,15 @@
   - 15 unit tests covering validation logic
   - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
   - Example: `examples/28-nfr03-repository-capacity.py`
+- **Feature #29: NFR-004: Single Repository Size**
+  - Repository size test runner script (scripts/run_repo_size_test.py)
+  - Repository size limit: 1GB (1024 MB)
+  - Chunk indexing validation
+  - Large file handling tests
+  - Threshold validation with exit codes (0 = pass, 1 = fail)
+  - 22 unit tests covering validation logic
+  - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
+  - Example: `examples/29-nfr04-repository-size.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

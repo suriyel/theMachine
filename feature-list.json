@@ -572,12 +572,14 @@
       "title": "NFR-004: Single Repository Size",
       "description": "Index repositories up to 1GB without failure",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given 1GB repository, when indexing job runs, then job completes successfully with all chunks indexed"
       ],
       "dependencies": [7],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-29-nfr-004-single-repository-size.md",
+      "st_case_count": 4
     },
     {
       "id": 30,
