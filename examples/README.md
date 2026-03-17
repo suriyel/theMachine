@@ -27,6 +27,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 20 | Language Filter (FR-015) | [20-language-filter.py](20-language-filter.py) | `python examples/20-language-filter.py` |
 | 27 | NFR-002: Query Throughput | [27-query-throughput.py](27-query-throughput.py) | `python examples/27-query-throughput.py --validate-sustained 1200` |
 | 28 | NFR-003: Repository Capacity | [28-nfr03-repository-capacity.py](28-nfr03-repository-capacity.py) | `python examples/28-nfr03-repository-capacity.py` |
+| 29 | NFR-004: Single Repository Size | [29-nfr04-repository-size.py](29-nfr04-repository-size.py) | `python examples/29-nfr04-repository-size.py 1024 20000` |
 
 ## Prerequisites
 
@@ -221,6 +222,22 @@ Quick validation examples:
 python examples/28-nfr03-repository-capacity.py  # Validate thresholds
 python scripts/run_capacity_test.py --validate --repos 500 --latency 800   # PASS
 python scripts/run_capacity_test.py --validate --repos 1000 --latency 950  # PASS
+```
+
+## Feature 29: NFR-004 Single Repository Size
+
+Demonstrates the repository size test runner for NFR-004:
+- Validate repository size threshold (<= 1GB / 1024MB)
+- Validate chunk indexing success
+- Large file handling tests
+- Run full size tests (requires services running with test repository)
+- Quick validation mode for CI/CD pipelines
+
+Quick validation examples:
+```bash
+python examples/29-nfr04-repository-size.py 500 10000   # PASS - 500MB with 10000 chunks
+python examples/29-nfr04-repository-size.py 1024 20000 # PASS - 1GB with 20000 chunks
+python scripts/run_repo_size_test.py --validate --size 500 --chunks 10000
 ```
 
 ---
