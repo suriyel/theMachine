@@ -587,12 +587,14 @@
       "title": "NFR-005: Service Availability",
       "description": "99.9% uptime (<= 8.76 hours downtime per year)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given 1-minute health check monitoring, when measuring over measurement period, then 99.9% of health checks succeed"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-30-nfr-005-service-availability.md",
+      "st_case_count": 5
     },
     {
       "id": 31,

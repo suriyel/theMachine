@@ -204,6 +204,17 @@
   - 22 unit tests covering validation logic
   - ST test case document with 4 test cases (FUNC, BNDRY, PERF)
   - Example: `examples/29-nfr04-repository-size.py`
+- **Feature #30: NFR-005: Service Availability**
+  - Service availability test runner script (scripts/run_availability_test.py)
+  - Availability threshold: 99.9% uptime (max 8.76 hours downtime/year)
+  - Validate mode for pre-collected metrics
+  - Monitor mode for live health check monitoring
+  - Boundary validation: 99.9% passes, 99.89% fails
+  - Input validation: negative values, successful > total
+  - Custom threshold support
+  - 26 unit tests covering validation logic
+  - ST test case document with 5 test cases (FUNC, BNDRY, PERF)
+  - Example: `examples/30-nfr05-service-availability.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

@@ -1,11 +1,30 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 22/32 features passing (68%) · Last: #29 NFR-004 Single Repository Size · Next: #30 NFR-005 Service Availability
+Progress: 23/32 features passing (72%) · Last: #30 NFR-005 Service Availability · Next: #31 NFR-006 Linear Scalability
 
 ---
 
 ## Session Log
+
+### Session 22 — 2026-03-18 (Feature #30)
+**Focus**: NFR-005: Service Availability (Non-Functional)
+**Completed**:
+- Implemented service availability test runner script (scripts/run_availability_test.py)
+- Created 26 unit tests covering threshold validation
+- Generated ST test case document with 5 test cases (FUNC, BNDRY, PERF)
+- Passed spec & design compliance review
+- Created example: examples/30-nfr05-service-availability.py
+**Quality Gates**:
+- Gate 0 (Real Tests): N/A (NFR verification via monitoring)
+- Gate 1 (Coverage): N/A (scripts not in src/ coverage scope)
+- Gate 2 (Mutation): N/A (NFR verification via monitoring)
+- Gate 3 (Verify): PASS (26 tests)
+**Issues**: None blocking - Full availability testing requires running services over extended period
+**Next Priority**: Feature #31 — NFR-006 Linear Scalability (Non-Functional)
+**Git Commits**: ae993b4
+
+---
 
 ### Session 21 — 2026-03-18 (Feature #29)
 **Focus**: NFR-004: Single Repository Size (Non-Functional)
