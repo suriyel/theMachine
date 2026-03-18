@@ -28,6 +28,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 27 | NFR-002: Query Throughput | [27-query-throughput.py](27-query-throughput.py) | `python examples/27-query-throughput.py --validate-sustained 1200` |
 | 28 | NFR-003: Repository Capacity | [28-nfr03-repository-capacity.py](28-nfr03-repository-capacity.py) | `python examples/28-nfr03-repository-capacity.py` |
 | 29 | NFR-004: Single Repository Size | [29-nfr04-repository-size.py](29-nfr04-repository-size.py) | `python examples/29-nfr04-repository-size.py 1024 20000` |
+| 30 | NFR-005: Service Availability | [30-nfr05-service-availability.py](30-nfr05-service-availability.py) | `python examples/30-nfr05-service-availability.py` |
 
 ## Prerequisites
 
@@ -238,6 +239,23 @@ Quick validation examples:
 python examples/29-nfr04-repository-size.py 500 10000   # PASS - 500MB with 10000 chunks
 python examples/29-nfr04-repository-size.py 1024 20000 # PASS - 1GB with 20000 chunks
 python scripts/run_repo_size_test.py --validate --size 500 --chunks 10000
+```
+
+## Feature 30: NFR-005 Service Availability
+
+Demonstrates the availability test runner for NFR-005:
+- Validate availability threshold (>= 99.9%)
+- Validate boundary conditions (99.9%, 99.89%, 95%)
+- Input validation (negative values, successful > total)
+- Custom threshold support
+- Monitor mode for live availability tracking
+- Quick validation mode for CI/CD pipelines
+
+Quick validation examples:
+```bash
+python examples/30-nfr05-service-availability.py  # Validate thresholds
+python scripts/run_availability_test.py --validate --checks 1000 --successful 999  # PASS - 99.9%
+python scripts/run_availability_test.py --validate --checks 1000 --successful 998  # FAIL - 99.8%
 ```
 
 ---
