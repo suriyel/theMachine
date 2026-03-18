@@ -29,6 +29,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 28 | NFR-003: Repository Capacity | [28-nfr03-repository-capacity.py](28-nfr03-repository-capacity.py) | `python examples/28-nfr03-repository-capacity.py` |
 | 29 | NFR-004: Single Repository Size | [29-nfr04-repository-size.py](29-nfr04-repository-size.py) | `python examples/29-nfr04-repository-size.py 1024 20000` |
 | 30 | NFR-005: Service Availability | [30-nfr05-service-availability.py](30-nfr05-service-availability.py) | `python examples/30-nfr05-service-availability.py` |
+| 31 | NFR-006: Linear Scalability | [31-nfr06-linear-scalability.py](31-nfr06-linear-scalability.py) | `python examples/31-nfr06-linear-scalability.py` |
 
 ## Prerequisites
 
@@ -256,6 +257,22 @@ Quick validation examples:
 python examples/30-nfr05-service-availability.py  # Validate thresholds
 python scripts/run_availability_test.py --validate --checks 1000 --successful 999  # PASS - 99.9%
 python scripts/run_availability_test.py --validate --checks 1000 --successful 998  # FAIL - 99.8%
+```
+
+## Feature 31: NFR-006 Linear Scalability
+
+Demonstrates the scalability test runner for NFR-006:
+- Validate linear scaling threshold (80-120% per-node capacity increase)
+- Support for multiple node counts (1→2, 2→3, 3→4, etc.)
+- Custom threshold support for flexible validation
+- Input validation (negative values, nodes1 <= nodes)
+- Quick validation mode for CI/CD pipelines
+
+Quick validation examples:
+```bash
+python examples/31-nfr06-linear-scalability.py  # Validate thresholds
+python scripts/run_scalability_test.py --validate --nodes 1 --throughput 1000 --nodes1 2 --throughput1 2000  # PASS - 100%
+python scripts/run_scalability_test.py --validate --nodes 1 --throughput 1000 --nodes1 2 --throughput1 1800  # PASS - 80%
 ```
 
 ---
