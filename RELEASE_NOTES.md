@@ -215,6 +215,17 @@
   - 26 unit tests covering validation logic
   - ST test case document with 5 test cases (FUNC, BNDRY, PERF)
   - Example: `examples/30-nfr05-service-availability.py`
+- **Feature #31: NFR-006: Linear Scalability**
+  - Linear scalability test runner script (scripts/run_scalability_test.py)
+  - Scaling threshold: 80-120% per-node capacity increase
+  - Validate mode for pre-collected metrics
+  - Boundary validation: 80% and 120% pass, 79% and 121% fail
+  - Support for multiple node counts (1→2, 2→3, 3→4, etc.)
+  - Custom threshold support (--threshold-min, --threshold-max)
+  - Input validation (negative values, nodes1 <= nodes)
+  - 22 unit tests covering validation logic
+  - ST test case document with 5 test cases (FUNC, BNDRY, PERF)
+  - Example: `examples/31-nfr06-linear-scalability.py`
 - **Feature #5: Content Extraction (FR-003)**
   - ContentExtractor class for extracting indexable content
   - Identifies README, CHANGELOG, documentation, and source files

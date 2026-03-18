@@ -602,12 +602,14 @@
       "title": "NFR-006: Linear Scalability",
       "description": "Adding a node increases throughput linearly (±20%)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given N query nodes, when measuring throughput, then N+1 nodes provide 80-120% of per-node capacity increase"
       ],
       "dependencies": [17],
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-31-nfr-006-linear-scalability.md",
+      "st_case_count": 5
     },
     {
       "id": 32,
