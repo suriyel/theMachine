@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_TTL_SECONDS: int = 300  # 5 minutes cache TTL
 
     # Qdrant
     QDRANT_URL: str = "http://localhost:6333"

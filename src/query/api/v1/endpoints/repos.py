@@ -113,6 +113,44 @@ async def trigger_reindex(
     repo_id: UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ReindexResponse:
-    """Trigger manual reindex for a specific repository."""
-    # TODO: Implement manual reindex trigger (FR-017)
-    raise HTTPException(status_code=501, detail="Not implemented")
+    """Trigger manual reindex for a specific repository.
+
+    Args:
+        repo_id: UUID of the repository to reindex
+        db: Database session
+
+    Returns:
+        ReindexResponse with job details
+
+    Raises:
+        HTTPException: 404 if repo not found, 409 if active job exists
+    """
+    from src.shared.models.index_job import TriggerType
+
+    repo_manager = RepoManager(db)
+
+    try:
+        # Check for existing active job
+        if await repo_manager.has_active_job(repo_id):
+            raise HTTPException(
+                status_code=409,
+                detail="Repository already has an active indexing job in progress",
+            )
+
+        # Queue the indexing job
+        job = await repo_manager.queue_indexing(repo_id, TriggerType.MANUAL)
+
+        return ReindexResponse(
+            job_id=job.id,
+            repo_id=repo_id,
+            status=job.status.value,
+            message="Indexing job queued successfully",
+        )
+
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=error_msg)
+        if "active" in error_msg.lower():
+            raise HTTPException(status_code=409, detail=error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)

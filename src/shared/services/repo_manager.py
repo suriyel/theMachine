@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.shared.models import Repository, RepoStatus
+from src.shared.models.index_job import IndexJob, JobStatus, TriggerType
 from src.shared.utils.git_validator import validate_git_url
 
 
@@ -140,3 +141,59 @@ class RepoManager:
         repo = await self.get(repo_id)
         await self.db.delete(repo)
         await self.db.flush()
+
+    async def queue_indexing(
+        self,
+        repo_id: UUID,
+        trigger_type: TriggerType = TriggerType.MANUAL,
+    ) -> IndexJob:
+        """Queue an indexing job for a repository.
+
+        Args:
+            repo_id: Repository UUID to index
+            trigger_type: How the job was triggered (manual or scheduled)
+
+        Returns:
+            Created IndexJob object
+
+        Raises:
+            ValueError: If repository not found
+        """
+        repo = await self.get(repo_id)
+
+        # Check if there's already an active job
+        if await self.has_active_job(repo_id):
+            raise ValueError(f"Repository {repo_id} already has an active indexing job")
+
+        # Create indexing job
+        job = IndexJob(
+            repo_id=repo_id,
+            status=JobStatus.QUEUED,
+            trigger_type=trigger_type,
+        )
+        self.db.add(job)
+        await self.db.flush()
+        await self.db.refresh(job)
+
+        # Update repository status
+        repo.status = RepoStatus.INDEXING
+        await self.db.flush()
+
+        return job
+
+    async def has_active_job(self, repo_id: UUID) -> bool:
+        """Check if repository has an active (queued or running) job.
+
+        Args:
+            repo_id: Repository UUID
+
+        Returns:
+            True if there's an active job, False otherwise
+        """
+        result = await self.db.execute(
+            select(IndexJob).where(
+                IndexJob.repo_id == repo_id,
+                IndexJob.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]),
+            )
+        )
+        return result.scalar_one_or_none() is not None

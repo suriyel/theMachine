@@ -144,6 +144,8 @@ class IndexWriter:
 
     async def _write_to_elasticsearch(self, chunks: List[CodeChunk]) -> None:
         """Write chunks to Elasticsearch."""
+        if self._es_client is None:
+            return
         await self._ensure_es_index()
         client = self._get_es_client()
 
@@ -213,6 +215,8 @@ class IndexWriter:
 
     async def _delete_from_elasticsearch(self, repo_id: str) -> None:
         """Delete chunks from Elasticsearch by repo_id."""
+        if self._es_client is None:
+            return
         await self._ensure_es_index()
         client = self._get_es_client()
 

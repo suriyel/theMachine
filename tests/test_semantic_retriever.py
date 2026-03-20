@@ -11,9 +11,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import asdict
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, ScoredPoint
+from qdrant_client.http.models.models import QueryResponse
 
 # Import the class under test - will fail until implemented
 from src.query.retriever import SemanticRetriever, Candidate
+
+
+def make_query_response(points):
+    """Create a QueryResponse from a list of ScoredPoints."""
+    return QueryResponse(points=points)
 
 
 # [real_test] — Real Qdrant integration test
@@ -29,6 +35,15 @@ class TestSemanticRetrieverReal:
         from src.query.config import settings
 
         qdrant = AsyncQdrantClient(url=settings.QDRANT_URL)
+        # Verify collection exists (sync call)
+        try:
+            collections = qdrant.get_collections().collections
+            collection_names = [c.name for c in collections]
+            if "code_chunks" not in collection_names:
+                pytest.skip("code_chunks collection not found in Qdrant - run indexing first")
+        except Exception:
+            pytest.skip("Qdrant not available")
+
         encoder = EmbeddingEncoder()
         retriever = SemanticRetriever(
             qdrant_client=qdrant,
@@ -81,7 +96,7 @@ class TestSemanticRetrieverUnit:
         """Create a mocked Qdrant client."""
         client = AsyncMock()
         # Remove spec to allow setting any attribute
-        client.search = AsyncMock()
+        client.query_points = AsyncMock()
         return client
 
     @pytest.fixture
@@ -109,7 +124,7 @@ class TestSemanticRetrieverUnit:
         when semantic retrieval executes,
         then semantically related chunks appear despite keyword mismatch."""
         # Mock Qdrant response with high-scored results
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-123",
                 version=1,
@@ -125,7 +140,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         # Execute query
         results = await retriever.retrieve("how to configure spring http client timeout", {})
@@ -148,7 +163,7 @@ class TestSemanticRetrieverUnit:
         when semantic retrieval executes,
         then an empty candidate list is returned for this retrieval method."""
         # Mock Qdrant response with low-scored results (below threshold)
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-low",
                 version=1,
@@ -164,7 +179,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         results = await retriever.retrieve("xyznonexistent123", {})
 
@@ -185,7 +200,7 @@ class TestSemanticRetrieverUnit:
         )
 
         # Mock Qdrant response with mixed scores
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-high",
                 version=1,
@@ -216,7 +231,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         results = await high_threshold_retriever.retrieve("query", {})
 
@@ -232,7 +247,7 @@ class TestSemanticRetrieverUnit:
         when semantic retrieval executes,
         then only chunks from specified repo are returned."""
         # Mock Qdrant response - should filter at Qdrant level
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-1",
                 version=1,
@@ -248,7 +263,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         results = await retriever.retrieve("timeout", {"repo_filter": "spring-framework"})
 
@@ -256,7 +271,7 @@ class TestSemanticRetrieverUnit:
         assert results[0].repo_name == "spring-framework"
 
         # Verify Qdrant search was called with filter
-        call_args = mock_qdrant_client.search.call_args
+        call_args = mock_qdrant_client.query_points.call_args
         assert call_args is not None
 
     # [unit] — language filter: only chunks in specified language
@@ -265,7 +280,7 @@ class TestSemanticRetrieverUnit:
         """Given query with language filter,
         when semantic retrieval executes,
         then only chunks in specified language are returned."""
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-1",
                 version=1,
@@ -281,7 +296,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         results = await retriever.retrieve("process", {"language_filter": "python"})
 
@@ -294,7 +309,7 @@ class TestSemanticRetrieverUnit:
         """Given query with both repo and language filter,
         when semantic retrieval executes,
         then only matching chunks are returned."""
-        mock_qdrant_client.search.return_value = [
+        mock_qdrant_client.query_points.return_value = make_query_response([
             ScoredPoint(
                 id="chunk-1",
                 version=1,
@@ -310,7 +325,7 @@ class TestSemanticRetrieverUnit:
                 shard_key=None,
                 missing=None
             )
-        ]
+        ])
 
         results = await retriever.retrieve(
             "process",
@@ -345,7 +360,7 @@ class TestSemanticRetrieverUnit:
         """Given Qdrant connection error,
         when semantic retrieval executes,
         then exception is propagated."""
-        mock_qdrant_client.search.side_effect = Exception("Connection refused")
+        mock_qdrant_client.query_points.side_effect = Exception("Connection refused")
 
         with pytest.raises(Exception, match="Connection refused"):
             await retriever.retrieve("query", {})

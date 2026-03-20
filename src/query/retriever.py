@@ -170,14 +170,7 @@ class SemanticRetriever:
         # Encode query to embedding
         query_vector = self._encoder.encode_query(query)
 
-        # Build search parameters
-        search_params = {
-            "collection_name": self._collection_name,
-            "query_vector": query_vector,
-            "limit": 100,
-        }
-
-        # Add filters if provided
+        # Build filter conditions
         must_filters = []
         if filters.get("repo_filter"):
             must_filters.append({
@@ -190,19 +183,17 @@ class SemanticRetriever:
                 "match": {"value": filters["language_filter"]}
             })
 
-        if must_filters:
-            search_params["query_filter"] = {
-                "must": must_filters
-            }
-
-        # Execute vector search
-        response = await self._qdrant.search(
-            **search_params
+        # Execute vector search using query_points API
+        response = await self._qdrant.query_points(
+            collection_name=self._collection_name,
+            query=query_vector,
+            query_filter={"must": must_filters} if must_filters else None,
+            limit=100,
         )
 
         # Parse results and filter by threshold
         candidates = []
-        for point in response:
+        for point in response.points:
             # Filter by threshold
             if point.score < self._threshold:
                 continue

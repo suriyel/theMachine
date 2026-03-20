@@ -22,6 +22,10 @@ async_session_maker = async_sessionmaker(
 )
 
 
+# Alias for direct session creation in Celery tasks
+AsyncSessionLocal = async_session_maker
+
+
 class Base(DeclarativeBase):
     """SQLAlchemy declarative base for all models."""
 

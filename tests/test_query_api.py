@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.query.main import app
 from src.query.dependencies import get_query_handler, get_db
+from src.query.cache import get_query_cache, QueryCache
 from src.query.handler import QueryHandler
 from src.shared.models import APIKey, KeyStatus
 
@@ -55,6 +56,17 @@ def create_mock_response(results=None, query_time_ms=100.0):
     mock.results = results if results is not None else []
     mock.query_time_ms = query_time_ms
     return mock
+
+
+# Mock QueryCache for testing
+async def mock_get_query_cache():
+    """Create a mock QueryCache that bypasses caching."""
+    mock_cache = AsyncMock(spec=QueryCache)
+    # Make get_or_compute call the handler directly without caching
+    async def bypass_cache(request, compute_fn):
+        return await compute_fn(request)
+    mock_cache.get_or_compute = bypass_cache
+    return mock_cache
 
 
 # ============================================================================
@@ -89,6 +101,7 @@ async def test_post_query_with_valid_api_key_returns_200():
     # Override dependencies
     app.dependency_overrides[get_query_handler] = mock_handler
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_query_cache] = mock_get_query_cache
 
     try:
         transport = ASGITransport(app=app)
@@ -286,6 +299,7 @@ async def test_post_query_with_whitespace_only_query_returns_422():
 
     app.dependency_overrides[get_query_handler] = mock_handler
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_query_cache] = mock_get_query_cache
 
     try:
         transport = ASGITransport(app=app)
@@ -369,6 +383,7 @@ async def test_post_query_with_repo_filter():
 
     app.dependency_overrides[get_query_handler] = mock_handler
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_query_cache] = mock_get_query_cache
 
     try:
         transport = ASGITransport(app=app)
@@ -406,6 +421,7 @@ async def test_post_query_with_language_filter():
 
     app.dependency_overrides[get_query_handler] = mock_handler
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_query_cache] = mock_get_query_cache
 
     try:
         transport = ASGITransport(app=app)
@@ -443,6 +459,7 @@ async def test_post_query_with_top_k_parameter():
 
     app.dependency_overrides[get_query_handler] = mock_handler
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_query_cache] = mock_get_query_cache
 
     try:
         transport = ASGITransport(app=app)

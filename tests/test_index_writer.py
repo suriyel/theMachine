@@ -15,6 +15,10 @@ class TestIndexWriterIntegration:
     """Integration tests for IndexWriter with real services."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        os.getenv("ELASTICSEARCH_URL") is None,
+        reason="ELASTICSEARCH_URL not set - skipping Elasticsearch test"
+    )
     async def test_elasticsearch_connection(self):
         """Given Elasticsearch is running, when connecting, then connection succeeds."""
         from src.indexing.index_writer import IndexWriter
