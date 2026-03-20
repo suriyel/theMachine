@@ -112,3 +112,64 @@ netstat -ano | findstr :3000    # expect no output
 2. **Verify dead** — run Verify Services Stopped; poll port max 5 seconds — must not respond
 3. **Start** — run Start All Services with output capture → `head -30` → extract new PID/port → update task-progress.md
 4. **Verify alive** — run Verify Services Running; poll health endpoint max 10 seconds — must respond
+
+---
+
+## Mutation Testing (mutmut 3.2.0)
+
+### Known Issue: `src` as top-level package
+
+mutmut 3.2.0 has一个 hardcoded `strip_prefix(prefix='src.')` on `__main__.py:261`, designed for [src-layout](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/) projects where `src/` is NOT importable. This project uses `src` as the top-level package itself, causing a name mismatch:
+
+| Source | Mutant key (from file path) | Stats key (from `orig.__module__`) |
+|---|---|---|
+| Before patch | `shared.database.x_get_engine` | `src.shared.database.x_get_engine` |
+| After patch | `src.shared.database.x_get_engine` | `src.shared.database.x_get_engine` |
+
+The mismatch makes all mutants report "no tests" (🫥, exit code 33) even though tests DO kill them.
+
+### Applied Patch
+
+**File**: `.venv/lib/python3.12/site-packages/mutmut/__main__.py` line 261
+
+```python
+# BEFORE (broken for src-as-package):
+module_name = strip_prefix(str(filename)[:-len(filename.suffix)].replace(os.sep, '.'), prefix='src.')
+
+# AFTER (preserves src. prefix):
+module_name = str(filename)[:-len(filename.suffix)].replace(os.sep, '.')
+```
+
+**WARNING**: This patch lives inside `.venv/` and will be lost on `pip install mutmut` or venv recreation. Re-apply after:
+```bash
+pip install mutmut==3.2.0
+# Then patch line 261 of .venv/lib/python3.12/site-packages/mutmut/__main__.py
+sed -i "s/module_name = strip_prefix(str(filename)\[:-len(filename.suffix)\].replace(os.sep, '.'), prefix='src.')/module_name = str(filename)[:-len(filename.suffix)].replace(os.sep, '.')/" \
+  .venv/lib/python3.12/site-packages/mutmut/__main__.py
+```
+
+### conftest.py Hook
+
+`tests/conftest.py` includes a hook for when `MUTANT_UNDER_TEST` is set — it prepends CWD to `sys.path` and clears stale `src.*` module cache so trampolined code in `mutants/` takes priority over the editable install.
+
+### Run Commands
+
+```bash
+source .venv/bin/activate
+
+# Full mutation run
+mutmut run
+
+# Check results
+mutmut results
+
+# Show specific mutant diff
+mutmut show <mutant-name>
+```
+
+### Equivalent Mutants (expected survivors)
+
+| Mutant | Why equivalent |
+|---|---|
+| `echo=False` → `echo=True` or removed | SQLAlchemy `create_async_engine` defaults to `echo=False` |
+| `version="0.1.0"` removed | FastAPI defaults to `version="0.1.0"` |
