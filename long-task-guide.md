@@ -1,383 +1,193 @@
 # Code Context Retrieval — Worker Session Guide
 
-Project-specific workflow guide for implementing features through TDD with quality gates.
-
-## Orient
-
-Each session starts by understanding current state:
-
-1. **Load environment** — activate the project environment:
-   ```bash
-   # Windows
-   .venv\Scripts\activate
-   # Unix/macOS
-   source .venv/bin/activate
-   ```
-
-2. **Read progress** — `task-progress.md` `## Current State` section for stats, last completed feature, next feature
-
-3. **Read features** — `feature-list.json` for constraints, assumptions, required_configs, feature statuses
-
-4. **Read design overview** — `docs/plans/2026-03-14-code-context-retrieval-design.md` Section 1 (Design Drivers)
-
-5. **Check recent commits** — `git log --oneline -10`
-
-6. **Pick next feature** — highest-priority `"failing"` feature with all dependencies `"passing"`
-
-7. **For UI features** (`"ui": true`) — read UCD: `docs/plans/2026-03-14-code-context-retrieval-ucd.md`
-
-## Bootstrap
-
-1. **Environment setup** — if `init.sh` / `init.ps1` not yet run, execute once
-
-2. **Verify test commands**:
-   ```bash
-   python scripts/get_tool_commands.py feature-list.json
-   ```
-
-3. **Smoke test** — run tests to verify previously passing features still work:
-   ```bash
-   pytest
-   ```
-
-4. **Services** — do NOT start services during Bootstrap; services are managed by `long-task-feature-st` during ST Acceptance testing
-
-## Config Gate
-
-Before planning any feature with external dependencies:
-
-```bash
-python scripts/check_configs.py feature-list.json --feature <id>
-```
-
-**If configs missing:**
-1. For each missing `env`-type config, use `AskUserQuestion` to ask for the value
-2. Save to `.env` file in project root (format: `KEY=value`)
-3. Re-run check to confirm
-
-**Block until all configs pass.**
-
-## TDD Red
-
-Write failing tests FIRST. Tests define expected behavior.
-
-1. **Read spec** — extract `{srs_section}` and `{design_section}` via Document Lookup Protocol (read full subsections, not grep snippets)
-
-2. **Write unit tests** covering all verification_steps:
-   - Happy path scenarios
-   - Error handling scenarios
-   - Boundary conditions
-   - Security scenarios (if auth-related)
-   - Negative test ratio >= 40%
-   - Low-value assertion ratio <= 20%
-
-3. **For UI features** (`"ui": true`): write `[devtools]` functional tests using EXPECT/REJECT format:
-   ```
-   [devtools] /search | EXPECT: search input, language filter chips, result cards | REJECT: console errors, broken images, placeholder "TODO"
-   ```
-
-4. **Run tests** — ALL must FAIL (no implementation yet):
-   ```bash
-   pytest
-   ```
-
-## TDD Green
-
-Write minimal code to make ALL tests pass.
-
-1. **Implement** — write the minimum code necessary to pass tests
-
-2. **Run full suite**:
-   ```bash
-   pytest
-   ```
-   All tests must pass, no regressions.
-
-## Coverage Gate
-
-After TDD Green, verify test coverage:
-
-```bash
-pytest --cov=src --cov-branch --cov-report=term-missing
-```
-
-**Thresholds:**
-- Line coverage >= 90%
-- Branch coverage >= 80%
-
-**If below threshold:**
-- Identify uncovered lines from report
-- Write additional tests for those paths
-- Re-run coverage
-
-**Evidence required:** Full coverage report output showing line % and branch %.
-
-## TDD Refactor
-
-Clean up code while keeping tests green:
-
-1. **Refactor** — improve code structure, remove duplication, enhance readability
-
-2. **Re-run tests**:
-   ```bash
-   pytest
-   ```
-   Must still all pass.
-
-## Mutation Gate
-
-After refactor, verify test effectiveness:
-
-```bash
-# Incremental (changed files only)
-mutmut run --paths-to-mutate=src/module_name.py
-```
-
-**Threshold:** Mutation score >= 80%
-
-**If below threshold:**
-- Run `mutmut results` to see surviving mutants
-- Run `mutmut show <id>` to inspect each
-- Improve test assertions to kill mutants
-- Re-run mutation testing
-
-**Evidence required:** Mutation report showing killed/survived/total and score %.
-
-## Verification Enforcement
-
-Before marking any feature as passing, run fresh verification:
-
-```
-1. IDENTIFY → Get commands via get_tool_commands.py
-2. RUN → Execute each command fresh (not cached)
-3. READ → Full output for each
-4. VERIFY → Does ALL output confirm the claim?
-5. THEN CLAIM → Mark feature "passing"
-```
-
-**Red flag words that mean STOP and re-verify:**
-- "should pass", "probably works", "seems to be working"
-- "I believe this is correct", "this looks good"
-- "coverage is probably fine", "mutation score should be high enough"
-
-## Code Review (Spec & Design Compliance)
-
-After quality gates pass, run compliance review via `long-task:long-task-review`:
-
-- **Spec Compliance** — Does implementation match verification_steps and SRS?
-- **Design Compliance** — Does implementation follow class diagrams, sequence flows, dependency versions?
-- **UCD Compliance** (ui:true only) — Do style tokens match UCD guide?
-
-## ST Test Cases
-
-After quality gates pass, run ST Acceptance Testing via `long-task:long-task-feature-st`:
-
-**Purpose:** Black-box acceptance testing per feature, ISO/IEC/IEEE 29119 compliant.
-
-**Process:**
-1. Invoke `long-task:long-task-feature-st` skill
-2. Skill manages environment lifecycle (start/stop services)
-3. Execute all `[devtools]` verification steps via Chrome DevTools MCP
-4. Generate test case document: `docs/test-cases/feature-{id}-{slug}.md`
-
-**Test case document includes:**
-- Test case ID and traceability (FR-xxx, verification_steps)
-- Preconditions and test data
-- Test procedure (step-by-step)
-- Expected results
-- Actual results (from execution)
-- Pass/Fail verdict
-
-**Hard Gate:** Any execution failure must be reported to user. No bypass allowed.
-
-## Examples
-
-Create runnable example in `examples/` for user-facing features:
-
-- API features → Python script calling the endpoint
-- UI features → Markdown walkthrough or demo script
-- Name pattern: `<NN>-<short-name>.<ext>`
-
-Update `examples/README.md` index.
-
-## Persist
-
-Save state for next session:
-
-1. **Git commit** implementation + tests + examples:
-   ```bash
-   git add .
-   git commit -m "feat(#id): feature description"
-   ```
-
-2. **Update RELEASE_NOTES.md** (Keep a Changelog format)
-
-3. **Update task-progress.md**:
-   - Update `## Current State` header
-   - Append session entry
-
-4. **Mark feature `"status": "passing"`** in feature-list.json
-
-5. **Validate**:
-   ```bash
-   python scripts/validate_features.py feature-list.json
-   ```
-
-6. **Commit progress files**:
-   ```bash
-   git add feature-list.json task-progress.md RELEASE_NOTES.md
-   git commit -m "progress: mark feature #id passing"
-   ```
-
-## Critical Rules
-
-- **One feature per cycle** — prevents context exhaustion
-- **Strict step order** — no skipping, no reordering
-- **Sub-skills are non-negotiable** — TDD, Quality, ST, Review MUST be invoked via Skill tool
-- **Config gate before planning** — never plan when configs missing
-- **Never mark "passing" without fresh evidence** — run tests, read output
-- **Never remove or edit verification_steps** — use increment skill for changes
-- **Systematic debugging only** — trace root cause, never guess-and-fix
-- **Update RELEASE_NOTES.md after every commit**
-- **Always commit + update progress before ending session**
-- **Never leave broken code** — revert incomplete work
-
 ## Environment Commands
 
-| Action | Command |
-|--------|---------|
-| Activate environment (Windows) | `.venv\Scripts\activate` |
-| Activate environment (Unix/macOS) | `source .venv/bin/activate` |
-| Run all tests | `pytest` |
-| Run specific test file | `pytest tests/test_module.py` |
-| Run with coverage | `pytest --cov=src --cov-branch --cov-report=term-missing` |
-| Run mutation (incremental) | `mutmut run --paths-to-mutate=src/module.py` |
-| Run mutation (full) | `mutmut run` |
-| View mutation results | `mutmut results` |
-| View specific mutant | `mutmut show <id>` |
+```bash
+# Activate environment
+source .venv/bin/activate
+
+# Run tests
+pytest --cov=src --cov-branch --cov-report=term-missing tests/
+
+# Run specific test file
+pytest tests/test_<module>.py -v
+
+# Coverage report
+pytest --cov=src --cov-branch --cov-report=term-missing
+
+# Mutation testing (incremental — changed files only)
+mutmut run --paths-to-mutate=src/<changed_module>.py
+
+# Mutation testing (full)
+mutmut run
+
+# Mutation results
+mutmut results
+mutmut show <mutant-id>
+```
 
 ## Service Commands
 
-This project has two main services. See `env-guide.md` for authoritative start/stop/restart commands.
+Refer to `env-guide.md` as the authoritative source for start/stop/restart commands.
 
-**Services:**
-| Service | Port | Health Check |
-|---------|------|--------------|
-| Query Service | 8000 | `GET /api/v1/health` |
-| Indexing Service | 8001 | (Celery worker, no HTTP) |
+**Services**:
+- **query-api** (FastAPI): port 8000, health check: `http://localhost:8000/api/v1/health`
+- **mcp-server**: port 3000
+- **index-worker** (Celery): no port (background worker)
 
-**Restart Protocol (4 steps):**
-1. **Kill** — Stop services using env-guide.md commands
-2. **Verify dead** — Poll ports, confirm no response
-3. **Start** — Run start commands from env-guide.md, capture output, record PID
-4. **Verify alive** — Poll health endpoints, confirm response
-
-**Important:** Services are started during ST acceptance testing by `long-task-feature-st`, not during Bootstrap.
+**Restart Protocol** (4 steps): Kill → Verify dead → Start with output capture → Verify alive. See `env-guide.md` for exact commands.
 
 ## Config Management
 
-This project uses `.env` file for configuration.
+This project uses `.env` file for configuration (loaded via python-dotenv or os.environ).
 
-**To add/update a config value:**
-1. Open `.env` in project root (create if not exists)
-2. Add or update line: `KEY=value`
-3. Save file
-4. Config is loaded automatically by `python-dotenv`
-
-**Config priority:**
-1. System environment variables (highest)
-2. `.env` file
-3. Default values in code (lowest)
-
-**Required configs are listed in `feature-list.json` under `required_configs`.**
+To add/update a config value:
+1. Append `KEY=value` to `.env` in project root
+2. Ensure `.env` is in `.gitignore`
+3. Update `.env.example` with the new key (no secret values)
+4. Source the `.env` before running: `set -a && source .env && set +a`
 
 ## Real Test Convention
 
-**Identification method:** Marker-based (`@pytest.mark.real_test`)
+**Identification method**: pytest marker `@pytest.mark.real`
 
-**Run only real tests:**
+**Run command** (real tests only):
 ```bash
-pytest -m real_test
+pytest -m real tests/
 ```
 
-**Example real test:**
+**Mock patterns to avoid in real tests**: `Mock`, `MagicMock`, `patch`, `mocker`, `monkeypatch.setattr`
+
+**Example real test**:
 ```python
 import pytest
 
-@pytest.mark.real_test
-async def test_query_retrieval_real():
-    """Real test: Query returns results from actual Qdrant/ES."""
-    from src.query.handler import QueryHandler
-    from src.query.models import QueryRequest
-
-    handler = QueryHandler()
-    response = await handler.handle(QueryRequest(
-        text="WebClient timeout",
-        query_type="natural_language"
-    ))
-
-    assert response.results is not None
-    assert len(response.results) <= 3
-    assert all(r.score >= 0.6 for r in response.results)
+@pytest.mark.real
+def test_repository_model_create(db_session):
+    """Real test: creates a Repository record in actual test database."""
+    from src.shared.models.repository import Repository
+    repo = Repository(name="test-repo", url="https://github.com/test/repo")
+    db_session.add(repo)
+    db_session.commit()
+    assert repo.id is not None
+    assert repo.status == "pending"
 ```
 
-**Mock patterns to avoid in real tests:**
-- `@patch`, `Mock()`, `MagicMock()`, `AsyncMock()`
-- `monkeypatch.setattr` for dependencies
-- `unittest.mock.*`
+## Orient
 
-**Real tests MUST hit actual services (Qdrant, ES, PG, Redis) using testcontainers or local instances.**
+1. Activate environment: `source .venv/bin/activate`
+2. Source config: `set -a && source .env && set +a`
+3. Read `task-progress.md` — current state, last feature, next up
+4. Read `feature-list.json` — constraints, assumptions, feature statuses
+5. Read design doc Section 1 — architecture overview
+6. Run `git log --oneline -10`
+7. Pick next `"failing"` feature by priority → array position (skip deprecated)
+8. Check dependency satisfaction before starting
 
-## Chrome DevTools MCP Testing (UI Features)
+## Bootstrap
 
-This project has UI features. When implementing `"ui": true` features:
+1. If environment not ready: run `bash init.sh`
+2. Verify: `python3 scripts/get_tool_commands.py feature-list.json`
+3. Smoke-test passing features: `pytest tests/ -v --tb=short`
 
-**DevTools Gate (before planning):**
+## Config Gate
+
 ```bash
-python scripts/check_devtools.py feature-list.json --feature <id>
+python3 scripts/check_configs.py feature-list.json --feature <id>
 ```
 
-**`[devtools]` verification step format:**
+If missing configs: prompt user for values → append to `.env` → re-run check.
+
+## TDD Red
+
+1. Read the feature's design section (Document Lookup Protocol — read full `### 4.N` subsection)
+2. Read the SRS FR-xxx section for acceptance criteria
+3. Write failing test(s) first — one test per acceptance criterion
+4. Verify tests fail: `pytest tests/test_<module>.py -v`
+
+## TDD Green
+
+1. Implement minimum code to pass all tests
+2. Run: `pytest tests/test_<module>.py -v`
+3. All tests must pass before proceeding
+
+## Coverage Gate
+
+```bash
+pytest --cov=src --cov-branch --cov-report=term-missing tests/
 ```
-[devtools] /path | EXPECT: <positive criteria> | REJECT: <negative criteria>
+- Line coverage >= 90%
+- Branch coverage >= 80%
+
+If below threshold: add tests for uncovered lines/branches.
+
+## TDD Refactor
+
+1. Clean up implementation code (no behavior changes)
+2. Re-run tests to confirm nothing broke
+3. Re-check coverage
+
+## Mutation Gate
+
+```bash
+mutmut run --paths-to-mutate=src/<changed_files>
+mutmut results
 ```
+- Mutation score >= 80% (surviving mutants < 20%)
 
-**Test sequence:**
-1. `navigate_page(url)` — navigate to page
-2. `wait_for(text)` — wait for page load
-3. `evaluate_script(ui_error_detector)` — automated error detection (HARD FAIL if errors)
-4. `take_snapshot()` — capture initial state
-5. Verify EXPECT criteria in snapshot
-6. Verify REJECT criteria NOT present
-7. `click(uid)` / `fill(uid, value)` — perform user action
-8. `wait_for(text)` — wait for response
-9. `evaluate_script(ui_error_detector)` — error detection again
-10. `take_snapshot()` / `take_screenshot()` — capture result
-11. Verify expected outcome
-12. `list_console_messages(types=["error"])` — HARD FAIL if console errors
+If below threshold: strengthen assertions, add edge case tests.
 
-**Three-layer error detection:**
-1. Automated error detection script via `evaluate_script()`
-2. EXPECT/REJECT format verification
-3. Console error gate via `list_console_messages()`
+## Verification Enforcement
 
-## UCD Style Reference
+Before marking any feature as "passing":
+1. All tests pass: `pytest tests/ -v`
+2. Coverage gate met
+3. Mutation gate met
+4. All verification_steps from feature-list.json are covered by tests
 
-For UI features, reference the UCD style guide:
+## ST Test Cases
 
-**Theme:** Developer Dark
-**Key tokens:**
-- Primary color: `#58A6FF`
-- Background: `#0D1117` (primary), `#161B22` (secondary)
-- Text: `#E6EDF3` (primary), `#8B949E` (secondary)
-- Code font: JetBrains Mono, 13px
-- UI font: System sans-serif, 14px body
+After quality gates pass, generate ISO/IEC/IEEE 29119 compliant test case documents:
+- Save to `docs/test-cases/feature-<id>-<slug>.md`
+- Each test case traces to SRS acceptance criteria and verification_steps
+- Include preconditions, test steps, expected results, and actual results
 
-**Components:** Search Input, Language Filter, Result Card, Score Badge, Empty State, Error Alert, Login Form
+## Chrome DevTools MCP
 
-**Pages:** Search Page (`/search`), Login Page (`/login`)
+For UI features (`"ui": true`), use Chrome DevTools MCP for black-box functional testing:
+1. Start the application using `env-guide.md` "Start All Services"
+2. Navigate to the UI entry point specified in the feature's `ui_entry` field
+3. Execute each `[devtools]`-prefixed verification step:
+   - Navigate to URL → verify page elements render correctly
+   - Interact with inputs/buttons → verify state changes
+   - Check for console errors → reject if any present
+4. Capture screenshots for evidence
+5. Stop services using `env-guide.md` "Stop All Services"
 
-See `docs/plans/2026-03-14-code-context-retrieval-ucd.md` for full style tokens and component prompts.
+## Code Review
+
+After quality gates pass, invoke `long-task:long-task-review` for spec & design compliance.
+
+## Examples
+
+After each feature passes, create/update `examples/<NN>-<feature-slug>.py` with a runnable demonstration.
+
+## Persist
+
+1. Update `feature-list.json`: set feature status to `"passing"`
+2. Update `task-progress.md`: append session entry with feature completed
+3. Update `RELEASE_NOTES.md`: add entry under current version
+4. Git commit all changes
+
+## Critical Rules
+
+- **Never skip TDD**: Write tests first, then implement
+- **Never skip quality gates**: Coverage AND mutation must pass
+- **Never skip review**: Run compliance review after every feature
+- **One feature per cycle**: Complete the full pipeline before starting the next
+- **Follow design doc**: Implementation must match approved class diagrams and sequence flows
+- **Environment activation**: Always activate venv before running any command
+- **Service lifecycle**: Services managed by long-task-feature-st, not during TDD
 
 
 *by long task skill*

@@ -1,132 +1,114 @@
-# Service Lifecycle Guide — Code Context Retrieval
+# Code Context Retrieval — Service Lifecycle Guide
 
 > User-editable. Claude reads this file before managing services. Update when ports change or new services are added.
 
-## Environment Variables (.env)
+## Services
+
+| Service Name | Port | Start Command | Stop Command | Verify URL |
+|---|---|---|---|---|
+| query-api | 8000 | `uvicorn src.query.main:app --host 0.0.0.0 --port 8000` | kill PID | `http://localhost:8000/api/v1/health` |
+| mcp-server | 3000 | `python -m src.query.mcp` | kill PID | `http://localhost:3000/health` |
+| index-worker | — | `celery -A src.indexing.celery_app worker --loglevel=info` | kill PID | N/A (check celery inspect active) |
+| celery-beat | — | `celery -A src.indexing.celery_app beat --loglevel=info` | kill PID | N/A |
+
+## External Dependencies (must be running before services)
+
+| Service | Port | Verify |
+|---|---|---|
+| PostgreSQL | 5432 | `pg_isready -h localhost -p 5432` |
+| Elasticsearch | 9200 | `curl -f http://localhost:9200/_cluster/health` |
+| Qdrant | 6333 | `curl -f http://localhost:6333/healthz` |
+| Redis | 6379 | `redis-cli ping` |
+| RabbitMQ | 5672 | `rabbitmqctl status` |
+
+## Start All Services
 
 ```bash
-# === Database ===
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+# Ensure environment is activated and .env is sourced
+source .venv/bin/activate
+set -a && source .env && set +a
 
-# === Cache & Broker ===
-REDIS_URL=redis://localhost:6379/0
+# Start query-api
+uvicorn src.query.main:app --host 0.0.0.0 --port 8000 > /tmp/svc-query-api-start.log 2>&1 &
+sleep 3
+head -30 /tmp/svc-query-api-start.log
+# → Record PID in task-progress.md
 
-# === Vector Store ===
-QDRANT_URL=http://localhost:6333
+# Start mcp-server
+python -m src.query.mcp > /tmp/svc-mcp-server-start.log 2>&1 &
+sleep 3
+head -30 /tmp/svc-mcp-server-start.log
+# → Record PID in task-progress.md
 
-# === Keyword Index ===
-ELASTICSEARCH_URL=http://localhost:9200
+# Start index-worker
+celery -A src.indexing.celery_app worker --loglevel=info > /tmp/svc-index-worker-start.log 2>&1 &
+sleep 3
+head -30 /tmp/svc-index-worker-start.log
+# → Record PID in task-progress.md
 
-# === ML Models ===
-EMBEDDING_MODEL=BAAI/bge-code-v1
-RERANKER_MODEL=BAAI/bge-reranker-v2-m3
-
-# === Security ===
-API_KEY_SECRET=dev-secret-key-change-in-production
-
-# === Optional ===
-QUERY_SERVICE_PORT=8000
-SEMANTIC_THRESHOLD=0.6
-INDEX_REFRESH_SCHEDULE=0 0 * * 0
+# Start celery-beat (scheduler)
+celery -A src.indexing.celery_app beat --loglevel=info > /tmp/svc-celery-beat-start.log 2>&1 &
+sleep 3
+head -30 /tmp/svc-celery-beat-start.log
+# → Record PID in task-progress.md
 ```
 
-## Services Table
+### Windows Alternative
 
-| Service | Port | Docker Command | Verify |
-|---------|------|----------------|--------|
-| PostgreSQL | 5432 | `docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16` | `pg_isready -h localhost -p 5432` |
-| Redis | 6379 | `docker run -d --name redis -p 6379:6379 redis:7` | `redis-cli ping` |
-| Qdrant | 6333 | `docker run -d --name qdrant -p 6333:6333 qdrant/qdrant:latest` | `GET http://localhost:6333/health` |
-| Elasticsearch | 9200 | `docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.12.2` | `GET http://localhost:9200/_cluster/health` |
-| Kibana | 5601 | `docker run -d --name kibana -p 5601:5601 --link elasticsearch:elasticsearch docker.elastic.co/kibana/kibana:8.12.2` | `GET http://localhost:5601/api/status` |
-| Query Service | 8000 | `uvicorn src.query.main:app --host 0.0.0.0 --port 8000` | `GET http://localhost:8000/api/v1/health` |
-
-## Docker Quick Start
-
-```bash
-# Start all storage services
-docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16
-docker run -d --name redis -p 6379:6379 redis:7
-docker run -d --name qdrant -p 6333:6333 qdrant/qdrant:latest
-docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 \
-  -e "discovery.type=single-node" \
-  -e "xpack.security.enabled=false" \
-  docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-
-# Optional: Kibana dashboard
-docker run -d --name kibana -p 5601:5601 \
-  --link elasticsearch:elasticsearch \
-  docker.elastic.co/kibana/kibana:8.12.2
-
-# Stop all
-docker stop postgres redis qdrant elasticsearch kibana
-
-# Remove containers
-docker rm postgres redis qdrant elasticsearch kibana
+```powershell
+# Start query-api
+cmd /c "start /b uvicorn src.query.main:app --host 0.0.0.0 --port 8000 > %TEMP%\svc-query-api-start.log 2>&1"
+timeout /t 3 /nobreak >nul
+powershell "Get-Content $env:TEMP\svc-query-api-start.log -TotalCount 30"
 ```
 
 ## Verify Services Running
 
-```powershell
-# PowerShell
-Invoke-WebRequest -Uri http://localhost:8000/api/v1/health -UseBasicParsing
-Invoke-WebRequest -Uri http://localhost:6333/health -UseBasicParsing
-Invoke-WebRequest -Uri http://localhost:9200/_cluster/health -UseBasicParsing
-redis-cli ping  # Expected: PONG
-pg_isready -h localhost -p 5432  # Expected: accepting connections
+```bash
+curl -f http://localhost:8000/api/v1/health    # query-api
+curl -f http://localhost:3000/health            # mcp-server
+celery -A src.indexing.celery_app inspect ping  # index-worker
 ```
 
 ## Stop All Services
 
 ```bash
-# Stop by container name
-docker stop postgres redis qdrant elasticsearch kibana
+# By PID (preferred — use PID recorded in task-progress.md)
+kill <query-api-PID>
+kill <mcp-server-PID>
+kill <index-worker-PID>
+kill <celery-beat-PID>
 
-# Stop Query Service by port (Windows)
-for /f "tokens=5" %a in ('netstat -ano ^| findstr :8000') do taskkill /F /PID %a
-
-# Stop Query Service by port (Unix/macOS)
-lsof -ti :8000 | xargs kill -9
+# By port (fallback)
+lsof -ti :8000 | xargs kill -9    # query-api
+lsof -ti :3000 | xargs kill -9    # mcp-server
 ```
 
-## Application Services
-
-### Start Query Service
+### Windows Alternative
 
 ```powershell
-# Windows (PowerShell)
-cd d:/03PyDemo/theMachine
-.venv/Scripts/activate
-uvicorn src.query.main:app --host 0.0.0.0 --port 8000
-
-# Unix/macOS
-cd /path/to/theMachine
-source .venv/bin/activate
-uvicorn src.query.main:app --host 0.0.0.0 --port 8000
+taskkill /F /PID <PID>
+# or by port
+for /f "tokens=5" %a in ('netstat -ano ^| findstr :8000') do taskkill /F /PID %a
 ```
 
-### Start Indexing Service (Future)
+## Verify Services Stopped
 
 ```bash
-# Celery Worker
-celery -A src.indexing.worker worker --loglevel=info
-
-# Celery Beat (scheduled tasks)
-celery -A src.indexing.worker beat --loglevel=info
+lsof -i :8000    # expect no output
+lsof -i :3000    # expect no output
 ```
 
-## Restart Protocol (4 Steps)
+### Windows Alternative
 
-1. **Kill** — Stop services by container name or PID
-2. **Verify dead** — Check ports not responding
-3. **Start** — Run Docker commands or application startup
-4. **Verify alive** — Check health endpoints
+```powershell
+netstat -ano | findstr :8000    # expect no output
+netstat -ano | findstr :3000    # expect no output
+```
 
-## Notes
+## Restart Protocol (4 steps)
 
-- **Query Service** is stateless and can be scaled horizontally
-- **Elasticsearch 8.x** required (client pinned to `>=8.17.0,<9.0.0`)
-- **PostgreSQL 16** recommended (tested with asyncpg driver)
-- **Redis 7** recommended (tested with redis-py 5.x)
-- **Qdrant latest** recommended
-- Record all PIDs in `task-progress.md` for proper cleanup
+1. **Kill** — Stop All Services (by PID from task-progress.md, or by port)
+2. **Verify dead** — run Verify Services Stopped; poll port max 5 seconds — must not respond
+3. **Start** — run Start All Services with output capture → `head -30` → extract new PID/port → update task-progress.md
+4. **Verify alive** — run Verify Services Running; poll health endpoint max 10 seconds — must respond

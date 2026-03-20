@@ -1,65 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "code-context-retrieval"
 version = "0.1.0"
-description = "Code Context Retrieval System - Index Git repositories and return relevant code context via MCP and Web UI"
-readme = "README.md"
+description = "Code Context Retrieval MCP System — hybrid search engine for code context"
 requires-python = ">=3.11"
-license = {text = "MIT"}
-authors = [
-    {name = "Code Context Retrieval Team"}
-]
-keywords = ["code-search", "semantic-search", "mcp", "retrieval", "ai-agent"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
-
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.34.0",
-    "gunicorn>=23.0.0",
-    "celery[redis]>=5.4.0",
-    "redis>=5.2.0",
-    "sqlalchemy[asyncio]>=2.0.36",
-    "asyncpg>=0.30.0",
-    "alembic>=1.14.0",
-    "qdrant-client>=1.12.0",
-    "elasticsearch[async]>=8.17.0,<9.0.0",
-    "sentence-transformers>=3.3.0",
-    "torch>=2.5.0",
-    "tree-sitter>=0.24.0",
-    "tree-sitter-java>=0.23.0",
-    "tree-sitter-python>=0.23.0",
-    "tree-sitter-typescript>=0.23.0",
-    "tree-sitter-c>=0.23.0",
-    "tree-sitter-cpp>=0.23.0",
-    "mcp>=1.0.0",
-    "gitpython>=3.1.43",
-    "jinja2>=3.1.4",
-    "passlib[bcrypt]>=1.7.4",
-    "pydantic>=2.10.0",
-    "prometheus-client>=0.21.0",
-    "python-dotenv>=1.0.0",
-    "httpx>=0.28.0",
+    "fastapi==0.115.6",
+    "uvicorn==0.34.0",
+    "celery==5.4.0",
+    "sqlalchemy==2.0.36",
+    "alembic==1.14.1",
+    "asyncpg==0.30.0",
+    "elasticsearch==8.17.0",
+    "qdrant-client==1.13.3",
+    "redis==5.2.1",
+    "sentence-transformers==3.4.1",
+    "tree-sitter==0.24.0",
+    "tree-sitter-java==0.23.5",
+    "tree-sitter-python==0.23.6",
+    "tree-sitter-javascript==0.23.1",
+    "tree-sitter-typescript==0.23.2",
+    "tree-sitter-c==0.23.4",
+    "tree-sitter-cpp==0.23.4",
+    "mcp==1.9.0",
+    "jinja2==3.1.5",
+    "pygments==2.19.1",
+    "prometheus-client==0.21.1",
+    "pydantic==2.10.5",
+    "python-multipart==0.0.20",
+    "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=5.0.0",
-    "mutmut>=2.5.0",
-    "testcontainers>=4.8.0",
-    "playwright>=1.48.0",
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-asyncio==0.25.0",
+    "mutmut==3.2.0",
 ]
-
-[build-system]
-requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -68,28 +49,21 @@ include = ["src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
-asyncio_default_test_loop_scope = "session"
-addopts = "-v --tb=short"
 markers = [
-    "real_test: Tests that hit real services (not mocks)",
-    "slow: Tests that take >1s to run",
-    "e2e: End-to-end tests",
+    "real: marks tests as real (no mocks) tests",
 ]
+addopts = "--cov=src --cov-branch --cov-report=term-missing"
 
 [tool.coverage.run]
 branch = true
 source = ["src"]
-omit = ["tests/*", "*/__pycache__/*", "src/shared/utils/git_validator.py"]
 
 [tool.coverage.report]
-fail_under = 90
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
-    "if __name__ == .__main__.:",
+    "if __name__ == .__main__.",
     "if TYPE_CHECKING:",
-    "raise NotImplementedError",
 ]
 
 [tool.mutmut]

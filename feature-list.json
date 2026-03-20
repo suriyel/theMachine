@@ -1,6 +1,6 @@
 {
   "project": "code-context-retrieval",
-  "created": "2026-03-14",
+  "created": "2026-03-21",
   "tech_stack": {
     "language": "python",
     "test_framework": "pytest",
@@ -12,624 +12,552 @@
     "branch_coverage_min": 80,
     "mutation_score_min": 80
   },
+  "real_test": {
+    "marker_pattern": "@pytest.mark.real",
+    "mock_patterns": ["Mock", "MagicMock", "patch", "mocker", "monkeypatch.setattr"],
+    "test_dir": "tests/"
+  },
   "constraints": [
-    "CON-001: The system shall parse source code in Java, Python, TypeScript, JavaScript, C, and C++",
-    "CON-002: The primary query interface shall conform to the MCP protocol specification",
-    "CON-003: All repository indexing shall execute offline in a dedicated cluster; query-time operations shall not trigger repository cloning or source parsing",
-    "CON-004: The system shall accept any Git repository accessible via URL as a data source"
+    "CON-001: Supported languages: Java, Python, TypeScript, JavaScript, C, C++",
+    "CON-002: Query response time must be < 1 second (p95)",
+    "CON-003: System must support >= 1000 QPS",
+    "CON-004: MCP protocol is the primary AI agent interface",
+    "CON-005: Repository source is any Git repository (public + private via SSH/token)",
+    "CON-006: Indexing must be performed offline in a distributed cluster",
+    "CON-007: BM25 engine: Elasticsearch",
+    "CON-008: Vector engine: Qdrant",
+    "CON-009: Code parser: tree-sitter",
+    "CON-010: Embedding model: CodeSage-large (1024-dim)",
+    "CON-011: Reranker model: bge-reranker-v2-m3",
+    "CON-012: Top-K results: 3 (default)",
+    "CON-013: Index refresh default: weekly, configurable via cron expression"
   ],
   "assumptions": [
-    "ASM-001: Git repositories are accessible from the indexing cluster via HTTPS or SSH using provided credentials",
-    "ASM-002: Programming language of source files can be reliably identified by file extension and parser heuristics",
-    "ASM-003: The majority of query traffic originates from AI coding agents rather than human users",
-    "ASM-004: Embedding model inference is available as a service or can run locally on the indexing cluster"
+    "ASM-001: Git repositories are accessible from the index cluster (network, credentials)",
+    "ASM-002: tree-sitter grammars exist and are stable for all 6 supported languages",
+    "ASM-003: CodeSage-large produces consistent 1024-dim vectors across versions",
+    "ASM-004: Elasticsearch and Qdrant clusters are provisioned and managed externally",
+    "ASM-005: Redis is available for caching; degrade gracefully if unavailable",
+    "ASM-006: Primary query traffic comes from AI agents (80%+)"
   ],
   "required_configs": [
     {
-      "name": "PostgreSQL Connection URL",
+      "name": "PostgreSQL URL",
       "type": "env",
       "key": "DATABASE_URL",
-      "description": "PostgreSQL connection string for metadata storage",
-      "required_by": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-      "check_hint": "Set DATABASE_URL=postgresql://user:pass@host:5432/dbname in .env"
-    },
-    {
-      "name": "Redis URL",
-      "type": "env",
-      "key": "REDIS_URL",
-      "description": "Redis connection URL for Celery broker and query cache",
-      "required_by": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-      "check_hint": "Set REDIS_URL=redis://localhost:6379/0 in .env"
-    },
-    {
-      "name": "Qdrant URL",
-      "type": "env",
-      "key": "QDRANT_URL",
-      "description": "Qdrant vector database URL for semantic search",
-      "required_by": [4, 9, 10, 11, 12],
-      "check_hint": "Set QDRANT_URL=http://localhost:6333 in .env"
+      "description": "PostgreSQL connection string for repository metadata, API keys, job tracking",
+      "required_by": [1, 2, 3, 4, 16],
+      "check_hint": "Set to postgresql+asyncpg://user:pass@localhost:5432/codecontext"
     },
     {
       "name": "Elasticsearch URL",
       "type": "env",
       "key": "ELASTICSEARCH_URL",
-      "description": "Elasticsearch URL for keyword search",
-      "required_by": [4, 8, 10, 11, 12],
-      "check_hint": "Set ELASTICSEARCH_URL=http://localhost:9200 in .env"
+      "description": "Elasticsearch cluster URL for BM25 keyword search",
+      "required_by": [8, 9, 10, 13, 14, 15, 17, 20],
+      "check_hint": "Set to http://localhost:9200"
     },
     {
-      "name": "Embedding Model",
+      "name": "Qdrant URL",
       "type": "env",
-      "key": "EMBEDDING_MODEL",
-      "description": "Embedding model name for semantic search (bge-code)",
-      "required_by": [4, 9],
-      "check_hint": "Set EMBEDDING_MODEL=BAAI/bge-code-v1 in .env"
+      "key": "QDRANT_URL",
+      "description": "Qdrant cluster URL for dense vector search",
+      "required_by": [7, 9, 13, 14, 15, 17],
+      "check_hint": "Set to http://localhost:6333"
     },
     {
-      "name": "Reranker Model",
+      "name": "Redis URL",
       "type": "env",
-      "key": "RERANKER_MODEL",
-      "description": "Reranker model name for neural reranking",
-      "required_by": [11],
-      "check_hint": "Set RERANKER_MODEL=BAAI/bge-reranker-v2-m3 in .env"
+      "key": "REDIS_URL",
+      "description": "Redis instance URL for query caching and rate limiting",
+      "required_by": [16, 25],
+      "check_hint": "Set to redis://localhost:6379/0"
     },
     {
-      "name": "API Key Secret",
+      "name": "RabbitMQ URL",
       "type": "env",
-      "key": "API_KEY_SECRET",
-      "description": "Secret key for API key hashing",
-      "required_by": [13, 14, 18],
-      "check_hint": "Generate with: openssl rand -hex 32"
+      "key": "RABBITMQ_URL",
+      "description": "RabbitMQ broker URL for Celery task queue",
+      "required_by": [4, 21, 22],
+      "check_hint": "Set to amqp://guest:guest@localhost:5672//"
+    },
+    {
+      "name": "Repository Clone Path",
+      "type": "env",
+      "key": "REPO_CLONE_PATH",
+      "description": "Base directory for cloned Git repositories",
+      "required_by": [4, 5],
+      "check_hint": "Set to /tmp/codecontext/repos or a persistent volume path"
+    },
+    {
+      "name": "API Secret Key",
+      "type": "env",
+      "key": "SECRET_KEY",
+      "description": "Secret key for API key hashing and session signing",
+      "required_by": [16],
+      "check_hint": "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    },
+    {
+      "name": "Query API Port",
+      "type": "env",
+      "key": "API_PORT",
+      "description": "Port for the FastAPI query service",
+      "required_by": [17],
+      "check_hint": "Set to 8000 (default)"
+    },
+    {
+      "name": "MCP Server Port",
+      "type": "env",
+      "key": "MCP_PORT",
+      "description": "Port for the MCP server",
+      "required_by": [18],
+      "check_hint": "Set to 3000 (default)"
     }
   ],
   "features": [
     {
       "id": 1,
-      "category": "infrastructure",
-      "title": "Project Skeleton and CI",
-      "description": "M1: Project directory structure, pyproject.toml, CI workflow, core abstractions, storage clients (PostgreSQL, Redis, Qdrant, Elasticsearch)",
+      "category": "core",
+      "title": "Project Skeleton & CI",
+      "description": "Set up project structure with src/indexing, src/query, src/shared packages, pyproject.toml, pytest config, alembic setup, and basic health check endpoint",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given the project root, when checking directory structure, then src/, tests/, docs/, examples/, scripts/ directories exist",
-        "Given pyproject.toml exists, when running pip install -e ., then all dependencies install without error",
-        "Given .github/workflows/ci.yml exists, when pushed to GitHub, then CI workflow runs pytest and passes",
-        "Given storage clients module, when testing PostgreSQL connection with valid DATABASE_URL, then connection succeeds",
-        "Given storage clients module, when testing Redis connection with valid REDIS_URL, then ping returns PONG",
-        "Given storage clients module, when testing Qdrant connection with valid QDRANT_URL, then health check returns 200",
-        "Given storage clients module, when testing Elasticsearch connection with valid ELASTICSEARCH_URL, then cluster health returns green/yellow"
+        "Given a fresh clone, when running 'pip install -e .[dev]', then all dependencies install without errors and pytest is available",
+        "Given the installed project, when running 'pytest tests/test_skeleton.py', then at least one test passes confirming the project structure exists",
+        "Given the project, when importing 'src.shared', 'src.indexing', 'src.query', then all imports succeed without errors",
+        "Given alembic config, when running 'alembic check', then it confirms migrations are in sync"
       ],
-      "dependencies": [],
-      "ui": false
+      "dependencies": []
     },
     {
       "id": 2,
       "category": "core",
-      "title": "Data Model and Migrations",
-      "description": "M1: SQLAlchemy models for Repository, IndexJob, CodeChunk, APIKey, QueryLog; Alembic migrations",
+      "title": "Data Model & Migrations",
+      "description": "Implement SQLAlchemy models for Repository, IndexJob, ApiKey, ApiKeyRepoAccess, QueryLog and create Alembic migration. Implement ES/Qdrant/Redis client wrappers in src/shared/clients/",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given a new database, when running alembic upgrade head, then all tables are created (repositories, index_jobs, code_chunks, api_keys, query_logs)",
-        "Given the Repository model, when creating a repository record with url, name, languages, then record is persisted and queryable",
-        "Given the IndexJob model, when creating a job with status QUEUED, then job is persisted with auto-generated UUID",
-        "Given the CodeChunk model, when creating a chunk with repo_id, file_path, content, then record is persisted",
-        "Given the APIKey model, when creating a key with hashed key and name, then record is persisted with status active",
-        "Given the QueryLog model, when creating a log entry with api_key_id, query_text, latency_ms, then record is persisted with correlation_id"
+        "Given the data models, when running Alembic migration against a test database, then tables REPOSITORY, INDEX_JOB, API_KEY, API_KEY_REPO_ACCESS, QUERY_LOG are created with correct columns and constraints",
+        "Given the Repository model, when creating a record with name='test-repo', url='https://github.com/test/repo', then it persists with a generated UUID id, status='pending', and created_at timestamp",
+        "Given the storage clients module, when importing ElasticsearchClient, QdrantClient, RedisClient, then all classes are importable and have connection/health-check methods"
       ],
-      "dependencies": [1],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-2-data-model-and-migrations.md",
-      "st_case_count": 12
+      "dependencies": [1]
     },
     {
       "id": 3,
       "category": "core",
-      "title": "Repository Registration (FR-001)",
-      "description": "M2: Admin API to register Git repositories with URL, name, and target languages; store metadata in PostgreSQL",
+      "title": "Repository Registration",
+      "description": "Implement RepoManager service with register_repo() that validates Git URL, checks for duplicates, creates Repository record, and queues initial indexing job",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-3-repository-registration.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given a valid Git repository URL https://github.com/example/repo.git, when POST /api/v1/repos with url, name, languages=[Java], then response 201 with repository object having status registered",
-        "Given an invalid Git URL (not reachable), when POST /api/v1/repos, then response 400 with error message indicating URL is invalid or unreachable",
-        "Given an existing repository URL, when POST /api/v1/repos with same URL, then response 409 Conflict",
-        "Given registered repositories exist, when GET /api/v1/repos, then response 200 with list of all repositories"
+        "Given a valid Git URL 'https://github.com/pallets/flask', when calling register_repo(url), then a Repository record is created with status='pending' and the repository ID is returned",
+        "Given an invalid URL 'not-a-url', when calling register_repo(url), then a ValidationError is raised within 2 seconds without creating a record",
+        "Given an already-registered URL, when calling register_repo(url) again, then a ConflictError is raised indicating the repository already exists"
       ],
-      "dependencies": [2],
-      "ui": false
+      "dependencies": [2]
     },
     {
       "id": 4,
       "category": "core",
-      "title": "Git Clone or Update (FR-002)",
-      "description": "M2: Celery task to clone repository if not exists, or fetch latest changes if already cloned; handle auth failures",
+      "title": "Git Clone & Update",
+      "description": "Implement GitCloner with clone_or_update() that performs git clone for new repos or git fetch+reset for existing repos, with error handling for network/auth/disk failures",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-4-git-clone-update.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given a registered repository not yet cloned, when indexing job runs, then full git clone is performed to workspace directory",
-        "Given a previously cloned repository, when indexing job runs, then git fetch retrieves only latest changes",
-        "Given a repository with invalid credentials, when clone is attempted, then job is marked failed with error message and existing index is preserved",
-        "Given a repository with network timeout, when clone is attempted, then job is marked failed after retry attempts exhausted"
+        "Given a newly registered repository, when clone_or_update() runs, then the repo is cloned to REPO_CLONE_PATH/{repo_id} and the working copy contains the default branch HEAD",
+        "Given a previously cloned repository, when clone_or_update() runs again, then it performs git fetch and resets to latest HEAD without re-cloning",
+        "Given a clone operation that fails (unreachable URL), when clone_or_update() runs, then it raises a CloneError with the error message and cleans up partial files"
       ],
-      "dependencies": [3],
-      "ui": false
+      "dependencies": [3]
     },
     {
       "id": 5,
       "category": "core",
-      "title": "Content Extraction (FR-003)",
-      "description": "M2: Identify and extract indexable content from cloned repository: README, source files, CHANGELOG",
+      "title": "Content Extraction",
+      "description": "Implement ContentExtractor that classifies files by type (source, doc, example, rule) by extension/path patterns, skips binary/oversized files, and reads text content",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-5-content-extraction.md",
-      "st_case_count": 3,
+      "status": "failing",
       "verification_steps": [
-        "Given a cloned repository with README.md, src/main.java, and CHANGELOG.md, when content extraction runs, then all three content types are identified and queued for chunking",
-        "Given a cloned repository with only binary files, when content extraction runs, then warning is logged and job completes with zero chunks",
-        "Given a cloned repository with 100 source files, when content extraction runs, then all 100 files are identified by language extension"
+        "Given a cloned repo with .py, .java, .md, and .png files, when extract_content() runs, then source files are classified as 'code', .md files as 'doc', and .png files are skipped",
+        "Given a file larger than 1MB, when extraction runs, then the file is skipped with a logged warning",
+        "Given files in examples/ directory, when extraction runs, then they are classified as 'example' content type",
+        "Given CLAUDE.md, CONTRIBUTING.md, .cursor/rules files, when extraction runs, then they are classified as 'rule' content type"
       ],
-      "dependencies": [4],
-      "ui": false
+      "dependencies": [4]
     },
     {
       "id": 6,
       "category": "core",
-      "title": "Code Chunking with tree-sitter (FR-004)",
-      "description": "M2: Segment source code into multi-granularity chunks (file, class, function, symbol) using tree-sitter parsers for 6 languages",
+      "title": "Code Chunking",
+      "description": "Implement Chunker with tree-sitter AST parsing for 6 languages, producing L1 (file), L2 (class), L3 (function) chunks with symbol, signature, doc_comment extraction. Includes DocChunker for markdown heading-based splitting and RuleExtractor for rule files.",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-6-code-chunking.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given a Java file with 2 classes each containing 3 methods, when chunking executes, then 1 file-level + 2 class-level + 6 method-level chunks are generated",
-        "Given a Python file with 4 functions and 2 classes, when chunking executes, then file, class, and function chunks are generated with correct line ranges",
-        "Given a source file in unsupported language (e.g., Ruby), when chunking executes, then single file-level text chunk is created without symbol decomposition",
-        "Given a TypeScript file with interfaces and type definitions, when chunking executes, then symbol-level chunks include type information"
+        "Given a Python file with 1 class containing 3 methods, when chunk_file() runs, then it produces 1 L1 file chunk, 1 L2 class chunk, and 3 L3 function chunks with correct symbol names and signatures",
+        "Given a Java file with 2 classes, when chunk_file() runs, then it produces L1, L2, and L3 chunks with parent_class set correctly for methods",
+        "Given a README.md with H1, H2, H3 headings, when chunk_markdown() runs, then it produces doc chunks split at H2 level with breadcrumb trails (e.g., 'Getting Started > Installation')",
+        "Given a file in an unsupported language, when chunk_file() runs, then it falls back to L1 file-level chunking only"
       ],
-      "dependencies": [5],
-      "ui": false
+      "dependencies": [5]
     },
     {
       "id": 7,
       "category": "core",
-      "title": "Embedding Generation and Index Writing",
-      "description": "M2: Generate embeddings for code chunks using bge-code model; write chunks to Elasticsearch (content + metadata) and Qdrant (vectors)",
+      "title": "Embedding Generation",
+      "description": "Implement EmbeddingEncoder using CodeSage-large model via sentence-transformers, with encode_documents() for batch indexing and encode_query() with instruction prefix for query-time embedding. Write embeddings to Qdrant.",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-7-embedding-generation.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given 100 code chunks, when embedding generation runs, then 100 embedding vectors are produced with correct dimension",
-        "Given embeddings and chunks, when writing to indices, then Elasticsearch contains 100 documents with content, metadata, and chunk_id",
-        "Given embeddings and chunks, when writing to indices, then Qdrant collection contains 100 points with same chunk_ids",
-        "Given an existing repository being re-indexed, when writing new chunks, then old chunks for that repo_id are deleted first"
+        "Given a list of 10 code chunks, when encode_documents() runs in batch, then it produces 10 vectors of 1024 dimensions each as float32 arrays",
+        "Given a query string 'how to configure timeout', when encode_query() runs, then it prepends 'Represent this code search query: ' and returns a single 1024-dim vector",
+        "Given 100 chunks with embeddings, when IndexWriter.write_code_chunks() runs, then all 100 vectors are stored in the Qdrant 'code_embeddings' collection with correct payload metadata"
       ],
-      "dependencies": [6],
-      "ui": false
+      "dependencies": [6]
     },
     {
       "id": 8,
       "category": "core",
-      "title": "Keyword Retrieval (FR-008)",
-      "description": "M3: Retrieve candidate chunks from Elasticsearch using BM25 keyword matching",
+      "title": "Keyword Retrieval (BM25)",
+      "description": "Implement Retriever.bm25_search() using Elasticsearch with the code_analyzer for code_chunks index and doc_analyzer for doc_chunks index, returning top-200 scored candidates",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-8-keyword-retrieval.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given query 'WebClient timeout' and indexed chunks containing 'WebClient.builder().responseTimeout()', when keyword retrieval executes, then matching chunks appear in results",
-        "Given a query with no keyword matches, when keyword retrieval executes, then empty candidate list is returned",
-        "Given query with repo filter, when keyword retrieval executes, then only chunks from specified repo are returned",
-        "Given query with language filter, when keyword retrieval executes, then only chunks in specified language are returned"
+        "Given indexed code chunks containing 'getUserName', when bm25_search('getUserName') runs against code_chunks, then results include chunks containing that symbol, ranked by BM25 score",
+        "Given the code_analyzer with synonym filter, when searching 'auth', then results also include chunks containing 'authentication' and 'authorization'",
+        "Given a query with no matching terms, when bm25_search() runs, then it returns an empty list without error",
+        "Given Elasticsearch is unreachable, when bm25_search() runs, then it raises a retrieval error (caller handles degradation)"
       ],
-      "dependencies": [7],
-      "ui": false
+      "dependencies": [7]
     },
     {
       "id": 9,
       "category": "core",
-      "title": "Semantic Retrieval (FR-009)",
-      "description": "M3: Retrieve candidate chunks from Qdrant using embedding-based similarity search with configurable threshold (default 0.6)",
+      "title": "Semantic Retrieval (Vector)",
+      "description": "Implement Retriever.vector_search() using Qdrant HNSW search with cosine similarity, encoding the query via EmbeddingEncoder.encode_query() and returning top-200 candidates",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-9-semantic-retrieval.md",
-      "st_case_count": 4,
+      "status": "failing",
       "verification_steps": [
-        "Given query 'how to configure spring http client timeout' and indexed chunks about WebClient timeout, when semantic retrieval executes, then semantically related chunks appear despite keyword mismatch",
-        "Given a query with no semantic matches above threshold 0.6, when semantic retrieval executes, then empty candidate list is returned",
-        "Given threshold configured to 0.8, when semantic retrieval executes, then only chunks with similarity >= 0.8 are returned",
-        "Given query with repo filter, when semantic retrieval executes, then only chunks from specified repo are returned"
+        "Given indexed embeddings for code about HTTP timeouts, when vector_search('how to configure spring http client timeout') runs, then results include semantically related chunks even without exact term matches",
+        "Given a query vector, when vector_search() runs, then it returns up to 200 candidates with cosine similarity scores from the Qdrant collection",
+        "Given Qdrant is unreachable, when vector_search() runs, then it raises a retrieval error (caller handles degradation)"
       ],
-      "dependencies": [7],
-      "ui": false
+      "dependencies": [7]
     },
     {
       "id": 10,
       "category": "core",
-      "title": "Rank Fusion (FR-010)",
-      "description": "M3: Merge keyword and semantic results using Reciprocal Rank Fusion (RRF) with k=60",
+      "title": "Rank Fusion (RRF)",
+      "description": "Implement RankFusion.fuse() using Reciprocal Rank Fusion with k=60, merging up to 5 ranked lists (4 primary + optional symbol boost) into a single top-50 candidate list",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-10-rank-fusion.md",
-      "st_case_count": 6,
+      "status": "failing",
       "verification_steps": [
-        "Given keyword results [A, B, C] and semantic results [B, D, E], when fusion executes, then merged list contains all 5 unique chunks (A, B, C, D, E) with B benefiting from dual appearance",
-        "Given keyword results empty and semantic results [A, B], when fusion executes, then fused list contains [A, B]",
-        "Given both retrieval methods return empty, when fusion executes, then empty list is returned"
+        "Given 200 BM25 candidates and 200 vector candidates with 50 overlapping chunks, when fuse() runs with k=60, then overlapping chunks receive boosted RRF scores from both rankings and the output contains at most 50 candidates",
+        "Given one empty result list and one non-empty list, when fuse() runs, then it returns results from the non-empty list only",
+        "Given 4-way input (BM25 code, vector code, BM25 doc, vector doc), when fuse() runs, then all 4 lists are merged by RRF and execution completes within 10ms"
       ],
-      "dependencies": [8, 9],
-      "ui": false
+      "dependencies": [8, 9]
     },
     {
       "id": 11,
       "category": "core",
-      "title": "Neural Reranking (FR-011)",
-      "description": "M3: Reorder fused candidates using bge-reranker cross-encoder; achieve nDCG@3 >= 0.7",
+      "title": "Neural Reranking",
+      "description": "Implement Reranker using bge-reranker-v2-m3 cross-encoder via sentence-transformers, scoring query-document pairs and selecting top-K results with fallback to RRF order on model failure",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-11-neural-reranking.md",
-      "st_case_count": 5,
+      "status": "failing",
       "verification_steps": [
-        "Given a fused candidate list with >= 2 items, when reranking executes, then candidates are reordered by neural relevance score",
-        "Given a fused candidate list with < 2 items, when reranking executes, then items are returned in current order without model invocation",
-        "Given evaluation dataset queries, when reranking is applied, then nDCG@3 >= 0.7 on held-out set"
+        "Given 50 fused candidates and a query, when rerank() runs, then it returns top-6 candidates re-scored by the cross-encoder with relevance scores",
+        "Given fewer than 3 candidates, when rerank() runs, then it returns all available candidates without error",
+        "Given a reranker model failure (OOM, load error), when rerank() runs, then it falls back to the fusion-ranked order and logs a degradation warning"
       ],
-      "dependencies": [10],
-      "ui": false
+      "dependencies": [10]
     },
     {
       "id": 12,
       "category": "core",
-      "title": "Context Response Builder (FR-012)",
-      "description": "M3: Build top-3 response with repository, path, symbol, score, and content for each result",
+      "title": "Context Response Builder",
+      "description": "Implement ResponseBuilder that assembles the dual-list response format: codeResults[] + docResults[] + rules{}, splitting reranked results by content_type, truncating content to 2000 chars",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-12-context-response-builder.md",
-      "st_case_count": 6,
+      "status": "failing",
       "verification_steps": [
-        "Given 50 ranked candidates after reranking, when response is built, then exactly 3 results are returned with fields: repository, path, symbol, score, content",
-        "Given zero candidates after full pipeline, when response is built, then empty results array is returned with no error",
-        "Given results with varying scores, when response is built, then results are ordered by score descending"
+        "Given 6 reranked results (3 code, 2 doc, 1 example), when build() runs, then the response contains codeResults with 3 items and docResults with 3 items (doc + example), each with content, repo, path, symbol, type, language, score fields",
+        "Given a chunk with content exceeding 2000 characters, when build() runs, then the content is truncated to 2000 chars with a trailing '...' indicator",
+        "Given a repository with rule chunks, when build() runs with include_rules=true, then the response includes a rules section with the full rule content"
       ],
-      "dependencies": [11],
-      "ui": false
+      "dependencies": [11]
     },
     {
       "id": 13,
       "category": "core",
-      "title": "Query Handler - Natural Language (FR-005)",
-      "description": "M3: Accept natural language query text and initiate retrieval pipeline; validate non-empty input",
+      "title": "Natural Language Query Handler",
+      "description": "Implement QueryHandler.handle_nl_query() that runs the full hybrid pipeline: 4-way parallel retrieval, unified RRF fusion, single rerank, with query expansion for embedded code identifiers",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-13-query-handler-nl.md",
-      "st_case_count": 3,
+      "status": "failing",
       "verification_steps": [
-        "Given natural language query 'how to use spring WebClient timeout', when submitted to QueryHandler, then query is accepted and retrieval pipeline initiated",
-        "Given empty query string, when submitted to QueryHandler, then validation error is returned indicating query must not be empty",
-        "Given query with only whitespace, when submitted to QueryHandler, then validation error is returned"
+        "Given the NL query 'how to use grpc java interceptor', when handle_nl_query() runs, then it executes 4-way parallel retrieval (BM25 code + vector code + BM25 doc + vector doc), fuses with RRF, reranks, and returns structured context results",
+        "Given an empty query string, when handle_nl_query() is called, then it raises a ValidationError with a descriptive message",
+        "Given the NL query 'how does AuthService validate tokens', when query expansion runs, then it extracts 'AuthService' and fires a parallel symbol.raw term query merged into RRF with weight 0.3",
+        "Given a pipeline that exceeds 1-second timeout, when handle_nl_query() runs, then it returns partial results with degraded=true flag"
       ],
-      "dependencies": [12],
-      "ui": false
+      "dependencies": [12]
     },
     {
       "id": 14,
       "category": "core",
-      "title": "Query Handler - Symbol Query (FR-006)",
-      "description": "M3: Accept code symbol identifier as query; validate non-whitespace input",
+      "title": "Symbol Query Handler",
+      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match → fuzzy fallback → NL pipeline fallback",
       "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-14-query-handler-symbol.md",
-      "st_case_count": 2,
+      "status": "failing",
       "verification_steps": [
-        "Given symbol query 'org.springframework.web.client.RestTemplate', when submitted to QueryHandler, then query is accepted and retrieval pipeline initiated",
-        "Given symbol query containing only whitespace, when submitted, then validation error is returned"
+        "Given the query 'UserService.getById', when detect_query_type() runs, then it classifies as 'symbol' due to dot notation",
+        "Given the symbol query 'std::vector', when handle_symbol_query() runs, then it first tries ES term query on symbol.raw, and returns matching class definitions and methods",
+        "Given a symbol query for a non-existent symbol, when ES term and fuzzy queries return 0 results, then it falls back to the full NL pipeline using the query as-is",
+        "Given a symbol query exceeding 200 characters, when submitted, then it raises a ValidationError"
       ],
-      "dependencies": [12],
-      "ui": false
+      "dependencies": [12]
     },
     {
       "id": 15,
       "category": "core",
-      "title": "Query Handler - Repository Scoped (FR-007)",
-      "description": "M3: Accept query with target repository filter; restrict retrieval to that repository",
+      "title": "Repository-Scoped Query",
+      "description": "Implement repository filtering in Retriever that restricts BM25 and vector searches to chunks from a specified repo_id, applied as ES filter clause and Qdrant payload filter",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given query 'timeout' scoped to repository 'spring-framework', when retrieval executes, then only chunks from spring-framework are processed",
-        "Given query scoped to non-existent repository, when retrieval executes, then empty result set is returned with no error"
+        "Given query 'timeout' with repo_filter='spring-framework', when retrieval runs, then all returned chunks have repo_id matching 'spring-framework'",
+        "Given a repo_filter for a non-existent repository, when retrieval runs, then it returns an empty result set with 200 status",
+        "Given a query without repo_filter, when retrieval runs, then it searches across all indexed repositories"
       ],
-      "dependencies": [12],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-15-query-handler-repo-scoped.md",
-      "st_case_count": 2
+      "dependencies": [12]
     },
     {
       "id": 16,
-      "category": "interface",
-      "title": "API Key Authentication (FR-018)",
-      "description": "M4: Verify valid API key before processing queries; return 401 for invalid/missing keys",
+      "category": "core",
+      "title": "API Key Authentication",
+      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute → 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given request with valid API key in X-API-Key header, when auth middleware checks, then request proceeds to handler",
-        "Given request with invalid API key, when auth middleware checks, then 401 Unauthorized is returned",
-        "Given request with missing API key header, when auth middleware checks, then 401 Unauthorized is returned",
-        "Given request with revoked API key, when auth middleware checks, then 401 Unauthorized is returned"
+        "Given a valid API key in X-API-Key header, when a request is made, then the middleware allows the request and attaches the key's role to the request state",
+        "Given an invalid or missing API key, when a request is made, then the middleware returns 401 Unauthorized without executing the handler",
+        "Given more than 10 failed auth attempts from the same IP within 1 minute, when another attempt is made, then the middleware returns 429 Too Many Requests",
+        "Given APIKeyManager.create_key(name='test', role='read'), when called, then it generates a key, stores the SHA-256 hash in PostgreSQL, and returns the plaintext key once"
       ],
-      "dependencies": [2],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-16-api-key-authentication.md",
-      "st_case_count": 7
+      "dependencies": [2]
     },
     {
       "id": 17,
-      "category": "interface",
+      "category": "core",
       "title": "REST API Endpoints",
-      "description": "M4: FastAPI routes for POST /api/v1/query, GET /api/v1/query, repo management, health, metrics",
+      "description": "Implement FastAPI router with endpoints: POST /api/v1/query, GET /api/v1/repos, POST /api/v1/repos, POST /api/v1/repos/{repo_id}/reindex, GET /api/v1/health, and API key management endpoints",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given valid API key, when POST /api/v1/query with query body, then 200 with QueryResponse",
-        "Given valid API key, when GET /api/v1/query?text=foo, then 200 with QueryResponse",
-        "Given no auth, when GET /api/v1/health, then 200 with health status",
-        "Given no auth, when GET /api/v1/metrics, then Prometheus-format metrics returned"
+        "Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (codeResults + docResults + rules)",
+        "Given a GET to /api/v1/repos with valid API key, when processed, then it returns the list of registered repositories with their indexing status",
+        "Given a GET to /api/v1/health without authentication, when processed, then it returns service health status with ES/Qdrant/Redis connectivity",
+        "Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message"
       ],
-      "dependencies": [13, 14, 15, 16],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-17-rest-api-endpoints.md",
-      "st_case_count": 8
+      "dependencies": [13, 14, 15, 16]
     },
     {
       "id": 18,
-      "category": "interface",
-      "title": "MCP Server (FR-013)",
-      "description": "M4: Expose search_code_context tool via MCP protocol (stdio and HTTP SSE transport)",
+      "category": "core",
+      "title": "MCP Server",
+      "description": "Implement standalone MCP server exposing 3 tools: search_code_context (with max_tokens param), list_repositories, get_chunk. Uses the same query handler as REST API.",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given valid MCP tool-call request with query and api_key, when processed, then structured context results returned as MCP tool response",
-        "Given malformed MCP request missing required parameters, when received, then MCP-compliant error response with missing fields indication",
-        "Given MCP client connected via stdio, when tool call is sent, then response is received via same transport",
-        "Given MCP client connected via HTTP SSE, when tool call is sent, then response is received via SSE"
+        "Given an MCP client calling search_code_context with {query: 'spring webclient timeout', repo: 'spring-framework'}, when executed, then it returns structured context results matching REST API format",
+        "Given an MCP client calling list_repositories, when executed, then it returns the list of indexed repositories with status",
+        "Given an MCP client calling search_code_context without the optional repo parameter, when executed, then it searches across all repositories",
+        "Given an MCP tool call with missing required 'query' field, then it returns an MCP error response with a descriptive message"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-18-mcp-server.md",
-      "st_case_count": 8
+      "dependencies": [13]
     },
     {
       "id": 19,
-      "category": "interface",
-      "title": "Web UI Search Page (FR-014)",
-      "description": "M4: Interactive search interface with syntax-highlighted results; Developer Dark theme; requires authentication",
+      "category": "ui",
+      "title": "Web UI Search Page",
+      "description": "Implement Jinja2 SSR web interface with search input, repository filter dropdown, language filter checkboxes, syntax-highlighted results with htmx partial updates. Developer Dark theme per UCD.",
       "priority": "medium",
-      "status": "passing",
-      "verification_steps": [
-        "[devtools] /search | EXPECT: search input with placeholder, language filter chips (All, Java, Python, TypeScript, JavaScript, C, C++), result card structure | REJECT: console errors, placeholder 'TODO', broken images",
-        "Given authenticated user on Web UI, when entering query 'WebClient timeout' and submitting, then results are displayed with syntax-highlighted code snippets and metadata",
-        "Given unauthenticated access to Web UI, when search is attempted, then redirect to login page",
-        "Given search results displayed, when viewing a result card, then file path, symbol, score badge, and code snippet are visible"
-      ],
-      "dependencies": [17],
+      "status": "failing",
       "ui": true,
-      "ui_entry": "/search"
+      "ui_entry": "/",
+      "verification_steps": [
+        "[devtools] Navigate / → EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' → click Search → EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
+        "[devtools] Navigate / → submit empty query → EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
+        "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling"
+      ],
+      "dependencies": [17]
     },
     {
       "id": 20,
-      "category": "interface",
-      "title": "Language Filter (FR-015)",
-      "description": "M4: Restrict retrieval results to specified programming language",
+      "category": "core",
+      "title": "Language Filter",
+      "description": "Implement LanguageFilter that adds ES/Qdrant filter clauses restricting results to specified programming languages, applied before retrieval",
       "priority": "medium",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-20-language-filter.md",
-      "st_case_count": 5,
+      "status": "failing",
       "verification_steps": [
-        "Given query 'timeout' with language filter 'Java', when retrieval executes, then only Java-language chunks appear in results",
-        "Given query with language filter 'UnsupportedLang', when submitted, then validation error lists supported languages (Java, Python, TypeScript, JavaScript, C, C++)",
-        "[devtools] /search | click Python chip → EXPECT: chip selected, other chips deselected | search → EXPECT: only Python results | REJECT: console errors, chips unclickable, wrong language results"
+        "Given query 'timeout' with language_filter=['java'], when retrieval runs, then all returned code chunks have language='java'",
+        "Given multiple language filters ['java', 'python'], when retrieval runs, then returned chunks are in either Java or Python",
+        "Given an unrecognized language value 'rust', when submitted, then a ValidationError is raised listing supported languages",
+        "Given an empty language filter list, when retrieval runs, then no language filtering is applied"
       ],
-      "dependencies": [17],
-      "ui": true,
-      "ui_entry": "/search"
+      "dependencies": [8, 9]
     },
     {
       "id": 21,
-      "category": "interface",
-      "title": "Web UI Login Page (FR-018)",
-      "description": "M4: API key input form; validate and create session; redirect to search on success",
-      "priority": "medium",
-      "status": "passing",
+      "category": "core",
+      "title": "Scheduled Index Refresh",
+      "description": "Implement Celery Beat periodic task that triggers re-indexing for all registered repositories on a configurable cron schedule (default: weekly Sunday 02:00 UTC)",
+      "priority": "high",
+      "status": "failing",
       "verification_steps": [
-        "[devtools] /login | EXPECT: API key input (password-masked), Sign In button | REJECT: console errors, visible API key value",
-        "Given login page, when entering valid API key and clicking Sign In, then redirect to /search and user session established",
-        "Given login page, when entering invalid API key and clicking Sign In, then error message 'Invalid API key' appears below input",
-        "Given login page, when clicking Sign In with empty input, then validation error appears"
+        "Given the default cron configuration, when the scheduler fires, then it queues re-indexing jobs for all registered repositories with status='active'",
+        "Given a scheduled job that fails, when the failure is detected, then the system retries once after 1 hour; if retry also fails, it logs an error and skips until next window",
+        "Given a re-index already in progress for a repository, when the schedule fires, then it skips the duplicate and logs an informational message"
       ],
-      "dependencies": [16, 19],
-      "ui": true,
-      "ui_entry": "/login",
-      "st_case_path": "docs/test-cases/feature-21-web-ui-login-page.md",
-      "st_case_count": 7
+      "dependencies": [4]
     },
     {
       "id": 22,
-      "category": "operations",
-      "title": "Scheduled Index Refresh (FR-016)",
-      "description": "M5: Celery Beat triggers re-indexing on configurable schedule (default weekly)",
+      "category": "core",
+      "title": "Manual Reindex Trigger",
+      "description": "Implement POST /api/v1/repos/{repo_id}/reindex endpoint that queues an immediate re-indexing job for a specific repository, requiring admin role",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given default configuration, when one week has elapsed since last indexing, then re-indexing is automatically triggered for all registered repositories",
-        "Given custom schedule configured to daily, when one day has elapsed, then re-indexing is triggered",
-        "Given scheduled re-indexing with some repos failing, when run completes, then successful repos are indexed, errors are logged, and alert is sent"
+        "Given a POST to /api/v1/repos/{repo_id}/reindex with valid admin API key, when processed, then an indexing job is queued and the response contains job_id with status='queued'",
+        "Given a reindex request for a non-existent repository, when processed, then it returns 404",
+        "Given a reindex request with a read-only API key, when processed, then it returns 403 Forbidden"
       ],
-      "dependencies": [3, 7],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-22-scheduled-index-refresh.md",
-      "st_case_count": 4
+      "dependencies": [17]
     },
     {
       "id": 23,
-      "category": "operations",
-      "title": "Manual Reindex Trigger (FR-017)",
-      "description": "M5: Admin API to queue immediate indexing job for specific repository",
-      "priority": "high",
-      "status": "passing",
+      "category": "operational",
+      "title": "Metrics Endpoint",
+      "description": "Implement /metrics endpoint using prometheus-client exposing query_latency_seconds, retrieval_latency_seconds, rerank_latency_seconds, index_size_chunks, queries_per_second, cache_hit_ratio",
+      "priority": "medium",
+      "status": "failing",
       "verification_steps": [
-        "Given registered repository with no active job, when POST /api/v1/repos/{id}/reindex, then new indexing job is queued and begins processing",
-        "Given repository with active indexing job in progress, when POST /api/v1/repos/{id}/reindex, then 409 Conflict with message indicating active job exists"
+        "Given a GET to /metrics without authentication, when processed, then the response contains Prometheus text format with all required metric names: query_latency_seconds, retrieval_latency_seconds, rerank_latency_seconds, index_size_chunks, cache_hit_ratio",
+        "Given several queries have been processed, when /metrics is called, then the histogram buckets for query_latency_seconds contain observed values"
       ],
-      "dependencies": [22],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-23-manual-reindex-trigger.md",
-      "st_case_count": 4
+      "dependencies": [17]
     },
     {
       "id": 24,
-      "category": "operations",
-      "title": "Metrics Endpoint (NFR-008)",
-      "description": "M5: Prometheus metrics for latency, throughput, index size, error rate",
-      "priority": "high",
-      "status": "passing",
+      "category": "operational",
+      "title": "Query Logging",
+      "description": "Implement structured JSON logging for query service: each query logs query, query_type, api_key_id, result_count, retrieval_ms, rerank_ms, total_ms, timestamp to stdout. Non-fatal.",
+      "priority": "medium",
+      "status": "failing",
       "verification_steps": [
-        "Given running Query Service, when GET /api/v1/metrics, then Prometheus-format response includes ccr_query_latency_seconds, ccr_query_throughput_total, ccr_index_size_bytes, ccr_query_errors_total",
-        "Given 100 queries executed, when checking metrics, then ccr_query_throughput_total shows 100 increment"
+        "Given a completed query, when logging executes, then a structured JSON log entry is written to stdout containing: query, query_type, result_count, retrieval_ms, rerank_ms, total_ms, timestamp",
+        "Given a logging I/O failure, when it occurs during query processing, then the query response is not blocked or delayed"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-24-metrics-endpoint.md",
-      "st_case_count": 5
+      "dependencies": [13]
     },
     {
       "id": 25,
-      "category": "operations",
-      "title": "Query Logging (NFR-009)",
-      "description": "M5: Log all query requests with timestamp, correlation ID, query text, latency",
-      "priority": "high",
-      "status": "passing",
+      "category": "core",
+      "title": "Query Cache",
+      "description": "Implement Cache with Redis backend and in-memory L1 cache. Cache key = hash(query + repo_filter + language_filter). TTL=300s. Cache invalidation on reindex.",
+      "priority": "medium",
+      "status": "failing",
       "verification_steps": [
-        "Given 100 queries submitted, when checking logs, then 100 log entries exist each with correlation_id, timestamp, query_text, latency_ms",
-        "Given a query fails, when checking logs, then error is logged with same correlation_id for tracing"
+        "Given a query that has been cached, when the same query is submitted again within TTL, then the cached result is returned without executing the retrieval pipeline",
+        "Given a cached query result, when a repository reindex completes, then the cache entries for that repository are invalidated",
+        "Given Redis is unavailable, when cache operations are attempted, then the system degrades gracefully to no-cache mode without errors"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-25-query-logging.md",
-      "st_case_count": 4
+      "dependencies": [13]
     },
     {
       "id": 26,
       "category": "non-functional",
-      "title": "NFR-001: Query Latency P95",
-      "description": "P95 query response time <= 1000ms under 1000 QPS load",
-      "priority": "high",
-      "status": "passing",
+      "title": "NFR-001: Query Latency p95 < 1s",
+      "description": "Verify that p95 query latency is under 1000ms end-to-end under load (100 concurrent users)",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given k6 load test with 1000 concurrent users for 10 minutes, when measuring P95 latency, then P95 <= 1000ms"
+        "Given a Locust load test with 100 concurrent users sending diverse NL and symbol queries, when run for 5 minutes, then p95 end-to-end latency is < 1000ms"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-26-nfr-001-query-latency-p95.md",
-      "st_case_count": 3
+      "dependencies": [25]
     },
     {
       "id": 27,
       "category": "non-functional",
-      "title": "NFR-002: Query Throughput",
-      "description": "Sustained >= 1000 QPS, peak >= 2000 QPS for 10 minutes",
-      "priority": "high",
-      "status": "passing",
+      "title": "NFR-002: Query Throughput >= 1000 QPS",
+      "description": "Verify sustained throughput of >= 1000 QPS with acceptable error rate",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given k6 load test targeting 1000 QPS for 10 minutes, when measuring throughput, then sustained >= 1000 QPS",
-        "Given k6 load test targeting 2000 QPS burst, when measuring peak, then peak >= 2000 QPS achieved"
+        "Given a Locust load test ramping to 1000+ QPS, when sustained for 5 minutes, then the system maintains >= 1000 QPS with < 1% error rate"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-27-nfr-002-query-throughput.md",
-      "st_case_count": 4
+      "dependencies": [26]
     },
     {
       "id": 28,
       "category": "non-functional",
       "title": "NFR-003: Repository Capacity",
-      "description": "Index 100-1000 repositories simultaneously without degradation",
-      "priority": "high",
-      "status": "passing",
+      "description": "Verify the system can index and serve queries across 100-1000 repositories",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given progressive addition of repositories from 100 to 1000, when measuring query latency, then latency remains within NFR-001 bounds"
+        "Given 100+ registered repositories with indexed content, when querying across all repos, then results are returned within the latency budget"
       ],
-      "dependencies": [7],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-28-nfr-003-repository-capacity.md",
-      "st_case_count": 4
+      "dependencies": [3]
     },
     {
       "id": 29,
       "category": "non-functional",
       "title": "NFR-004: Single Repository Size",
-      "description": "Index repositories up to 1GB without failure",
-      "priority": "high",
-      "status": "passing",
+      "description": "Verify the system handles repositories up to 1GB in size",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given 1GB repository, when indexing job runs, then job completes successfully with all chunks indexed"
+        "Given a repository approaching 1GB, when indexing runs, then all files are processed and chunks are indexed without OOM or timeout"
       ],
-      "dependencies": [7],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-29-nfr-004-single-repository-size.md",
-      "st_case_count": 4
+      "dependencies": [4]
     },
     {
       "id": 30,
       "category": "non-functional",
-      "title": "NFR-005: Service Availability",
-      "description": "99.9% uptime (<= 8.76 hours downtime per year)",
-      "priority": "high",
-      "status": "passing",
+      "title": "NFR-005: Service Availability 99.9%",
+      "description": "Verify query service achieves 99.9% uptime with health monitoring",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given 1-minute health check monitoring, when measuring over measurement period, then 99.9% of health checks succeed"
+        "Given the query service running with health check endpoint, when monitored over a test window, then uptime exceeds 99.9% with automatic recovery from transient failures"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-30-nfr-005-service-availability.md",
-      "st_case_count": 5
+      "dependencies": [17]
     },
     {
       "id": 31,
       "category": "non-functional",
-      "title": "NFR-006: Linear Scalability",
-      "description": "Adding a node increases throughput linearly (±20%)",
-      "priority": "high",
-      "status": "passing",
+      "title": "NFR-006: Linear Scalability >= 70%",
+      "description": "Verify adding query nodes yields >= 70% of theoretical throughput increase",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given N query nodes, when measuring throughput, then N+1 nodes provide 80-120% of per-node capacity increase"
+        "Given N query nodes achieving X QPS, when deploying N+1 nodes, then throughput increases by >= 0.7 * (X/N)"
       ],
-      "dependencies": [17],
-      "ui": false,
-      "st_case_path": "docs/test-cases/feature-31-nfr-006-linear-scalability.md",
-      "st_case_count": 5
+      "dependencies": [27]
     },
     {
       "id": 32,
       "category": "non-functional",
       "title": "NFR-007: Single-Node Failure Tolerance",
-      "description": "Zero query failures during single-node outage; failover <= 30s",
-      "priority": "high",
-      "status": "passing",
-      "st_case_path": "docs/test-cases/feature-32-nfr-007-single-node-failure.md",
-      "st_case_count": 5,
+      "description": "Verify query service continues operating when any single node fails",
+      "priority": "low",
+      "status": "failing",
       "verification_steps": [
-        "Given multi-node deployment with load balancer, when one query node is killed, then zero queries fail and failover completes within 30s"
+        "Given a multi-node query cluster under load, when one node is killed, then remaining nodes continue serving requests without failures"
       ],
-      "dependencies": [17],
-      "ui": false
+      "dependencies": [30]
     }
-  ],
-  "real_test": {
-    "marker_pattern": "real_test",
-    "mock_patterns": ["Mock", "MagicMock", "AsyncMock", "@patch", "monkeypatch"],
-    "test_dir": "tests"
-  }
+  ]
 }

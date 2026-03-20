@@ -1,29 +1,26 @@
-"""Basic skeleton test to verify project setup."""
+"""Skeleton tests — verify project structure exists."""
 
-import pytest
+
+def test_src_packages_importable():
+    """Verify core packages are importable."""
+    import src
+    import src.indexing
+    import src.query
+    import src.shared
+    import src.shared.clients
+    import src.shared.models
+    import src.shared.services
+    import src.shared.utils
 
 
 def test_project_structure():
-    """Verify project structure is correctly scaffolded."""
+    """Verify key project files exist."""
     from pathlib import Path
 
-    project_root = Path(__file__).parent.parent
-
-    assert (project_root / "src" / "query").exists()
-    assert (project_root / "src" / "indexing").exists()
-    assert (project_root / "src" / "shared").exists()
-    assert (project_root / "tests").exists()
-    assert (project_root / "docs" / "plans").exists()
-    assert (project_root / "pyproject.toml").exists()
-
-
-def test_import_query_module():
-    """Verify query module can be imported."""
-    import src.query
-    assert src.query.__version__ is not None
-
-
-def test_import_shared_module():
-    """Verify shared module can be imported."""
-    import src.shared
-    assert src.shared is not None
+    root = Path(__file__).parent.parent
+    assert (root / "pyproject.toml").exists()
+    assert (root / "feature-list.json").exists()
+    assert (root / "src" / "__init__.py").exists()
+    assert (root / "src" / "indexing" / "__init__.py").exists()
+    assert (root / "src" / "query" / "__init__.py").exists()
+    assert (root / "src" / "shared" / "__init__.py").exists()
