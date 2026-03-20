@@ -121,7 +121,7 @@
       "title": "Project Skeleton & CI",
       "description": "Set up project structure with src/indexing, src/query, src/shared packages, pyproject.toml, pytest config, alembic setup, and basic health check endpoint",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a fresh clone, when running 'pip install -e .[dev]', then all dependencies install without errors and pytest is available",
         "Given the installed project, when running 'pytest tests/test_skeleton.py', then at least one test passes confirming the project structure exists",

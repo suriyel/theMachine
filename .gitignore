@@ -30,6 +30,7 @@ ENV/
 htmlcov/
 .pytest_cache/
 .mutmut-cache/
+mutants/
 
 # Logs
 *.log

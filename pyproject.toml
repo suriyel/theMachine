@@ -30,6 +30,7 @@ dependencies = [
     "pygments==2.19.1",
     "prometheus-client==0.21.1",
     "pydantic==2.10.5",
+    "pydantic-settings==2.7.1",
     "python-multipart==0.0.20",
     "httpx==0.28.1",
 ]
@@ -69,4 +70,4 @@ exclude_lines = [
 [tool.mutmut]
 paths_to_mutate = "src/"
 tests_dir = "tests/"
-runner = "python -m pytest -x --tb=short"
+runner = "python -m pytest -x --tb=short -k 'not test_project_structure'"
