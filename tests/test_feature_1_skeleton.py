@@ -98,7 +98,7 @@ def test_settings_missing_database_url_raises(monkeypatch):
 
 # [unit] Test K1: get_engine with empty string raises ValueError
 def test_get_engine_empty_url_raises():
-    with pytest.raises(ValueError, match="must not be empty"):
+    with pytest.raises(ValueError, match="database_url must not be empty"):
         get_engine("")
 
 
@@ -124,8 +124,10 @@ def test_get_engine_pool_pre_ping_enabled():
     assert engine.pool._pre_ping is True
 
 
-# [unit] Test K5: get_session_factory expire_on_commit is disabled
+# [unit] Test K5: get_session_factory expire_on_commit is disabled and engine is bound
 def test_get_session_factory_expire_on_commit_disabled():
     engine = get_engine("sqlite+aiosqlite:///test.db")
     factory = get_session_factory(engine)
     assert factory.kw.get("expire_on_commit") is False
+    # Verify the engine is correctly bound (not None or missing)
+    assert factory.kw.get("bind") is engine
