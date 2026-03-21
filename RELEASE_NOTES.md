@@ -80,6 +80,14 @@
 - **Fixed**: Pre-existing test `test_encoder_init_missing_api_key_raises_error` made robust for mutmut environment
 - Example: 12-keyword-retrieval.py
 
+### Feature #9: Semantic Retrieval (Vector)
+- **New**: Retriever.vector_code_search(query, repo_id, languages?, top_k=200) — encodes query via EmbeddingEncoder.encode_query(), searches Qdrant code_embeddings collection with cosine similarity, returns ScoredChunks with content_type="code"
+- **New**: Retriever.vector_doc_search(query, repo_id, top_k=200) — same pattern for doc_embeddings collection, returns ScoredChunks with content_type="doc"
+- **New**: Qdrant payload filtering — repo_id (always) + languages (optional via MatchAny)
+- **New**: Error wrapping — EmbeddingModelError and Qdrant errors (UnexpectedResponse, RpcError, ConnectionError) wrapped into RetrievalError
+- **New**: Degradation warning — logs warning when Qdrant is unreachable per SRS FR-007 AC-3
+- Example: 13-semantic-retrieval.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 12/39 active features passing · Last: #8 Keyword Retrieval (BM25) (2026-03-21) · Next: #9 Semantic Retrieval
+Progress: 13/39 active features passing · Last: #9 Semantic Retrieval (Vector) (2026-03-21) · Next: #10 Rank Fusion (RRF)
 
 ---
 
@@ -224,3 +224,15 @@ Progress: 12/39 active features passing · Last: #8 Keyword Retrieval (BM25) (20
 - **Fixed**: Pre-existing test_encoder_init_missing_api_key_raises_error made robust for mutmut env
 - **Result**: Feature #8 marked PASSING
 - **Next**: Feature #9 — Semantic Retrieval
+
+### Session 17 — 2026-03-21 (Feature #9)
+- **Feature**: #9 — Semantic Retrieval (Vector)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Retriever extended with vector_code_search() and vector_doc_search() — encodes query via EmbeddingEncoder.encode_query(), searches Qdrant code_embeddings/doc_embeddings collections with cosine similarity, Qdrant payload filtering (repo_id + optional languages via MatchAny), error wrapping (EmbeddingModelError, UnexpectedResponse, RpcError, ConnectionError → RetrievalError), degradation warning logging per SRS AC-3
+- **Tests**: 19 feature tests (18 unit + 1 real) + 355 prior = 374/374 passing
+- **Coverage**: 100% line, 100% branch on retriever.py
+- **Mutation**: 6/7 manual mutations killed, 1 equivalent (ConnectionError subclass of OSError) — effective 100%
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS after fixing 1 Important issue (SRS AC-3 degradation warning not logged — added logger.warning)
+- **Result**: Feature #9 marked PASSING
+- **Next**: Feature #10 — Rank Fusion (RRF)
