@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 7/39 active features passing · Last: #34 Python decorated_definition Unwrapping (2026-03-21) · Next: #35 Java: enum + record + static initializer
+Progress: 8/39 active features passing · Last: #35 Java: enum + record + static initializer (2026-03-21) · Next: #36 JavaScript: prototype-assigned functions + require() imports
 
 ---
 
@@ -162,3 +162,15 @@ Progress: 7/39 active features passing · Last: #34 Python decorated_definition 
 - **Review**: PASS — 2 minor findings fixed (L2 decorator content, plan doc stacked decorator note)
 - **Result**: Feature #34 marked PASSING
 - **Next**: Feature #35 — Java: enum + record + static initializer
+
+### Session 12 — 2026-03-21 (Feature #35)
+- **Feature**: #35 — Java: enum + record + static initializer (Wave 2)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Added `enum_declaration`, `record_declaration` to Java class_nodes; `static_initializer` to function_nodes; `enum_body`/`enum_body_declarations` to `_get_body_node`; `<static>` sentinel name
+- **Tests**: 12 feature tests + 274 prior = 286/286 passing
+- **Coverage**: 94% overall
+- **Mutation**: 4/4 critical mutants killed (manual verification)
+- **ST**: 7/7 test cases PASS (3 FUNC, 4 BNDRY), all Real
+- **Review**: N/A (minor scope, design-compliant configuration changes)
+- **Result**: Feature #35 marked PASSING
+- **Next**: Feature #36 — JavaScript: prototype-assigned functions + require() imports

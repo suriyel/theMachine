@@ -57,6 +57,13 @@
 - **Fixed**: Proxy env vars (`ALL_PROXY`, `HTTP_PROXY`, etc.) cleared in test conftest to fix Qdrant/httpx client test failures
 - Example: 07-decorated-definition-chunking.py
 
+### Feature #35: Java enum + record + static initializer
+- **Modified**: Java `class_nodes` — added `enum_declaration` and `record_declaration` for L2 chunk production
+- **Modified**: Java `function_nodes` — added `static_initializer` for L3 chunk production
+- **Modified**: `_get_body_node` — handles `enum_body` → `enum_body_declarations` for method extraction in enums
+- **Modified**: `_get_node_name` — returns `"<static>"` sentinel for `static_initializer` nodes
+- Example: 08-java-enum-record-static.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

@@ -616,8 +616,10 @@
       "title": "Java: enum + record + static initializer",
       "description": "Add enum_declaration and record_declaration to Java class_nodes so enums (with methods) and records produce L2 chunks. Add static_initializer to function_nodes so static {} blocks produce L3 chunks.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
+      "st_case_path": "docs/test-cases/feature-35-java-enum-record-static.md",
+      "st_case_count": 7,
       "verification_steps": [
         "Given a Java file with an enum declaration containing 2 enum constants and 1 method, when chunking completes, then the enum produces an L2 chunk and the method produces an L3 chunk with parent_class equal to the enum name",
         "Given a Java file with a record declaration (Java 16+), when chunking completes, then the record produces an L2 chunk with correct symbol name",
