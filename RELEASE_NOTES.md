@@ -154,6 +154,13 @@
 - **New**: ROLE_PERMISSIONS static map for fast permission checks without DB lookups
 - Example: 16-api-key-authentication.py
 
+### Feature #21: Scheduled Index Refresh
+- **New**: `create_celery_app(broker_url, schedule_cron=None)` — Celery app factory with Beat schedule configuration, configurable cron (default: weekly Sunday 02:00 UTC), 5-field cron string parsing
+- **New**: `scheduled_reindex_all` — periodic Celery task that queries active repos, skips those with in-progress jobs (pending/running IndexJob), enqueues `reindex_repo_task` for eligible repos
+- **New**: `reindex_repo_task` — per-repo task with branch fallback chain (indexed_branch → default_branch → "main"), creates IndexJob, retries once after 1 hour on failure (MaxRetriesExceededError logged and skipped)
+- **New**: Sync SQLAlchemy session helper for Celery worker context
+- Example: 19-scheduled-index-refresh.py
+
 ### Feature #15: Repository-Scoped Query
 - **Modified**: Retriever — `bm25_code_search`, `bm25_doc_search`, `vector_code_search`, `vector_doc_search` now accept `repo_id: str | None = None`; when None, searches span all indexed repositories; when specified, results restricted via ES term filter and Qdrant payload filter
 - **Modified**: QueryHandler — `handle_nl_query`, `handle_symbol_query`, `_run_pipeline`, `_symbol_boost_search` accept `repo: str | None = None`; symbol query inline ES queries (term + fuzzy) conditionally include repo filter
