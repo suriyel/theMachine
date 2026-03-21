@@ -921,3 +921,225 @@ class TestT40LazyParser:
         # Both should succeed; parser is created once and reused
         assert len(chunks1) >= 1
         assert len(chunks2) >= 1
+
+
+# ===========================================================================
+# Feature #36 — JavaScript: prototype-assigned functions + require() imports
+# [no integration test] — pure computation feature, no external I/O
+# ===========================================================================
+
+JS_PROTOTYPE_FUNCTION = """\
+res.status = function(code) { return code; };
+"""
+
+JS_PROTOTYPE_ARROW = """\
+obj.handler = (req, res) => { return 42; };
+"""
+
+JS_REQUIRE_SINGLE = """\
+var express = require('express');
+"""
+
+JS_REQUIRE_MULTIPLE = """\
+var express = require('express');
+const path = require('path');
+let _ = require('lodash');
+"""
+
+JS_PROTOTYPE_WITH_NORMAL = """\
+class Router {
+    get(path) { return path; }
+}
+
+function formatDate(date) {
+    return date.toISOString();
+}
+
+res.status = function(code) { return code; };
+"""
+
+JS_DEEP_MEMBER_CHAIN = """\
+a.b.c.d = function() { return 1; };
+"""
+
+JS_NON_FUNCTION_ASSIGN = """\
+obj.x = 42;
+"""
+
+JS_REQUIRE_SCOPED = """\
+const a = require('@scope/pkg');
+"""
+
+JS_REQUIRE_DYNAMIC = """\
+const a = require(dynamicVar);
+"""
+
+JS_COMPUTED_PROPERTY = """\
+obj[key] = function() { return 1; };
+"""
+
+JS_REQUIRE_NO_SEMICOLONS = """\
+var a = require('alpha')
+const b = require('beta')
+"""
+
+
+class TestFeature36JsPrototypeAssign:
+    """Feature #36 — prototype-assigned function detection."""
+
+    # [unit] T01: happy path — function_expression assignment
+    def test_js_prototype_function(self, chunker):
+        """res.status = function(code){...} → L3 chunk with symbol='status'."""
+        f = _make_file("src/app.js", JS_PROTOTYPE_FUNCTION)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 1
+        assert funcs[0].symbol == "status"
+        assert funcs[0].language == "javascript"
+        assert funcs[0].parent_class == ""
+
+    # [unit] T02: happy path — arrow_function assignment
+    def test_js_prototype_arrow(self, chunker):
+        """obj.handler = (req, res) => {...} → L3 chunk with symbol='handler'."""
+        f = _make_file("src/app.js", JS_PROTOTYPE_ARROW)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 1
+        assert funcs[0].symbol == "handler"
+        assert funcs[0].language == "javascript"
+
+    # [unit] T05: happy path — prototype alongside normal functions and classes
+    def test_js_prototype_with_normal_functions(self, chunker):
+        """Prototype-assigned function coexists with normal functions and classes."""
+        f = _make_file("src/app.js", JS_PROTOTYPE_WITH_NORMAL)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        classes = [c for c in chunks if c.chunk_type == "class"]
+
+        func_symbols = {c.symbol for c in funcs}
+        assert "status" in func_symbols, "prototype fn missing"
+        assert "formatDate" in func_symbols, "normal fn missing"
+        assert "get" in func_symbols, "class method missing"
+        assert len(classes) == 1
+        assert classes[0].symbol == "Router"
+
+    # [unit] T06: boundary — deep member chain
+    def test_js_deep_member_chain(self, chunker):
+        """a.b.c.d = function(){} → L3 chunk with symbol='d' (last property)."""
+        f = _make_file("src/app.js", JS_DEEP_MEMBER_CHAIN)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 1
+        assert funcs[0].symbol == "d"
+
+    # [unit] T07: boundary — non-function assignment produces no L3 chunk
+    def test_js_non_function_assign_no_chunk(self, chunker):
+        """obj.x = 42 should NOT produce an L3 function chunk."""
+        f = _make_file("src/app.js", JS_NON_FUNCTION_ASSIGN)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 0
+
+    # [unit] T10: boundary — normal JS file unaffected
+    def test_js_normal_file_unaffected(self, chunker):
+        """File with no prototype assigns produces normal chunks only."""
+        f = _make_file("src/events.js", JAVASCRIPT_MIXED)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        func_symbols = {c.symbol for c in funcs}
+        # Normal functions: constructor, on, formatDate, double
+        assert "formatDate" in func_symbols
+        assert "double" in func_symbols
+
+    # [unit] T11: error — computed property assignment no L3 chunk
+    def test_js_computed_property_no_chunk(self, chunker):
+        """obj[key] = function(){} should NOT produce an L3 chunk."""
+        f = _make_file("src/app.js", JS_COMPUTED_PROPERTY)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 0
+
+    # [unit] T13: boundary — empty JS file
+    def test_js_empty_file(self, chunker):
+        """Empty JS file produces only L1 file chunk, no crash."""
+        f = _make_file("src/empty.js", "")
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        assert len(chunks) == 1
+        assert chunks[0].chunk_type == "file"
+        assert chunks[0].imports == []
+
+    # [unit] T14: happy path — chunk content includes full statement text
+    def test_js_prototype_content_is_full_statement(self, chunker):
+        """Prototype function chunk content includes the full expression_statement."""
+        f = _make_file("src/app.js", JS_PROTOTYPE_FUNCTION)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(funcs) == 1
+        assert "res.status" in funcs[0].content
+        assert "function" in funcs[0].content
+
+    # [unit] — prototype-assigned function appears in top_level_symbols
+    def test_js_prototype_in_top_level_symbols(self, chunker):
+        """Prototype-assigned function symbol appears in L1 top_level_symbols."""
+        f = _make_file("src/app.js", JS_PROTOTYPE_FUNCTION)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "status" in l1.top_level_symbols
+
+
+class TestFeature36JsRequireImports:
+    """Feature #36 — CommonJS require() import detection."""
+
+    # [unit] T03: happy path — single require()
+    def test_js_require_single(self, chunker):
+        """var express = require('express') → imports includes 'express'."""
+        f = _make_file("src/app.js", JS_REQUIRE_SINGLE)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "express" in l1.imports
+
+    # [unit] T04: happy path — multiple require() with var/const/let
+    def test_js_require_multiple(self, chunker):
+        """Multiple require() calls with var/const/let all detected."""
+        f = _make_file("src/app.js", JS_REQUIRE_MULTIPLE)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "express" in l1.imports
+        assert "path" in l1.imports
+        assert "lodash" in l1.imports
+
+    # [unit] T08: boundary — scoped package
+    def test_js_require_scoped_package(self, chunker):
+        """require('@scope/pkg') → imports includes '@scope/pkg'."""
+        f = _make_file("src/app.js", JS_REQUIRE_SCOPED)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "@scope/pkg" in l1.imports
+
+    # [unit] T09: boundary — dynamic require is not extracted
+    def test_js_require_dynamic_skipped(self, chunker):
+        """require(dynamicVar) should NOT be added to imports."""
+        f = _make_file("src/app.js", JS_REQUIRE_DYNAMIC)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        # Should have no imports from dynamic require
+        assert len(l1.imports) == 0
+
+    # [unit] T12: boundary — require without semicolons (ASI)
+    def test_js_require_no_semicolons(self, chunker):
+        """require() calls without semicolons still detected."""
+        f = _make_file("src/app.js", JS_REQUIRE_NO_SEMICOLONS)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "alpha" in l1.imports
+        assert "beta" in l1.imports
+
+    # [unit] — require + ES import coexistence
+    def test_js_require_with_es_imports(self, chunker):
+        """require() imports and ES import statements both collected."""
+        js_code = "import { foo } from 'bar';\nconst x = require('baz');\n"
+        f = _make_file("src/app.js", js_code)
+        chunks = chunker.chunk(f, repo_id="repo-36", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert any("bar" in imp for imp in l1.imports), "ES import missing"
+        assert "baz" in l1.imports, "require import missing"

@@ -233,6 +233,13 @@ class Chunker:
                         name = _get_node_name(inner)
                         if name:
                             top_level_symbols.append(name)
+                elif (
+                    child.type == "expression_statement"
+                    and language == "javascript"
+                ):
+                    result = _is_prototype_assign(child)
+                    if result is not None:
+                        top_level_symbols.append(result[0])
 
         content_parts = imports + ([""] if imports else []) + top_level_symbols
         content = "\n".join(content_parts)
@@ -564,6 +571,25 @@ class Chunker:
                                     chunks,
                                     parent_class=cls_name,
                                 )
+            elif (
+                child.type == "expression_statement"
+                and language == "javascript"
+            ):
+                # JS prototype-assigned functions:
+                # obj.method = function(...){} or obj.method = (...) => {}
+                result = _is_prototype_assign(child)
+                if result is not None:
+                    prop_name, _func_node = result
+                    self._add_function_chunk(
+                        child,
+                        prop_name,
+                        file,
+                        repo_id,
+                        branch,
+                        language,
+                        parent_class,
+                        chunks,
+                    )
             elif child.type in node_map.function_nodes:
                 name = _get_node_name(child)
                 self._add_function_chunk(
@@ -776,6 +802,8 @@ class Chunker:
 
         imports: list[str] = []
         self._collect_imports(tree.root_node, node_map.import_nodes, imports)
+        if language == "javascript":
+            _collect_require_imports(tree.root_node, imports)
         return imports
 
     def _collect_imports(
@@ -939,3 +967,73 @@ def _clean_comment(text: str) -> str:
         if line:
             cleaned.append(line)
     return "\n".join(cleaned)
+
+
+def _is_prototype_assign(node: ts.Node) -> tuple[str, ts.Node] | None:
+    """Detect JS prototype-assigned function: obj.x = function/arrow.
+
+    Returns (property_name, function_node) if pattern matches, else None.
+    """
+    # Find assignment_expression child
+    assign = None
+    for child in node.children:
+        if child.type == "assignment_expression":
+            assign = child
+            break
+    if assign is None:
+        return None
+
+    # Check LHS is member_expression, RHS is function
+    lhs = None
+    rhs = None
+    for child in assign.children:
+        if child.type == "member_expression":
+            lhs = child
+        elif child.type in ("function_expression", "arrow_function"):
+            rhs = child
+
+    if lhs is None or rhs is None:
+        return None
+
+    # Extract property name from member_expression
+    for child in lhs.children:
+        if child.type == "property_identifier":
+            prop_name = child.text.decode("utf-8") if child.text else ""
+            if prop_name:
+                return (prop_name, rhs)
+
+    return None
+
+
+def _collect_require_imports(
+    node: ts.Node, imports: list[str]
+) -> None:
+    """Collect CommonJS require() imports from JS root children."""
+    for child in node.children:
+        if child.type in ("variable_declaration", "lexical_declaration"):
+            for declarator in child.children:
+                if declarator.type == "variable_declarator":
+                    for sub in declarator.children:
+                        if sub.type == "call_expression":
+                            _extract_require_arg(sub, imports)
+
+
+def _extract_require_arg(
+    call_node: ts.Node, imports: list[str]
+) -> None:
+    """Extract module path from a require('module') call_expression."""
+    func_name = None
+    arg_str = None
+    for child in call_node.children:
+        if child.type == "identifier":
+            text = child.text.decode("utf-8") if child.text else ""
+            if text == "require":
+                func_name = "require"
+        elif child.type == "arguments":
+            for arg in child.children:
+                if arg.type == "string":
+                    raw = arg.text.decode("utf-8") if arg.text else ""
+                    # Strip outer quotes
+                    arg_str = raw.strip("'\"")
+    if func_name == "require" and arg_str:
+        imports.append(arg_str)
