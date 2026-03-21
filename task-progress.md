@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 3/33 active features passing · Last: #3 Repository Registration (Wave 1 re-verify, 2026-03-21) · Next: #4 Git Clone & Update (Wave 1 re-verify)
+Progress: 4/33 active features passing · Last: #4 Git Clone & Update (Wave 1 re-verify, 2026-03-21) · Next: #5 Content Extraction
 
 ---
 
@@ -91,3 +91,16 @@ Progress: 3/33 active features passing · Last: #3 Repository Registration (Wave
 - **Review**: PASS — all S1-S5, D1-D5, P1-P6, T1-T2 checks passed
 - **Result**: Feature #3 marked PASSING
 - **Next**: Feature #4 — Git Clone & Update (Wave 1 re-verify)
+
+### Session 7 — 2026-03-21 (Feature #4 Wave 1 Re-verify)
+- **Feature**: #4 — Git Clone & Update (Wave 1 branch support)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Changes**: Added `branch` param to `clone_or_update()`, `detect_default_branch()`, `list_remote_branches()`
+- **Implementation**: `--branch` flag in _clone, `origin/{branch}` in _update, symbolic-ref for default detection, `git branch -r` parsing
+- **Tests**: 21 feature tests + 74 prior = 95/95 passing (6 new Wave 1 tests + 15 existing)
+- **Coverage**: 98% overall, 99% git_cloner.py
+- **Mutation**: 100% for Feature #4 scope (18 killed, 0 surviving in git_cloner.py)
+- **ST**: 8/8 test cases PASS (5 FUNC, 3 BNDRY) — updated for branch support
+- **Review**: PASS — all compliance checks passed
+- **Result**: Feature #4 marked PASSING
+- **Next**: Feature #5 — Content Extraction

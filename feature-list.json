@@ -171,10 +171,10 @@
       "title": "Git Clone & Update",
       "description": "Implement GitCloner with clone_or_update(branch) that performs git clone (with --branch if specified) for new repos or git fetch+reset to origin/{branch} for existing repos, detects default_branch, supports list_remote_branches(), with error handling for network/auth/disk failures",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 1,
       "st_case_path": "docs/test-cases/feature-4-git-clone-update.md",
-      "st_case_count": 5,
+      "st_case_count": 8,
       "verification_steps": [
         "Given a newly registered repository with no branch specified, when clone_or_update() runs, then the repo is cloned to REPO_CLONE_PATH/{repo_id}, default_branch is detected via symbolic-ref, and indexed_branch is set to default_branch",
         "Given a newly registered repository with branch='develop', when clone_or_update(branch='develop') runs, then the repo is cloned with --branch develop and indexed_branch is set to 'develop'",
