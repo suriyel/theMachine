@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 19/42 active features passing · Last: #15 Repository-Scoped Query (2026-03-21) · Next: #16 API Key Authentication
+Progress: 20/42 active features passing · Last: #16 API Key Authentication (2026-03-21) · Next: #20 Language Filter
 
 ---
 
@@ -317,3 +317,15 @@ Progress: 19/42 active features passing · Last: #15 Repository-Scoped Query (20
 - **Review**: PASS — S1-S5 pass, D1-D5 pass, P1-P6 pass, T1-T3 pass; 1 minor fixed (duplicate assertion clause)
 - **Result**: Feature #15 marked PASSING
 - **Next**: Feature #16 — API Key Authentication
+
+### Session 25 — 2026-03-21 (Feature #16)
+- **Feature**: #16 — API Key Authentication
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: AuthMiddleware (FastAPI dependency: X-API-Key extraction, SHA-256 hash, Redis cache→DB fallback, rate limiting 10/min/IP via INCR/EXPIRE, ROLE_PERMISSIONS map, check_repo_access via ApiKeyRepoAccess), APIKeyManager (create_key with secrets.token_urlsafe(32), revoke_key with cache invalidation, rotate_key lifecycle, list_keys)
+- **Tests**: 34 feature tests + 489 prior = 523/523 passing (5 skipped)
+- **Coverage**: 94% auth_middleware.py, 95% api_key_manager.py; 95% overall
+- **Mutation**: mutmut 3.2.0 stats mapping bug; manual mutation verification confirms key mutations killed (hash, rate limit boundary, permission map, expiry check)
+- **ST**: 10/10 test cases PASS (5 FUNC, 3 BNDRY, 2 SEC)
+- **Review**: PASS — S1-S5 pass, D1-D5 pass (FastAPI dependency approved deviation), P1-P6 pass, T1-T3 pass
+- **Result**: Feature #16 marked PASSING
+- **Next**: Feature #20 — Language Filter

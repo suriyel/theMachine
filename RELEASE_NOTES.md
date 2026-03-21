@@ -132,6 +132,12 @@
 - **New**: Input validation — `ValidationError` for empty/whitespace queries and queries exceeding 200 chars
 - Example: 14-symbol-query.py
 
+### Feature #16: API Key Authentication
+- **New**: AuthMiddleware — FastAPI dependency for X-API-Key header validation, SHA-256 hash lookup (Redis cache TTL=300s → PostgreSQL fallback), rate limiting (10 failures/IP/minute → 429 via Redis INCR/EXPIRE), role-based permissions (read: query+list_repos, admin: all), repository access control (admin bypasses, read checks ApiKeyRepoAccess), graceful Redis failure (fail-open rate limit, DB fallback for key lookup)
+- **New**: APIKeyManager — create_key(name, role, repo_ids) generates secrets.token_urlsafe(32), stores SHA-256 hash, returns plaintext once; revoke_key deactivates + invalidates Redis cache; rotate_key revokes old + creates new with same name/role/repos; list_keys returns all keys
+- **New**: ROLE_PERMISSIONS static map for fast permission checks without DB lookups
+- Example: 16-api-key-authentication.py
+
 ### Feature #15: Repository-Scoped Query
 - **Modified**: Retriever — `bm25_code_search`, `bm25_doc_search`, `vector_code_search`, `vector_doc_search` now accept `repo_id: str | None = None`; when None, searches span all indexed repositories; when specified, results restricted via ES term filter and Qdrant payload filter
 - **Modified**: QueryHandler — `handle_nl_query`, `handle_symbol_query`, `_run_pipeline`, `_symbol_boost_search` accept `repo: str | None = None`; symbol query inline ES queries (term + fuzzy) conditionally include repo filter

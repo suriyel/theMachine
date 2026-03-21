@@ -584,7 +584,7 @@
       "title": "API Key Authentication",
       "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute \u2192 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a valid API key in X-API-Key header, when a request is made, then the middleware allows the request and attaches the key's role to the request state",
         "Given an invalid or missing API key, when a request is made, then the middleware returns 401 Unauthorized without executing the handler",
@@ -593,7 +593,9 @@
       ],
       "dependencies": [
         2
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-16-api-key-authentication.md",
+      "st_case_count": 10
     },
     {
       "id": 17,
