@@ -17,6 +17,20 @@ if os.environ.get("MUTANT_UNDER_TEST"):
             del sys.modules[mod_name]
 
 
+@pytest.fixture(autouse=True)
+def _clear_proxy_env(request, monkeypatch):
+    """Remove proxy env vars that break Qdrant/httpx client instantiation.
+
+    Skipped for tests marked with @pytest.mark.real that need network
+    access through the proxy (e.g., git clone tests).
+    """
+    if request.node.get_closest_marker("real"):
+        return
+    for key in ("ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy",
+                "HTTPS_PROXY", "https_proxy", "NO_PROXY", "no_proxy"):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture
 def sample_query():
     """A sample natural language query for testing."""

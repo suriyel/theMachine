@@ -210,6 +210,20 @@ class Chunker:
                     name = _get_node_name(child)
                     if name:
                         top_level_symbols.append(name)
+                elif child.type == "export_statement":
+                    for inner in child.children:
+                        if inner.type in all_interesting:
+                            name = _get_node_name(inner)
+                            if name:
+                                top_level_symbols.append(name)
+                elif child.type == "decorated_definition":
+                    inner = _find_decorated_inner(
+                        child, all_interesting
+                    )
+                    if inner is not None:
+                        name = _get_node_name(inner)
+                        if name:
+                            top_level_symbols.append(name)
 
         content_parts = imports + ([""] if imports else []) + top_level_symbols
         content = "\n".join(content_parts)
@@ -268,6 +282,83 @@ class Chunker:
     ) -> None:
         """Recursively find class nodes and create L2 chunks."""
         for child in node.children:
+            # Unwrap export_statement: recurse into export node so its class
+            # children are found by the class_nodes check below on next level.
+            if child.type == "export_statement":
+                self._walk_classes(
+                    child, file, repo_id, branch, language, node_map, chunks
+                )
+                continue
+            # Unwrap decorated_definition: find inner class node
+            if child.type == "decorated_definition":
+                inner = _find_decorated_inner(child, node_map.class_nodes)
+                if inner is None:
+                    continue
+                name = _get_node_name(inner)
+                signature = self.extract_signature(inner, language)
+                doc_comment = self.extract_doc_comment(inner, language)
+
+                method_sigs: list[str] = []
+                body = _get_body_node(inner, language)
+                if body:
+                    for member in body.children:
+                        if member.type in node_map.function_nodes:
+                            m_name = _get_node_name(member)
+                            m_sig = self.extract_signature(
+                                member, language
+                            )
+                            method_sigs.append(
+                                m_sig if m_sig else m_name
+                            )
+
+                # Include decorator text (SRS: decorator preserved)
+                decorator_lines: list[str] = []
+                for dc in child.children:
+                    if dc.type == "decorator":
+                        dt = dc.text.decode("utf-8") if dc.text else ""
+                        if dt:
+                            decorator_lines.append(dt)
+                decorator_prefix = (
+                    "\n".join(decorator_lines) + "\n"
+                    if decorator_lines
+                    else ""
+                )
+                content = decorator_prefix + signature + "\n" + doc_comment
+                if method_sigs:
+                    content += "\n" + "\n".join(method_sigs)
+
+                chunk_id = (
+                    f"{repo_id}:{branch}:{file.path}:"
+                    f"{name}:class:{child.start_point[0]}"
+                )
+                chunks.append(
+                    CodeChunk(
+                        chunk_id=chunk_id,
+                        repo_id=repo_id,
+                        branch=branch,
+                        file_path=file.path,
+                        language=language,
+                        chunk_type="class",
+                        symbol=name,
+                        signature=signature,
+                        doc_comment=doc_comment,
+                        parent_class="",
+                        content=content,
+                        line_start=child.start_point[0],
+                        line_end=child.end_point[0],
+                    )
+                )
+                if body:
+                    self._walk_classes(
+                        body,
+                        file,
+                        repo_id,
+                        branch,
+                        language,
+                        node_map,
+                        chunks,
+                    )
+                continue
             if child.type in node_map.class_nodes:
                 name = _get_node_name(child)
                 signature = self.extract_signature(child, language)
@@ -365,7 +456,43 @@ class Chunker:
     ) -> None:
         """Recursively find function nodes and create L3 chunks."""
         for child in node.children:
-            if child.type in node_map.class_nodes:
+            if child.type == "decorated_definition":
+                # Unwrap decorated_definition to find inner class/function
+                all_targets = (
+                    node_map.class_nodes + node_map.function_nodes
+                )
+                inner = _find_decorated_inner(child, all_targets)
+                if inner is None:
+                    continue
+                if inner.type in node_map.class_nodes:
+                    cls_name = _get_node_name(inner)
+                    body = _get_body_node(inner, language)
+                    if body:
+                        self._walk_functions(
+                            body,
+                            file,
+                            repo_id,
+                            branch,
+                            language,
+                            node_map,
+                            chunks,
+                            parent_class=cls_name,
+                        )
+                elif inner.type in node_map.function_nodes:
+                    name = _get_node_name(inner)
+                    # Pass `child` (decorated_definition) so content
+                    # includes decorator text
+                    self._add_function_chunk(
+                        child,
+                        name,
+                        file,
+                        repo_id,
+                        branch,
+                        language,
+                        parent_class,
+                        chunks,
+                    )
+            elif child.type in node_map.class_nodes:
                 # Recurse into class body with class name as parent
                 cls_name = _get_node_name(child)
                 body = _get_body_node(child, language)
@@ -399,6 +526,35 @@ class Chunker:
                         parent_class,
                         chunks,
                     )
+                elif child.type == "export_statement":
+                    # export function foo() / export class Foo — unwrap
+                    for inner in child.children:
+                        if inner.type in node_map.function_nodes:
+                            name = _get_node_name(inner)
+                            self._add_function_chunk(
+                                inner,
+                                name,
+                                file,
+                                repo_id,
+                                branch,
+                                language,
+                                parent_class,
+                                chunks,
+                            )
+                        elif inner.type in node_map.class_nodes:
+                            cls_name = _get_node_name(inner)
+                            body = _get_body_node(inner, language)
+                            if body:
+                                self._walk_functions(
+                                    body,
+                                    file,
+                                    repo_id,
+                                    branch,
+                                    language,
+                                    node_map,
+                                    chunks,
+                                    parent_class=cls_name,
+                                )
             elif child.type in node_map.function_nodes:
                 name = _get_node_name(child)
                 self._add_function_chunk(
@@ -610,12 +766,23 @@ class Chunker:
             return []
 
         imports: list[str] = []
-        for child in tree.root_node.children:
-            if child.type in node_map.import_nodes:
+        self._collect_imports(tree.root_node, node_map.import_nodes, imports)
+        return imports
+
+    def _collect_imports(
+        self,
+        node: "ts.Node",
+        import_types: list[str],
+        imports: list[str],
+    ) -> None:
+        """Recursively collect import nodes (handles #ifndef header guards)."""
+        for child in node.children:
+            if child.type in import_types:
                 text = child.text.decode("utf-8") if child.text else ""
                 if text:
                     imports.append(text.strip())
-        return imports
+            elif child.type in ("preproc_ifdef", "preproc_if"):
+                self._collect_imports(child, import_types, imports)
 
     def fallback_file_chunk(
         self, file: ExtractedFile, repo_id: str, branch: str
@@ -641,6 +808,16 @@ class Chunker:
             imports=[],
             top_level_symbols=[],
         )
+
+
+def _find_decorated_inner(
+    node: ts.Node, target_types: list[str]
+) -> ts.Node | None:
+    """Find the inner class/function node inside a decorated_definition."""
+    for child in node.children:
+        if child.type in target_types:
+            return child
+    return None
 
 
 def _get_node_name(node: ts.Node) -> str:
