@@ -150,13 +150,16 @@
       "id": 3,
       "category": "core",
       "title": "Repository Registration",
-      "description": "Implement RepoManager service with register_repo() that validates Git URL, checks for duplicates, creates Repository record, and queues initial indexing job",
+      "description": "Implement RepoManager service with register_repo() that validates Git URL, accepts optional branch parameter, checks for duplicates, creates Repository record with indexed_branch, and queues initial indexing job",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
+      "wave": 1,
       "st_case_path": "docs/test-cases/feature-3-repository-registration.md",
       "st_case_count": 5,
       "verification_steps": [
         "Given a valid Git URL 'https://github.com/pallets/flask', when calling register_repo(url), then a Repository record is created with status='pending' and the repository ID is returned",
+        "Given a valid Git URL with branch='develop', when calling register_repo(url, branch='develop'), then a Repository record is created with indexed_branch='develop'",
+        "Given a valid Git URL with no branch parameter, when calling register_repo(url), then a Repository record is created with indexed_branch=None (default branch detected at clone time)",
         "Given an invalid URL 'not-a-url', when calling register_repo(url), then a ValidationError is raised within 2 seconds without creating a record",
         "Given an already-registered URL, when calling register_repo(url) again, then a ConflictError is raised indicating the repository already exists"
       ],
@@ -166,15 +169,18 @@
       "id": 4,
       "category": "core",
       "title": "Git Clone & Update",
-      "description": "Implement GitCloner with clone_or_update() that performs git clone for new repos or git fetch+reset for existing repos, with error handling for network/auth/disk failures",
+      "description": "Implement GitCloner with clone_or_update(branch) that performs git clone (with --branch if specified) for new repos or git fetch+reset to origin/{branch} for existing repos, detects default_branch, supports list_remote_branches(), with error handling for network/auth/disk failures",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
+      "wave": 1,
       "st_case_path": "docs/test-cases/feature-4-git-clone-update.md",
       "st_case_count": 5,
       "verification_steps": [
-        "Given a newly registered repository, when clone_or_update() runs, then the repo is cloned to REPO_CLONE_PATH/{repo_id} and the working copy contains the default branch HEAD",
-        "Given a previously cloned repository, when clone_or_update() runs again, then it performs git fetch and resets to latest HEAD without re-cloning",
-        "Given a clone operation that fails (unreachable URL), when clone_or_update() runs, then it raises a CloneError with the error message and cleans up partial files"
+        "Given a newly registered repository with no branch specified, when clone_or_update() runs, then the repo is cloned to REPO_CLONE_PATH/{repo_id}, default_branch is detected via symbolic-ref, and indexed_branch is set to default_branch",
+        "Given a newly registered repository with branch='develop', when clone_or_update(branch='develop') runs, then the repo is cloned with --branch develop and indexed_branch is set to 'develop'",
+        "Given a previously cloned repository with indexed_branch='main', when clone_or_update(branch='main') runs again, then it performs git fetch and resets to origin/main without re-cloning",
+        "Given a clone operation that fails (unreachable URL), when clone_or_update() runs, then it raises a CloneError with the error message and cleans up partial files",
+        "Given a cloned repository, when list_remote_branches() is called, then it returns a sorted list of remote branch names with origin/ prefix stripped"
       ],
       "dependencies": [3]
     },
@@ -386,15 +392,17 @@
       "id": 19,
       "category": "ui",
       "title": "Web UI Search Page",
-      "description": "Implement Jinja2 SSR web interface with search input, repository filter dropdown, language filter checkboxes, syntax-highlighted results with htmx partial updates. Developer Dark theme per UCD.",
+      "description": "Implement Jinja2 SSR web interface with search input, repository filter dropdown, language filter checkboxes, branch selector for registration, syntax-highlighted results with htmx partial updates. Developer Dark theme per UCD.",
       "priority": "medium",
       "status": "failing",
+      "wave": 1,
       "ui": true,
       "ui_entry": "/",
       "verification_steps": [
         "[devtools] Navigate / → EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' → click Search → EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
         "[devtools] Navigate / → submit empty query → EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
-        "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling"
+        "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling",
+        "[devtools] Navigate to repository registration form → enter a repo URL → EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch → submit → EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
       ],
       "dependencies": [17]
     },
@@ -564,6 +572,28 @@
         "Given a multi-node query cluster under load, when one node is killed, then remaining nodes continue serving requests without failures"
       ],
       "dependencies": [30]
+    },
+    {
+      "id": 33,
+      "category": "core",
+      "title": "Branch Listing API",
+      "description": "Implement GET /api/v1/repos/{id}/branches endpoint that returns list of remote branches for a registered repository, using GitCloner.list_remote_branches(). Returns 404 for unknown repos, 409 if not yet cloned.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 1,
+      "verification_steps": [
+        "Given a registered and cloned repository, when GET /api/v1/repos/{id}/branches is called, then it returns 200 with {branches: ['main', 'develop', ...], default_branch: 'main'} sorted alphabetically",
+        "Given a repository ID that does not exist, when the endpoint is called, then it returns 404 Not Found",
+        "Given a repository that has not been cloned yet, when the endpoint is called, then it returns 409 Conflict"
+      ],
+      "dependencies": [4, 17]
+    }
+  ],
+  "waves": [
+    {
+      "id": 1,
+      "date": "2026-03-21",
+      "description": "Support branch selection for repository clone & indexing"
     }
   ]
 }
