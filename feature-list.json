@@ -566,7 +566,7 @@
       "title": "Repository-Scoped Query",
       "description": "Implement repository filtering in Retriever that restricts BM25 and vector searches to chunks from a specified repo_id, applied as ES filter clause and Qdrant payload filter",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given query 'timeout' with repo_filter='spring-framework', when retrieval runs, then all returned chunks have repo_id matching 'spring-framework'",
         "Given a repo_filter for a non-existent repository, when retrieval runs, then it returns an empty result set with 200 status",
@@ -574,7 +574,9 @@
       ],
       "dependencies": [
         12
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-15-repository-scoped-query.md",
+      "st_case_count": 6
     },
     {
       "id": 16,

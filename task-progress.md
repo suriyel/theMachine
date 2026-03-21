@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 18/42 active features passing · Last: #14 Symbol Query Handler (2026-03-21) · Next: #15 Repository-Scoped Query
+Progress: 19/42 active features passing · Last: #15 Repository-Scoped Query (2026-03-21) · Next: #16 API Key Authentication
 
 ---
 
@@ -305,3 +305,15 @@ Progress: 18/42 active features passing · Last: #14 Symbol Query Handler (2026-
 - **Review**: PASS — S1-S5 pass, D1-D5 pass; SRS AC-2 tension noted (NL fallback vs empty result for non-existent symbols — approved design refinement)
 - **Result**: Feature #14 marked PASSING
 - **Next**: Feature #15 — Repository-Scoped Query
+
+### Session 24 — 2026-03-21 (Feature #15)
+- **Feature**: #15 — Repository-Scoped Query
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Made repo_id/repo parameter optional (str | None = None) in Retriever (bm25_code_search, bm25_doc_search, vector_code_search, vector_doc_search) and QueryHandler (handle_nl_query, handle_symbol_query, _run_pipeline, _symbol_boost_search); _build_code_query, _build_doc_query conditionally add repo_id term filter; _build_qdrant_filter returns None when no conditions; symbol query inline ES queries (term + fuzzy) conditionally include repo filter
+- **Tests**: 17 feature tests + 472 prior = 489/489 passing (5 skipped)
+- **Coverage**: 100% retriever.py, 99% query_handler.py (1 partial branch — fuzzy path with None repo); 95% overall
+- **Mutation**: mutmut 3.2.0 stats mapping bug; manual mutation verification confirms key mutants killed
+- **ST**: 6/6 test cases PASS (3 FUNC, 3 BNDRY)
+- **Review**: PASS — S1-S5 pass, D1-D5 pass, P1-P6 pass, T1-T3 pass; 1 minor fixed (duplicate assertion clause)
+- **Result**: Feature #15 marked PASSING
+- **Next**: Feature #16 — API Key Authentication

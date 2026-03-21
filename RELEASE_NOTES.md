@@ -132,6 +132,14 @@
 - **New**: Input validation — `ValidationError` for empty/whitespace queries and queries exceeding 200 chars
 - Example: 14-symbol-query.py
 
+### Feature #15: Repository-Scoped Query
+- **Modified**: Retriever — `bm25_code_search`, `bm25_doc_search`, `vector_code_search`, `vector_doc_search` now accept `repo_id: str | None = None`; when None, searches span all indexed repositories; when specified, results restricted via ES term filter and Qdrant payload filter
+- **Modified**: QueryHandler — `handle_nl_query`, `handle_symbol_query`, `_run_pipeline`, `_symbol_boost_search` accept `repo: str | None = None`; symbol query inline ES queries (term + fuzzy) conditionally include repo filter
+- **Modified**: `_build_code_query`, `_build_doc_query` — omit `filter` key from ES bool clause when no filter conditions exist
+- **Modified**: `_build_qdrant_filter` — returns `None` (not empty Filter) when no conditions, accepted by qdrant-client
+- **New**: Non-existent repository returns empty result set (no exception) — ES/Qdrant return 0 hits gracefully
+- Example: 15-repo-scoped-query.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
