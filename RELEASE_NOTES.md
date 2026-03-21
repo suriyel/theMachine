@@ -94,6 +94,14 @@
 - **New**: Feature #42 — Retrieval Quality Evaluation & Reporting (`EvalRunner`, MRR@10/NDCG@10/Recall@200/Precision@3, per-language/per-stage breakdown)
 - **New configs**: MINIMAX_API_KEY, MINIMAX_BASE_URL, MINIMAX_MODEL
 
+### Feature #10: Rank Fusion (RRF)
+- **New**: RankFusion — `fuse(*result_lists, top_k=50)` using Reciprocal Rank Fusion with k=60, merging N ranked lists into a single unified ranking
+- **New**: RRF score formula: `score(d) = Σ 1/(k + rank_i(d))` — overlapping candidates across lists receive boosted scores
+- **New**: Supports 2-way (BM25 + vector), 4-way (BM25 code/doc + vector code/doc), and 5-way (+ symbol boost) fusion via variadic parameter
+- **New**: Input validation — `ValueError` for k ≤ 0
+- **New**: Pure computation — no external dependencies, ~2ms for 400 candidates
+- Example: 14-rank-fusion.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

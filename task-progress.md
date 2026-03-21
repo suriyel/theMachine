@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 13/42 active features passing · Last: Increment Wave 3 (2026-03-21) · Next: #10 Rank Fusion (RRF)
+Progress: 14/42 active features passing · Last: #10 Rank Fusion RRF (2026-03-21) · Next: #11 Neural Reranking
 
 ---
 
@@ -245,3 +245,15 @@ Progress: 13/42 active features passing · Last: Increment Wave 3 (2026-03-21) �
 - **Documents updated**: SRS (FR-024 to FR-026), Design (§4.7 + M7 milestone + dependency chain)
 - **Result**: 13/42 active features passing (was 13/39)
 - **Next**: Feature #10 — Rank Fusion (RRF)
+
+### Session 19 — 2026-03-21 (Feature #10)
+- **Feature**: #10 — Rank Fusion (RRF)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: RankFusion class with fuse(*result_lists, top_k=50) and _rrf_score(rank), using RRF formula score(d) = Σ 1/(k + rank_i(d)) with k=60 default; supports 2-way through 5-way fusion via variadic parameter; overlapping candidates receive accumulated scores; ValueError for k ≤ 0
+- **Tests**: 17 feature tests + 371 prior = 388/388 passing
+- **Coverage**: 100% line, 100% branch on rank_fusion.py
+- **Mutation**: 5/5 representative mutations killed (manual verification, mutmut 3.2.0 stats mapping bug)
+- **ST**: 7/7 test cases PASS (3 FUNC, 3 BNDRY, 1 PERF)
+- **Review**: PASS — S1-S5 all pass, D1-D5 all pass, P1-P6 pass (example created in persist step), T1-T3 pass
+- **Result**: Feature #10 marked PASSING
+- **Next**: Feature #11 — Neural Reranking

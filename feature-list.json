@@ -433,7 +433,7 @@
       "title": "Rank Fusion (RRF)",
       "description": "Implement RankFusion.fuse() using Reciprocal Rank Fusion with k=60, merging up to 5 ranked lists (4 primary + optional symbol boost) into a single top-50 candidate list",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given 200 BM25 candidates and 200 vector candidates with 50 overlapping chunks, when fuse() runs with k=60, then overlapping chunks receive boosted RRF scores from both rankings and the output contains at most 50 candidates",
         "Given one empty result list and one non-empty list, when fuse() runs, then it returns results from the non-empty list only",
@@ -442,7 +442,9 @@
       "dependencies": [
         8,
         9
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-10-rank-fusion.md",
+      "st_case_count": 7
     },
     {
       "id": 11,
