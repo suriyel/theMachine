@@ -236,8 +236,9 @@ The indexing pipeline clones a Git repository, extracts **four types of content*
 classDiagram
     class GitCloner {
         -storage_path: str
-        +clone(url: str, credentials: dict): str
-        +update(repo_path: str): str
+        +clone_or_update(repo_id: str, url: str, branch: str | None): str
+        +detect_default_branch(repo_path: str): str
+        +list_remote_branches(repo_path: str): list~str~
         +cleanup_partial(repo_path: str): void
     }
 
@@ -334,15 +335,21 @@ sequenceDiagram
     participant ES as Elasticsearch
     participant QD as Qdrant
 
-    Admin->>API: POST /api/v1/repos {url}
-    API->>DB: Insert repo record (status=pending)
+    Admin->>API: POST /api/v1/repos {url, branch?}
+    API->>DB: Insert repo record (status=pending, indexed_branch=branch)
     API->>RB: Enqueue index_job(repo_id)
     API-->>Admin: 201 {repo_id, job_id}
 
     RB->>Worker: Dequeue index_job
     Worker->>DB: Update job status=running
-    Worker->>Git: git clone url
+    alt branch specified
+        Worker->>Git: git clone --branch {branch} url
+    else no branch
+        Worker->>Git: git clone url
+    end
     Git-->>Worker: repo files
+    Worker->>Git: detect default_branch (symbolic-ref HEAD)
+    Worker->>DB: Update repo (default_branch, indexed_branch, clone_path)
 
     Worker->>Worker: ContentExtractor.extract()
     Note over Worker: Classify files into 4 types:<br/>code / doc / example / rules
@@ -957,6 +964,7 @@ classDiagram
 - **Component mapping**: UCD Component → Implementation:
   - Search Input → `<input>` + `<button>` styled with UCD tokens
   - Repository Dropdown → `<select>` populated from repo list API
+  - Branch Selector → `<select>` populated via `GET /api/v1/repos/{id}/branches` after URL entry (HTMX partial update). Defaults to repo's default branch. Shown in repository registration form.
   - Language Checkboxes → `<input type="checkbox">` × 6 languages
   - Result Card → Jinja2 macro `result_card(chunk)` with Pygments highlighting
   - Empty State → Jinja2 conditional block
@@ -1004,7 +1012,7 @@ classDiagram
     class RepoManager {
         -db_session: AsyncSession
         -celery_app: Celery
-        +register(url: str): Repository
+        +register(url: str, branch: str | None): Repository
         +list_repos(): list~Repository~
         +trigger_reindex(repo_id: str): IndexJob
     }
@@ -1042,6 +1050,41 @@ classDiagram
 - Health endpoint (`/api/v1/health`) is unauthenticated — checks ES, Qdrant, Redis, PostgreSQL connectivity.
 - Metrics endpoint (`/metrics`) requires admin role.
 - **Credential encryption**: Repository access tokens/SSH keys encrypted with AES-256-GCM. Encryption key sourced from environment variable `CREDENTIAL_ENCRYPTION_KEY`. Key rotation supported via re-encryption on read.
+
+---
+
+### 4.5b Feature: Branch Listing API (FR-023) [Wave 1]
+
+#### 4.5b.1 Overview
+REST endpoint to list remote branches for a registered (and cloned) repository. Used by the Web UI branch selector during repository registration, and available to API consumers.
+
+#### 4.5b.2 Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant Git as Local Clone
+
+    Client->>API: GET /api/v1/repos/{id}/branches
+    API->>DB: Fetch Repository by id
+    alt repo not found
+        API-->>Client: 404 Not Found
+    else repo not cloned yet
+        API-->>Client: 409 Conflict (clone not ready)
+    else repo cloned
+        API->>Git: git branch -r (in clone_path)
+        Git-->>API: origin/main, origin/develop, ...
+        API-->>Client: 200 {branches: ["main", "develop", ...], default_branch: "main"}
+    end
+```
+
+#### 4.5b.3 Design Notes
+- Uses `GitCloner.list_remote_branches(repo_path)` which runs `git branch -r` in the clone directory and strips the `origin/` prefix.
+- Returns branches sorted alphabetically, with `default_branch` indicated separately.
+- Requires the repository to have been cloned at least once (status != "pending" with no clone_path).
+- Auth: `read` or `admin` role (read-role keys must have access to the repo via ACL).
 
 ---
 
@@ -1357,7 +1400,8 @@ The `symbol.raw` sub-field (keyword type) enables exact term queries for the sym
 |--------|------|------|-------------|-----------|
 | POST | `/api/v1/query` | API Key (read/admin) | Submit query, return dual-list results | FR-011, FR-012, FR-013 |
 | GET | `/api/v1/repos` | API Key (read: scoped; admin: all) | List registered repositories | FR-015 |
-| POST | `/api/v1/repos` | API Key (admin) | Register new repository | FR-001 |
+| POST | `/api/v1/repos` | API Key (admin) | Register new repository (optional `branch` param) | FR-001 |
+| GET | `/api/v1/repos/{id}/branches` | API Key (read/admin) | List remote branches for a registered repository | FR-023 |
 | POST | `/api/v1/repos/{id}/reindex` | API Key (admin) | Trigger manual reindex | FR-020 |
 | GET | `/api/v1/chunks/{chunk_id}` | API Key (read/admin) | Get full content of a specific chunk | FR-010 |
 | POST | `/api/v1/keys` | API Key (admin) | Create new API key | FR-014 |
@@ -1557,6 +1601,7 @@ graph LR
 | 30 | P3 | NFR-005: Service Availability | — | #17 | M6 |
 | 31 | P3 | NFR-006: Linear Scalability | — | #27 | M6 |
 | 32 | P3 | NFR-007: Single-Node Failure | — | #30 | M6 |
+| 33 | P1 | Branch Listing API | FR-023 | #4, #17 | M4 |
 
 ### 11.3 Dependency Chain
 
@@ -1588,6 +1633,8 @@ graph LR
     F9 --> F20
     F4 --> F21["#21 Scheduled Refresh<br/>P1"]
     F17 --> F22["#22 Manual Reindex<br/>P1"]
+    F4 --> F33["#33 Branch Listing API<br/>P1"]
+    F17 --> F33
     F17 --> F23["#23 Metrics<br/>P2"]
     F13 --> F24["#24 Query Logging<br/>P2"]
     F13 --> F25["#25 Query Cache<br/>P2"]
