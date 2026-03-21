@@ -1143,3 +1143,168 @@ class TestFeature36JsRequireImports:
         l1 = [c for c in chunks if c.chunk_type == "file"][0]
         assert any("bar" in imp for imp in l1.imports), "ES import missing"
         assert "baz" in l1.imports, "require import missing"
+
+
+# ===========================================================================
+# Feature #37 — TypeScript: enum + namespace + decorator unwrapping
+# [no integration test] — pure computation feature, no external I/O
+# ===========================================================================
+
+TS_ENUM = """\
+enum Color { Red, Green, Blue }
+"""
+
+TS_NAMESPACE_CLASS = """\
+namespace Foo {
+  class Bar {
+    method() { return 1; }
+  }
+}
+"""
+
+TS_NESTED_NAMESPACE = """\
+namespace A {
+  namespace B {
+    class C {}
+  }
+}
+"""
+
+TS_DECORATOR_CLASS = """\
+@Component({selector: 'app'})
+class AppComponent {
+  render() { return 1; }
+}
+"""
+
+TS_EMPTY_NAMESPACE = """\
+namespace Empty {}
+"""
+
+TS_ENUM_CLASS_NAMESPACE = """\
+enum Status { Active, Inactive }
+
+class Router {
+    handle() { return 1; }
+}
+
+namespace Utils {
+  class Helper {
+    format() { return 'ok'; }
+  }
+}
+"""
+
+TS_NAMESPACE_FUNCTIONS = """\
+namespace MathUtils {
+  function add(a: number, b: number): number { return a + b; }
+  function sub(a: number, b: number): number { return a - b; }
+}
+"""
+
+TS_EXPORT_NAMESPACE = """\
+export namespace Foo {
+  class Bar {
+    greet() { return 'hi'; }
+  }
+}
+"""
+
+
+class TestFeature37TsEnum:
+    """Feature #37 — TypeScript enum detection."""
+
+    # [unit] T01: happy path — enum produces L2 chunk
+    def test_ts_enum_produces_l2(self, chunker):
+        """enum Color { Red, Green, Blue } → L2 chunk with symbol='Color'."""
+        f = _make_file("src/types.ts", TS_ENUM)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        assert len(classes) == 1
+        assert classes[0].symbol == "Color"
+        assert classes[0].language == "typescript"
+
+
+class TestFeature37TsNamespace:
+    """Feature #37 — TypeScript namespace unwrapping."""
+
+    # [unit] T02: happy path — namespace with class → L2 + L3
+    def test_ts_namespace_class_method(self, chunker):
+        """namespace Foo { class Bar { method() {} } } → L2 Bar + L3 method."""
+        f = _make_file("src/foo.ts", TS_NAMESPACE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "Bar" for c in classes), "class Bar not found"
+        assert any(c.symbol == "method" for c in funcs), "method not found"
+
+    # [unit] T03: happy path — nested namespace → class found
+    def test_ts_nested_namespace(self, chunker):
+        """namespace A { namespace B { class C {} } } → L2 chunk symbol='C'."""
+        f = _make_file("src/nested.ts", TS_NESTED_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        assert any(c.symbol == "C" for c in classes), "class C not found in nested namespace"
+
+    # [unit] T05: boundary — empty namespace
+    def test_ts_empty_namespace(self, chunker):
+        """Empty namespace produces no L2/L3 chunks."""
+        f = _make_file("src/empty.ts", TS_EMPTY_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert len(classes) == 0
+        assert len(funcs) == 0
+
+    # [unit] T06: boundary — enum + class + namespace coexistence
+    def test_ts_enum_class_namespace_coexist(self, chunker):
+        """Enum, class, and namespace all produce correct chunks."""
+        f = _make_file("src/mixed.ts", TS_ENUM_CLASS_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        class_symbols = {c.symbol for c in chunks if c.chunk_type == "class"}
+        func_symbols = {c.symbol for c in chunks if c.chunk_type == "function"}
+        assert "Status" in class_symbols, "enum not found"
+        assert "Router" in class_symbols, "class not found"
+        assert "Helper" in class_symbols, "namespace class not found"
+        assert "handle" in func_symbols
+        assert "format" in func_symbols
+
+    # [unit] T07: boundary — namespace with functions only (no class)
+    def test_ts_namespace_functions(self, chunker):
+        """namespace MathUtils { function add() {}, function sub() {} } → L3 chunks."""
+        f = _make_file("src/math.ts", TS_NAMESPACE_FUNCTIONS)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        func_symbols = {c.symbol for c in funcs}
+        assert "add" in func_symbols
+        assert "sub" in func_symbols
+
+    # [unit] T08: boundary — exported namespace
+    def test_ts_export_namespace(self, chunker):
+        """export namespace Foo { class Bar {} } → L2 Bar found."""
+        f = _make_file("src/exports.ts", TS_EXPORT_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        assert any(c.symbol == "Bar" for c in classes), "class Bar not found in exported namespace"
+
+    # [unit] T09: boundary — normal TS file unaffected
+    def test_ts_normal_file_unaffected(self, chunker):
+        """Normal TS file with classes and interfaces still works."""
+        f = _make_file("src/logger.ts", TYPESCRIPT_CLASS_INTERFACE)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        class_symbols = {c.symbol for c in chunks if c.chunk_type == "class"}
+        assert "ConsoleLogger" in class_symbols
+
+
+class TestFeature37TsDecorator:
+    """Feature #37 — TypeScript decorator verification."""
+
+    # [unit] T04: happy path — decorator on class already works
+    def test_ts_decorator_class(self, chunker):
+        """@Component class AppComponent { render() {} } → L2 + L3."""
+        f = _make_file("src/app.ts", TS_DECORATOR_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-37", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "AppComponent" for c in classes)
+        assert any(c.symbol == "render" for c in funcs)

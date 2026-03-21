@@ -90,7 +90,7 @@ LANGUAGE_NODE_MAPS: dict[str, LanguageNodeMap] = {
         body_delimiter="{",
     ),
     "typescript": LanguageNodeMap(
-        class_nodes=["class_declaration", "interface_declaration"],
+        class_nodes=["class_declaration", "interface_declaration", "enum_declaration"],
         function_nodes=[
             "function_declaration",
             "arrow_function",
@@ -304,6 +304,24 @@ class Chunker:
                 self._walk_classes(
                     child, file, repo_id, branch, language, node_map, chunks
                 )
+                continue
+            # Unwrap TS namespace: expression_statement > internal_module
+            # or direct internal_module (inside export_statement)
+            if child.type in ("expression_statement", "internal_module"):
+                target = child
+                if child.type == "expression_statement":
+                    target = None
+                    for sub in child.children:
+                        if sub.type == "internal_module":
+                            target = sub
+                            break
+                if target is not None and target.type == "internal_module":
+                    body = _get_namespace_body(target)
+                    if body:
+                        self._walk_classes(
+                            body, file, repo_id, branch,
+                            language, node_map, chunks,
+                        )
                 continue
             # Unwrap decorated_definition: find inner class node
             if child.type == "decorated_definition":
@@ -571,25 +589,51 @@ class Chunker:
                                     chunks,
                                     parent_class=cls_name,
                                 )
-            elif (
-                child.type == "expression_statement"
-                and language == "javascript"
-            ):
-                # JS prototype-assigned functions:
-                # obj.method = function(...){} or obj.method = (...) => {}
-                result = _is_prototype_assign(child)
-                if result is not None:
-                    prop_name, _func_node = result
-                    self._add_function_chunk(
-                        child,
-                        prop_name,
-                        file,
-                        repo_id,
-                        branch,
-                        language,
-                        parent_class,
-                        chunks,
-                    )
+                        elif inner.type == "internal_module":
+                            ns_body = _get_namespace_body(inner)
+                            if ns_body:
+                                self._walk_functions(
+                                    ns_body,
+                                    file,
+                                    repo_id,
+                                    branch,
+                                    language,
+                                    node_map,
+                                    chunks,
+                                    parent_class=parent_class,
+                                )
+            elif child.type == "expression_statement":
+                if language == "javascript":
+                    # JS prototype-assigned functions:
+                    # obj.method = function(...){} or obj.method = (...) => {}
+                    result = _is_prototype_assign(child)
+                    if result is not None:
+                        prop_name, _func_node = result
+                        self._add_function_chunk(
+                            child,
+                            prop_name,
+                            file,
+                            repo_id,
+                            branch,
+                            language,
+                            parent_class,
+                            chunks,
+                        )
+                # TS namespace: expression_statement > internal_module
+                for sub in child.children:
+                    if sub.type == "internal_module":
+                        ns_body = _get_namespace_body(sub)
+                        if ns_body:
+                            self._walk_functions(
+                                ns_body,
+                                file,
+                                repo_id,
+                                branch,
+                                language,
+                                node_map,
+                                chunks,
+                                parent_class=parent_class,
+                            )
             elif child.type in node_map.function_nodes:
                 name = _get_node_name(child)
                 self._add_function_chunk(
@@ -946,6 +990,14 @@ def _get_var_name_from_declaration(node: ts.Node) -> str:
             if result:
                 return result
     return ""
+
+
+def _get_namespace_body(node: ts.Node) -> ts.Node | None:
+    """Get the statement_block body of a TS internal_module (namespace)."""
+    for child in node.children:
+        if child.type == "statement_block":
+            return child
+    return None
 
 
 def _clean_comment(text: str) -> str:
