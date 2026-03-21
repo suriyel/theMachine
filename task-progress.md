@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 6/39 active features passing · Last: Increment Wave 2 (2026-03-21) · Next: #34 Python decorated_definition Unwrapping
+Progress: 7/39 active features passing · Last: #34 Python decorated_definition Unwrapping (2026-03-21) · Next: #35 Java: enum + record + static initializer
 
 ---
 
@@ -147,3 +147,18 @@ Progress: 6/39 active features passing · Last: Increment Wave 2 (2026-03-21) ·
   - #39: C++ namespace (recursive) + template (single-level)
 - **Total**: 39 features (6 passing, 33 failing)
 - **Next**: Feature #34 — Python decorated_definition Unwrapping
+
+### Session 11 — 2026-03-21 (Feature #34)
+- **Feature**: #34 — Python: decorated_definition Unwrapping (Wave 2)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: `_find_decorated_inner()` helper; modified `_walk_classes`, `_walk_functions`, `extract_file_chunk` to unwrap `decorated_definition` nodes
+- **Decorator support**: @property, @property.setter, @staticmethod, @classmethod, @dataclass, @app.route, stacked decorators
+- **Content preservation**: Decorator text included in both L2 class and L3 function chunk content
+- **Infrastructure**: Fixed proxy env vars (ALL_PROXY/HTTP_PROXY) breaking Qdrant/httpx tests in conftest.py
+- **Tests**: 14 feature tests + 260 prior = 274/274 passing
+- **Coverage**: 94% overall
+- **Mutation**: 4/4 critical mutants killed (manual verification, mutmut 3.2.0 stats mapping bug)
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY), all Real
+- **Review**: PASS — 2 minor findings fixed (L2 decorator content, plan doc stacked decorator note)
+- **Result**: Feature #34 marked PASSING
+- **Next**: Feature #35 — Java: enum + record + static initializer

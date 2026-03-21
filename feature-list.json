@@ -598,8 +598,10 @@
       "title": "Python: decorated_definition Unwrapping",
       "description": "Unwrap decorated_definition AST nodes in Python so that @property, @staticmethod, @classmethod, @dataclass, @app.route and other decorator-wrapped functions produce L3 chunks and decorator-wrapped classes produce L2 chunks. Decorator text preserved in chunk content.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
+      "st_case_path": "docs/test-cases/feature-34-python-decorated-definition.md",
+      "st_case_count": 7,
       "verification_steps": [
         "Given a Python file with @property-decorated getter and @property.setter, when chunking completes, then each produces an L3 chunk with correct symbol name and parent_class",
         "Given a Python file with @staticmethod and @classmethod decorated functions inside a class, when chunking completes, then each produces an L3 chunk with parent_class set to the class name",
