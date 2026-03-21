@@ -154,6 +154,11 @@
 - **New**: ROLE_PERMISSIONS static map for fast permission checks without DB lookups
 - Example: 16-api-key-authentication.py
 
+### Feature #22: Manual Reindex Trigger
+- **Formalized**: POST /api/v1/repos/{repo_id}/reindex endpoint (already implemented in Feature #17)
+- Admin role required (403 for read-only keys), 404 for non-existent repos
+- Creates IndexJob with status="pending" and returns job_id
+
 ### Feature #21: Scheduled Index Refresh
 - **New**: `create_celery_app(broker_url, schedule_cron=None)` — Celery app factory with Beat schedule configuration, configurable cron (default: weekly Sunday 02:00 UTC), 5-field cron string parsing
 - **New**: `scheduled_reindex_all` — periodic Celery task that queries active repos, skips those with in-progress jobs (pending/running IndexJob), enqueues `reindex_repo_task` for eligible repos

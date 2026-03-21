@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 23/42 active features passing · Last: #21 Scheduled Index Refresh (2026-03-22) · Next: #22 Manual Reindex Trigger
+Progress: 24/42 active features passing · Last: #22 Manual Reindex Trigger (2026-03-22) · Next: #33 Branch Listing API
 
 ---
 
@@ -364,3 +364,13 @@ Progress: 23/42 active features passing · Last: #21 Scheduled Index Refresh (20
 - **Review**: PASS — S1-S5, D1-D5, P1-P6, T1-T2 all pass
 - **Result**: Feature #21 marked PASSING
 - **Next**: Feature #22 — Manual Reindex Trigger
+
+### Session 29 — 2026-03-22 (Feature #22)
+- **Feature**: #22 — Manual Reindex Trigger
+- **Phase**: Feature Design → Verify Existing → ST → Persist
+- **Implementation**: Already implemented in Feature #17 (POST /api/v1/repos/{repo_id}/reindex in repos_router)
+- **Tests**: 3 existing tests from test_rest_api.py (T08, T21, T24) cover all 3 verification steps
+- **Coverage**: 98% line, 100% branch on repos.py
+- **ST**: 4/4 test cases PASS (2 FUNC, 2 BNDRY)
+- **Result**: Feature #22 marked PASSING
+- **Next**: Feature #33 — Branch Listing API

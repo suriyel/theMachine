@@ -700,7 +700,7 @@
       "title": "Manual Reindex Trigger",
       "description": "Implement POST /api/v1/repos/{repo_id}/reindex endpoint that queues an immediate re-indexing job for a specific repository, requiring admin role",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a POST to /api/v1/repos/{repo_id}/reindex with valid admin API key, when processed, then an indexing job is queued and the response contains job_id with status='queued'",
         "Given a reindex request for a non-existent repository, when processed, then it returns 404",
@@ -708,7 +708,9 @@
       ],
       "dependencies": [
         17
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-22-manual-reindex-trigger.md",
+      "st_case_count": 4
     },
     {
       "id": 23,
