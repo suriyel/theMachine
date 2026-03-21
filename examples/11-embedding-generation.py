@@ -1,32 +1,18 @@
 """Example: Embedding Generation — Feature #7.
 
-Demonstrates EmbeddingEncoder and IndexWriter usage for code chunk embedding
-and index writing. Uses a mock model to avoid downloading the real CodeSage-large
-model (~1.3GB).
+Demonstrates EmbeddingEncoder using DashScope text-embedding-v3 API.
+Requires EMBEDDING_API_KEY environment variable to be set.
 """
 
 import numpy as np
-from unittest.mock import MagicMock, patch
 
 
 def main():
-    # --- EmbeddingEncoder demo ---
-    print("=== EmbeddingEncoder Demo ===\n")
+    from src.indexing.embedding_encoder import EmbeddingEncoder
 
-    # Mock the SentenceTransformer to avoid downloading the real model
-    mock_model = MagicMock()
-    mock_model.encode = MagicMock(
-        side_effect=lambda texts, **kwargs: np.random.rand(len(texts), 1024).astype(
-            np.float32
-        )
-    )
+    print("=== EmbeddingEncoder Demo (DashScope text-embedding-v3) ===\n")
 
-    with patch(
-        "src.indexing.embedding_encoder.SentenceTransformer", return_value=mock_model
-    ):
-        from src.indexing.embedding_encoder import EmbeddingEncoder
-
-        encoder = EmbeddingEncoder(model_name="mock-model")
+    encoder = EmbeddingEncoder()
 
     # Encode batch of code chunks
     code_texts = [
@@ -37,18 +23,21 @@ def main():
     vectors = encoder.encode_batch(code_texts)
     print(f"Encoded {len(vectors)} code chunks:")
     for i, vec in enumerate(vectors):
-        print(f"  Chunk {i}: shape={vec.shape}, dtype={vec.dtype}, norm={np.linalg.norm(vec):.4f}")
+        print(f"  Chunk {i}: shape={vec.shape}, dtype={vec.dtype}, "
+              f"norm={np.linalg.norm(vec):.4f}, first3={vec[:3]}")
 
     # Encode a query with instruction prefix
     query = "how to configure timeout"
     query_vec = encoder.encode_query(query)
     print(f"\nQuery vector: shape={query_vec.shape}, dtype={query_vec.dtype}")
     print(f"  (query prefix 'Represent this code search query: ' was prepended)")
+    print(f"  first3={query_vec[:3]}")
 
-    # Encode batch with is_query=True
-    queries = ["find auth middleware", "database connection pool"]
-    query_vecs = encoder.encode_batch(queries, is_query=True)
-    print(f"\nBatch query encoding: {len(query_vecs)} queries, each {query_vecs[0].shape}")
+    # Compute cosine similarity between query and code chunks
+    print("\nCosine similarity (query vs chunks):")
+    for i, vec in enumerate(vectors):
+        sim = np.dot(query_vec, vec) / (np.linalg.norm(query_vec) * np.linalg.norm(vec))
+        print(f"  Chunk {i}: {sim:.4f}")
 
     # --- Error handling demo ---
     print("\n=== Error Handling Demo ===\n")
@@ -63,7 +52,7 @@ def main():
     except ValueError as e:
         print(f"Empty query error (expected): {e}")
 
-    print("\nDone! In production, replace mock-model with 'Salesforce/codesage-large'.")
+    print("\nDone!")
 
 
 if __name__ == "__main__":

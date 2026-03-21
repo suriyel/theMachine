@@ -1,8 +1,8 @@
 """Tests for EmbeddingEncoder — Feature #7 Embedding Generation.
 
 Test layers:
-- [unit] Tests use a mock SentenceTransformer model to avoid real model download.
-- [integration] Real test uses actual sentence-transformers model (marked @pytest.mark.real).
+- [unit] Tests use a mock httpx response to avoid real API calls.
+- [integration] Real test calls DashScope API (marked @pytest.mark.real).
 
 Categories covered:
 - Happy path: T1, T2, T4, T5, T18
@@ -11,6 +11,9 @@ Categories covered:
 - Security: N/A — internal indexing component with no user-facing input
 """
 
+import json
+
+import httpx
 import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
@@ -23,24 +26,31 @@ from src.indexing.exceptions import EmbeddingModelError
 # Fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def mock_model():
-    """Create a mock SentenceTransformer that returns 1024-dim vectors."""
-    model = MagicMock()
-    def fake_encode(texts, batch_size=64, convert_to_numpy=True,
-                    normalize_embeddings=True, **kwargs):
-        return np.random.rand(len(texts), 1024).astype(np.float32)
-    model.encode = MagicMock(side_effect=fake_encode)
-    return model
+def _make_api_response(n: int, dim: int = 1024) -> httpx.Response:
+    """Create a mock httpx.Response with n embeddings of given dimension."""
+    data = [
+        {"index": i, "embedding": np.random.rand(dim).tolist()}
+        for i in range(n)
+    ]
+    body = json.dumps({
+        "model": "text-embedding-v3",
+        "data": data,
+        "usage": {"prompt_tokens": n * 5, "total_tokens": n * 5},
+    }).encode()
+    request = httpx.Request("POST", "https://test.example.com/v1/embeddings")
+    return httpx.Response(status_code=200, content=body, headers={
+        "content-type": "application/json",
+    }, request=request)
 
 
 @pytest.fixture
-def encoder(mock_model):
-    """EmbeddingEncoder with mocked model."""
-    with patch("src.indexing.embedding_encoder.SentenceTransformer",
-               return_value=mock_model):
-        enc = EmbeddingEncoder(model_name="mock-model")
-    return enc
+def encoder():
+    """EmbeddingEncoder with test API key."""
+    return EmbeddingEncoder(
+        model_name="text-embedding-v3",
+        api_key="test-key-123",
+        base_url="https://test.example.com/v1",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +61,14 @@ def encoder(mock_model):
 def test_encode_batch_returns_correct_count_and_dimensions(encoder):
     """VS-1: Given 10 code chunks, encode_documents produces 10 vectors of 1024 dims."""
     texts = [f"def function_{i}(): pass" for i in range(10)]
-    result = encoder.encode_batch(texts)
+
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        # Will be called in batches of 6 (6 + 4)
+        mock_post.side_effect = [
+            _make_api_response(6),
+            _make_api_response(4),
+        ]
+        result = encoder.encode_batch(texts)
 
     assert len(result) == 10, f"Expected 10 vectors, got {len(result)}"
     for i, vec in enumerate(result):
@@ -64,36 +81,43 @@ def test_encode_batch_returns_correct_count_and_dimensions(encoder):
 # [unit]
 # ---------------------------------------------------------------------------
 
-def test_encode_query_prepends_prefix_and_returns_1024_dim(encoder, mock_model):
+def test_encode_query_prepends_prefix_and_returns_1024_dim(encoder):
     """VS-2: Given query 'how to configure timeout', returns 1024-dim vector with prefix."""
     query = "how to configure timeout"
-    result = encoder.encode_query(query)
+
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        mock_post.return_value = _make_api_response(1)
+        result = encoder.encode_query(query)
 
     assert result.shape == (1024,), f"Expected (1024,), got {result.shape}"
     assert result.dtype == np.float32
 
-    # Verify the model was called with the prefix prepended
-    call_args = mock_model.encode.call_args
-    texts_passed = call_args[0][0] if call_args[0] else call_args[1].get("texts", call_args[0])
-    # The first (and only) text should start with the query prefix
-    assert any(
-        "Represent this code search query: " in str(arg)
-        for arg in [call_args[0][0]] if isinstance(call_args[0][0], list)
-    ) or "Represent this code search query: " in str(call_args[0][0])
+    # Verify the API was called with the prefix prepended
+    call_args = mock_post.call_args
+    payload = call_args[1]["json"]
+    assert len(payload["input"]) == 1
+    assert payload["input"][0].startswith("Represent this code search query: ")
+    assert query in payload["input"][0]
 
 
 # ---------------------------------------------------------------------------
-# T4: Happy path — large batch (10000 texts) all encoded
+# T4: Happy path — large batch (10000 texts) all encoded via batching
 # [unit]
 # ---------------------------------------------------------------------------
 
 def test_encode_batch_large_batch_10000(encoder):
-    """FR-005 AC-2: Given 10,000 chunks, all vectors produced."""
+    """FR-005 AC-2: Given 10,000 chunks, all vectors produced via batched API calls."""
     texts = [f"code chunk {i}" for i in range(10000)]
-    result = encoder.encode_batch(texts)
+
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        # 10000 / 6 = 1667 batches (last batch has 4)
+        def make_response(*args, **kwargs):
+            n = len(kwargs.get("json", {}).get("input", []))
+            return _make_api_response(n)
+        mock_post.side_effect = make_response
+        result = encoder.encode_batch(texts)
 
     assert len(result) == 10000, f"Expected 10000 vectors, got {len(result)}"
-    # Spot-check first and last
     assert result[0].shape == (1024,)
     assert result[9999].shape == (1024,)
 
@@ -103,29 +127,40 @@ def test_encode_batch_large_batch_10000(encoder):
 # [unit]
 # ---------------------------------------------------------------------------
 
-def test_encode_batch_with_is_query_prepends_prefix(encoder, mock_model):
+def test_encode_batch_with_is_query_prepends_prefix(encoder):
     """encode_batch with is_query=True prepends query prefix to every text."""
     texts = ["query one", "query two"]
-    encoder.encode_batch(texts, is_query=True)
 
-    call_args = mock_model.encode.call_args
-    passed_texts = call_args[0][0]
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        mock_post.return_value = _make_api_response(2)
+        encoder.encode_batch(texts, is_query=True)
+
+    call_args = mock_post.call_args
+    payload = call_args[1]["json"]
     prefix = "Represent this code search query: "
-    for t in passed_texts:
+    for t in payload["input"]:
         assert t.startswith(prefix), f"Text '{t}' missing query prefix"
 
 
 # ---------------------------------------------------------------------------
-# T9: Error — model encode raises RuntimeError (OOM)
+# T9: Error — API returns error status
 # [unit]
 # ---------------------------------------------------------------------------
 
-def test_encode_batch_model_failure_raises_embedding_model_error(encoder, mock_model):
-    """FR-005 AC-3: Model error raises EmbeddingModelError, no partial output."""
-    mock_model.encode.side_effect = RuntimeError("CUDA out of memory")
+def test_encode_batch_api_failure_raises_embedding_model_error(encoder):
+    """FR-005 AC-3: API error raises EmbeddingModelError, no partial output."""
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        request = httpx.Request("POST", "https://test.example.com/v1/embeddings")
+        error_resp = httpx.Response(
+            status_code=500,
+            content=b'{"error": "Internal Server Error"}',
+            headers={"content-type": "application/json"},
+            request=request,
+        )
+        mock_post.return_value = error_resp
 
-    with pytest.raises(EmbeddingModelError, match="Model inference failed"):
-        encoder.encode_batch(["some code"])
+        with pytest.raises(EmbeddingModelError, match="Model inference failed"):
+            encoder.encode_batch(["some code"])
 
 
 # ---------------------------------------------------------------------------
@@ -157,34 +192,44 @@ def test_encode_query_empty_string_raises_value_error(encoder):
 
 def test_encode_batch_single_text_returns_one_vector(encoder):
     """Boundary: single text → list with 1 vector of 1024-dim."""
-    result = encoder.encode_batch(["single chunk"])
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        mock_post.return_value = _make_api_response(1)
+        result = encoder.encode_batch(["single chunk"])
+
     assert len(result) == 1
     assert result[0].shape == (1024,)
     assert result[0].dtype == np.float32
 
 
 # ---------------------------------------------------------------------------
-# T18: Happy path — constructor defaults
+# T18: Happy path — constructor defaults from env vars
 # [unit]
 # ---------------------------------------------------------------------------
 
-def test_encoder_init_defaults(encoder):
-    """Constructor sets batch_size=64 and query_prefix correctly."""
-    assert encoder._batch_size == 64
-    assert encoder._query_prefix == "Represent this code search query: "
+def test_encoder_init_defaults():
+    """Constructor reads from env vars and sets query_prefix correctly."""
+    with patch.dict("os.environ", {
+        "EMBEDDING_MODEL": "test-model",
+        "EMBEDDING_API_KEY": "test-key",
+        "EMBEDDING_BASE_URL": "https://test.api.com/v1",
+    }):
+        enc = EmbeddingEncoder()
+    assert enc._model == "test-model"
+    assert enc._query_prefix == "Represent this code search query: "
+    assert enc._dimensions == 1024
+    assert enc._base_url == "https://test.api.com/v1"
 
 
 # ---------------------------------------------------------------------------
-# T19: Error — invalid model name raises EmbeddingModelError
+# T19: Error — missing API key raises EmbeddingModelError
 # [unit]
 # ---------------------------------------------------------------------------
 
-def test_encoder_init_invalid_model_raises_error():
-    """Invalid model name should raise EmbeddingModelError."""
-    with patch("src.indexing.embedding_encoder.SentenceTransformer",
-               side_effect=Exception("Model not found")):
-        with pytest.raises(EmbeddingModelError, match="Failed to load model"):
-            EmbeddingEncoder(model_name="nonexistent/model")
+def test_encoder_init_missing_api_key_raises_error():
+    """Missing API key should raise EmbeddingModelError."""
+    with patch.dict("os.environ", {}, clear=True):
+        with pytest.raises(EmbeddingModelError, match="EMBEDDING_API_KEY is required"):
+            EmbeddingEncoder(api_key="", model_name="test")
 
 
 # ---------------------------------------------------------------------------
@@ -194,35 +239,91 @@ def test_encoder_init_invalid_model_raises_error():
 
 def test_encode_batch_empty_string_element_succeeds(encoder):
     """Empty string as text element should encode without crash."""
-    result = encoder.encode_batch([""])
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        mock_post.return_value = _make_api_response(1)
+        result = encoder.encode_batch([""])
+
     assert len(result) == 1
     assert result[0].shape == (1024,)
 
 
 # ---------------------------------------------------------------------------
-# Real test: actual model encoding produces correct dimensions
+# T21: Error — API returns wrong number of embeddings
+# [unit]
+# ---------------------------------------------------------------------------
+
+def test_encode_batch_wrong_count_raises_error(encoder):
+    """API returning wrong number of embeddings should raise EmbeddingModelError."""
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        # Send 3 texts but API returns 2 embeddings
+        mock_post.return_value = _make_api_response(2)
+        with pytest.raises(EmbeddingModelError, match="expected 3 embeddings, got 2"):
+            encoder.encode_batch(["a", "b", "c"])
+
+
+# ---------------------------------------------------------------------------
+# T22: Error — network connection error
+# [unit]
+# ---------------------------------------------------------------------------
+
+def test_encode_batch_network_error_raises_embedding_model_error(encoder):
+    """Network error raises EmbeddingModelError."""
+    with patch("src.indexing.embedding_encoder.httpx.post") as mock_post:
+        mock_post.side_effect = httpx.ConnectError("Connection refused")
+        with pytest.raises(EmbeddingModelError, match="Model inference failed"):
+            encoder.encode_batch(["some code"])
+
+
+# ---------------------------------------------------------------------------
+# T23: Happy path — API response sorted by index
+# [unit]
+# ---------------------------------------------------------------------------
+
+def test_encode_batch_sorts_by_index(encoder):
+    """API may return embeddings out of order — encoder must sort by index."""
+    data = [
+        {"index": 1, "embedding": [0.0] * 1024},
+        {"index": 0, "embedding": [1.0] * 1024},
+    ]
+    body = json.dumps({"model": "test", "data": data, "usage": {}}).encode()
+    request = httpx.Request("POST", "https://test.example.com/v1/embeddings")
+    resp = httpx.Response(200, content=body, headers={"content-type": "application/json"}, request=request)
+
+    with patch("src.indexing.embedding_encoder.httpx.post", return_value=resp):
+        result = encoder.encode_batch(["text_0", "text_1"])
+
+    # Index 0 should have [1.0, ...], index 1 should have [0.0, ...]
+    assert result[0][0] == 1.0, "First vector should correspond to index 0"
+    assert result[1][0] == 0.0, "Second vector should correspond to index 1"
+
+
+# ---------------------------------------------------------------------------
+# Real test: actual DashScope API encoding produces correct dimensions
 # [integration]
 # ---------------------------------------------------------------------------
 
 @pytest.mark.real
-def test_real_sentence_transformer_encode():
-    """Real test: verify sentence-transformers produces 1024-dim vectors.
+def test_real_dashscope_embedding_api():
+    """Real test: verify DashScope text-embedding-v3 produces 1024-dim vectors."""
+    import os
 
-    Uses all-MiniLM-L6-v2 (384-dim) as a lightweight stand-in to verify
-    the encode pipeline works end-to-end. We mock the model dimension check
-    but verify the actual encoding workflow.
-    """
-    # Use a small model that's fast to download for CI
-    from sentence_transformers import SentenceTransformer
+    api_key = os.environ.get("EMBEDDING_API_KEY", "")
+    if not api_key:
+        pytest.skip("EMBEDDING_API_KEY not set")
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    encoder = EmbeddingEncoder()
     texts = ["def hello(): pass", "class Foo: pass"]
-    vectors = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+    vectors = encoder.encode_batch(texts)
 
-    assert vectors.shape[0] == 2, f"Expected 2 vectors, got {vectors.shape[0]}"
-    assert vectors.shape[1] == 384, f"Expected 384-dim (MiniLM), got {vectors.shape[1]}"
-    assert vectors.dtype == np.float32
-    # Verify normalization (unit vectors)
-    for i in range(2):
-        norm = np.linalg.norm(vectors[i])
-        assert abs(norm - 1.0) < 0.01, f"Vector {i} norm={norm}, expected ~1.0"
+    assert len(vectors) == 2, f"Expected 2 vectors, got {len(vectors)}"
+    for i, vec in enumerate(vectors):
+        assert vec.shape == (1024,), f"Vector {i} shape={vec.shape}, expected (1024,)"
+        assert vec.dtype == np.float32, f"Vector {i} dtype={vec.dtype}"
+
+    # Query encoding with prefix
+    query_vec = encoder.encode_query("how to configure timeout")
+    assert query_vec.shape == (1024,)
+    assert query_vec.dtype == np.float32
+
+    # Verify vectors are different (not all zeros or identical)
+    assert not np.allclose(vectors[0], vectors[1]), "Vectors should differ for different inputs"
