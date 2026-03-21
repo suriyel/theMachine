@@ -87,9 +87,11 @@ flowchart LR
 
 | Method | Signature | Preconditions | Postconditions | Raises |
 |--------|-----------|---------------|----------------|--------|
-| `clone_or_update` | `clone_or_update(repo_id: str, url: str) -> str` | `repo_id` is a non-empty string; `url` is a valid Git URL; `REPO_CLONE_PATH` is set and writable | Returns `dest_path` (str) = `{storage_path}/{repo_id}`; directory exists with default branch HEAD checked out | `CloneError` if git command fails (network, auth, disk) |
-| `_clone` | `_clone(url: str, dest_path: str) -> None` | `dest_path` does not exist or is empty; `url` is reachable | `dest_path` contains a full git clone of the repo | `CloneError` if git clone fails; partial files cleaned up |
-| `_update` | `_update(dest_path: str) -> None` | `dest_path` is an existing git repository | Repository at `dest_path` is updated to latest remote HEAD | `CloneError` if git fetch/reset fails |
+| `clone_or_update` | `clone_or_update(repo_id: str, url: str, branch: str \| None = None) -> str` | `repo_id` is a non-empty string; `url` is a valid Git URL; `REPO_CLONE_PATH` is set and writable | Returns `dest_path` (str) = `{storage_path}/{repo_id}`; directory exists with specified branch (or default) checked out | `CloneError` if git command fails (network, auth, disk) |
+| `_clone` | `_clone(url: str, dest_path: str, branch: str \| None = None) -> None` | `dest_path` does not exist or is empty; `url` is reachable | `dest_path` contains a full git clone; if branch specified, uses `--branch {branch}` | `CloneError` if git clone fails; partial files cleaned up |
+| `_update` | `_update(dest_path: str, branch: str \| None = None) -> None` | `dest_path` is an existing git repository | Repository at `dest_path` is updated to latest `origin/{branch}` or `origin/HEAD` | `CloneError` if git fetch/reset fails |
+| `detect_default_branch` | `detect_default_branch(repo_path: str) -> str` | `repo_path` is a valid git clone | Returns the default branch name (e.g. "main") by parsing `symbolic-ref refs/remotes/origin/HEAD` | `CloneError` if command fails |
+| `list_remote_branches` | `list_remote_branches(repo_path: str) -> list[str]` | `repo_path` is a valid git clone | Returns sorted list of remote branch names with `origin/` prefix stripped; excludes `HEAD ->` entries | `CloneError` if command fails |
 | `_cleanup_partial` | `_cleanup_partial(dest_path: str) -> None` | `dest_path` is a filesystem path | Directory at `dest_path` is removed if it exists; no-op if it doesn't | Never raises (logs warning on failure) |
 | `_run_git` | `_run_git(args: list[str], cwd: str | None = None) -> str` | `args` is a non-empty list of git subcommand args | Returns stdout as string; git command completed successfully | `CloneError` if exit code != 0, with stderr in message |
 

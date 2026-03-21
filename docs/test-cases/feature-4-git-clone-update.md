@@ -1,7 +1,7 @@
 # 测试用例集: Git Clone & Update
 
 **Feature ID**: 4
-**关联需求**: FR-002（Git Clone & Update）
+**关联需求**: FR-002（Git Clone & Update）[Wave 1 — branch selection]
 **日期**: 2026-03-21
 **测试标准**: ISO/IEC/IEEE 29119-3
 **模板版本**: 1.0
@@ -10,9 +10,9 @@
 
 | 类别 | 用例数 |
 |------|--------|
-| functional | 3 |
-| boundary | 2 |
-| **合计** | **5** |
+| functional | 5 |
+| boundary | 3 |
+| **合计** | **8** |
 
 ---
 
@@ -245,15 +245,143 @@ FR-002（Git Clone & Update）
 
 ---
 
+### 用例编号
+
+ST-FUNC-004-004
+
+### 关联需求
+
+FR-002（Git Clone & Update）
+
+### 测试目标
+
+验证指定 branch 参数时，clone_or_update 使用 --branch 标志克隆指定分支。
+
+### 前置条件
+
+- GitCloner 实例已创建
+- subprocess.run 被模拟
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 调用 clone_or_update(repo_id, url, branch="develop") | git clone --branch develop 被执行 |
+| 2 | 检查传给 subprocess.run 的命令 | 包含 ["git", "clone", "--branch", "develop", url, dest_path] |
+
+### 验证点
+
+- git clone 命令包含 --branch develop 标志
+- 返回正确的 dest_path
+
+### 后置检查
+
+- 无
+
+### 元数据
+
+- **优先级**: High
+- **类别**: functional
+- **已自动化**: Yes
+- **测试引用**: tests/test_feature_4_git_cloner.py::test_clone_with_branch_passes_branch_flag
+- **Test Type**: Mock
+
+---
+
+### 用例编号
+
+ST-FUNC-004-005
+
+### 关联需求
+
+FR-002（Git Clone & Update）
+
+### 测试目标
+
+验证不指定 branch 时，clone_or_update 不传 --branch 标志（使用仓库默认分支）。
+
+### 前置条件
+
+- GitCloner 实例已创建
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 调用 clone_or_update(repo_id, url) 不带 branch | git clone 命令不包含 --branch |
+| 2 | 检查传给 subprocess.run 的命令 | 等于 ["git", "clone", url, dest_path] |
+
+### 验证点
+
+- clone 命令中无 --branch 标志
+
+### 后置检查
+
+- 无
+
+### 元数据
+
+- **优先级**: High
+- **类别**: functional
+- **已自动化**: Yes
+- **测试引用**: tests/test_feature_4_git_cloner.py::test_clone_without_branch_no_branch_flag
+- **Test Type**: Mock
+
+---
+
+### 用例编号
+
+ST-BNDRY-004-003
+
+### 关联需求
+
+FR-002（Git Clone & Update）
+
+### 测试目标
+
+验证 update 操作使用 origin/{branch} 而非 origin/HEAD 进行 reset。
+
+### 前置条件
+
+- 仓库已克隆（.git 目录存在）
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 调用 clone_or_update(repo_id, url, branch="main") | git reset --hard origin/main 被执行 |
+| 2 | 检查 reset 命令 | 等于 ["git", "reset", "--hard", "origin/main"] |
+
+### 验证点
+
+- reset 目标为 origin/{branch} 而非 origin/HEAD
+
+### 后置检查
+
+- 无
+
+### 元数据
+
+- **优先级**: High
+- **类别**: boundary
+- **已自动化**: Yes
+- **测试引用**: tests/test_feature_4_git_cloner.py::test_update_with_branch_resets_to_origin_branch
+- **Test Type**: Mock
+
+---
+
 ## 可追溯矩阵
 
 | 用例 ID | 关联需求 | verification_step | 自动化测试 | Test Type | 结果 |
 |---------|----------|-------------------|-----------|---------|------|
-| ST-FUNC-004-001 | FR-002 | VS-1: clone to REPO_CLONE_PATH/{repo_id} | test_real_clone_public_repo | Real | PASS |
-| ST-FUNC-004-002 | FR-002 | VS-2: fetch+reset without re-cloning | test_real_update_after_clone | Real | PASS |
-| ST-FUNC-004-003 | FR-002 | VS-3: CloneError + cleanup on failure | test_real_clone_invalid_url_raises_clone_error | Real | PASS |
-| ST-BNDRY-004-001 | FR-002 | VS-3: CloneError on failure (timeout) | test_timeout_raises_clone_error | Mock | PASS |
-| ST-BNDRY-004-002 | FR-002 | VS-3: CloneError on failure (git missing) | test_git_not_found_raises_clone_error | Mock | PASS |
+| ST-FUNC-004-001 | FR-002 | VS-1: clone to REPO_CLONE_PATH/{repo_id}, detect default_branch | test_real_clone_public_repo | Real | PASS |
+| ST-FUNC-004-002 | FR-002 | VS-3: fetch+reset to origin/{branch} | test_real_update_after_clone | Real | PASS |
+| ST-FUNC-004-003 | FR-002 | VS-4: CloneError + cleanup on failure | test_real_clone_invalid_url_raises_clone_error | Real | PASS |
+| ST-FUNC-004-004 | FR-002 | VS-2: clone with --branch develop | test_clone_with_branch_passes_branch_flag | Mock | PASS |
+| ST-FUNC-004-005 | FR-002 | VS-1: clone without branch (no --branch flag) | test_clone_without_branch_no_branch_flag | Mock | PASS |
+| ST-BNDRY-004-001 | FR-002 | VS-4: CloneError on timeout | test_timeout_raises_clone_error | Mock | PASS |
+| ST-BNDRY-004-002 | FR-002 | VS-4: CloneError on git missing | test_git_not_found_raises_clone_error | Mock | PASS |
+| ST-BNDRY-004-003 | FR-002 | VS-3: update resets to origin/{branch} | test_update_with_branch_resets_to_origin_branch | Mock | PASS |
 
 ## Real Test Case Execution Summary
 

@@ -16,12 +16,16 @@ class GitCloner:
     def __init__(self, storage_path: str) -> None:
         self._storage_path = storage_path
 
-    def clone_or_update(self, repo_id: str, url: str) -> str:
+    def clone_or_update(
+        self, repo_id: str, url: str, branch: str | None = None
+    ) -> str:
         """Clone a repository or update it if already cloned.
 
         Args:
             repo_id: Unique identifier for the repository.
             url: Git repository URL.
+            branch: Optional branch to clone/checkout. If None, uses
+                the repository's default branch.
 
         Returns:
             Path to the local clone directory.
@@ -32,24 +36,70 @@ class GitCloner:
         dest_path = str(Path(self._storage_path) / repo_id)
 
         if Path(dest_path, ".git").is_dir():
-            self._update(dest_path)
+            self._update(dest_path, branch=branch)
         else:
-            self._clone(url, dest_path)
+            self._clone(url, dest_path, branch=branch)
 
         return dest_path
 
-    def _clone(self, url: str, dest_path: str) -> None:
+    def detect_default_branch(self, repo_path: str) -> str:
+        """Detect the default branch of a cloned repository.
+
+        Uses git symbolic-ref to read origin/HEAD.
+
+        Returns:
+            Branch name (e.g. "main").
+
+        Raises:
+            CloneError: If the command fails.
+        """
+        output = self._run_git(
+            ["symbolic-ref", "refs/remotes/origin/HEAD"], cwd=repo_path
+        )
+        # Output is like "refs/remotes/origin/main\n"
+        return output.strip().split("/")[-1]
+
+    def list_remote_branches(self, repo_path: str) -> list[str]:
+        """List remote branches for a cloned repository.
+
+        Returns:
+            Sorted list of branch names with origin/ prefix stripped.
+            Excludes HEAD pointer entries.
+
+        Raises:
+            CloneError: If the command fails.
+        """
+        output = self._run_git(["branch", "-r"], cwd=repo_path)
+        branches = []
+        for line in output.strip().splitlines():
+            line = line.strip()
+            # Skip HEAD -> origin/main entries
+            if "->" in line:
+                continue
+            # Strip origin/ prefix
+            if line.startswith("origin/"):
+                branches.append(line[len("origin/"):])
+        return sorted(branches)
+
+    def _clone(
+        self, url: str, dest_path: str, branch: str | None = None
+    ) -> None:
         """Perform a fresh git clone."""
         try:
-            self._run_git(["clone", url, dest_path])
+            cmd = ["clone"]
+            if branch is not None:
+                cmd.extend(["--branch", branch])
+            cmd.extend([url, dest_path])
+            self._run_git(cmd)
         except CloneError:
             self._cleanup_partial(dest_path)
             raise
 
-    def _update(self, dest_path: str) -> None:
-        """Fetch and reset an existing clone to latest HEAD."""
+    def _update(self, dest_path: str, branch: str | None = None) -> None:
+        """Fetch and reset an existing clone to latest branch HEAD."""
         self._run_git(["fetch", "origin"], cwd=dest_path)
-        self._run_git(["reset", "--hard", "origin/HEAD"], cwd=dest_path)
+        target = f"origin/{branch}" if branch is not None else "origin/HEAD"
+        self._run_git(["reset", "--hard", target], cwd=dest_path)
 
     def _cleanup_partial(self, dest_path: str) -> None:
         """Remove a partially cloned directory. No-op if path doesn't exist."""

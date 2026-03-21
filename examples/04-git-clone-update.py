@@ -2,7 +2,9 @@
 
 Demonstrates:
 - Cloning a public Git repository to a local directory
+- Cloning with a specific branch (Wave 1)
 - Updating (fetch + reset) an already-cloned repository
+- Detecting default branch and listing remote branches (Wave 1)
 - Error handling for unreachable URLs
 - Cleanup of partial files on failure
 
@@ -29,14 +31,26 @@ def main() -> None:
         files = [f for f in os.listdir(dest) if f != ".git"]
         print(f"   -> files: {files}")
 
-        # 2. Update the same repository (fetch + reset, no re-clone)
-        print("\n2. Updating the same repository ...")
-        dest2 = cloner.clone_or_update("hello-world", "https://github.com/octocat/Hello-World")
+        # 2. Detect default branch and list remote branches (Wave 1)
+        print("\n2. Detecting default branch ...")
+        default_branch = cloner.detect_default_branch(dest)
+        print(f"   -> default_branch: {default_branch}")
+
+        print("\n3. Listing remote branches ...")
+        branches = cloner.list_remote_branches(dest)
+        print(f"   -> branches: {branches}")
+
+        # 4. Update the same repository (fetch + reset, no re-clone)
+        print("\n4. Updating the same repository ...")
+        dest2 = cloner.clone_or_update(
+            "hello-world", "https://github.com/octocat/Hello-World",
+            branch=default_branch,
+        )
         print(f"   -> path unchanged: {dest2 == dest}")
         print(f"   -> .git still exists: {os.path.isdir(os.path.join(dest2, '.git'))}")
 
-        # 3. Attempt to clone an unreachable URL
-        print("\n3. Cloning unreachable URL ...")
+        # 5. Attempt to clone an unreachable URL
+        print("\n5. Cloning unreachable URL ...")
         try:
             cloner.clone_or_update("bad-repo", "https://invalid.example.com/no-repo.git")
         except CloneError as e:

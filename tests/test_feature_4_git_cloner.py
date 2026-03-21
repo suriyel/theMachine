@@ -1,13 +1,18 @@
 """Tests for Feature #4 — Git Clone & Update (GitCloner).
 
+Wave 1 update: Added branch parameter, detect_default_branch, list_remote_branches tests.
+
 Test Inventory from feature detailed design:
 - T1-T2: happy path (clone, update)
 - T3-T5: error (clone failure, update failure, disk error)
 - T6-T8: boundary (timeout, git not found, corrupted .git)
 - T9-T10: cleanup behavior
 - T11-T12: _run_git internals
+- T13-T18: Wave 1 — branch parameter, detect_default_branch, list_remote_branches
 
 Security: N/A — internal utility with no user-facing input.
+
+Negative tests: T3-T8, T10, T12, T18 = 9/21 = 43% >= 40%
 """
 
 import logging
@@ -344,3 +349,109 @@ def test_real_clone_invalid_url_raises_clone_error(tmp_path: Path):
 
     # Verify cleanup happened
     assert not os.path.exists(os.path.join(storage, "bad-repo"))
+
+
+# ---------------------------------------------------------------------------
+# Wave 1: Branch parameter tests
+# ---------------------------------------------------------------------------
+
+# [unit] T13: clone with explicit branch passes --branch flag
+def test_clone_with_branch_passes_branch_flag(cloner, storage_path: str):
+    """VS-2: clone_or_update with branch='develop' passes --branch develop to git clone."""
+    repo_id = "branch-repo"
+    url = "https://github.com/octocat/Hello-World"
+    expected_dest = os.path.join(storage_path, repo_id)
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        result = cloner.clone_or_update(repo_id, url, branch="develop")
+
+    assert result == expected_dest
+    call_args = mock_run.call_args_list[0]
+    cmd = call_args[0][0]
+    assert cmd == ["git", "clone", "--branch", "develop", url, expected_dest]
+
+
+# [unit] T14: clone without branch does NOT pass --branch flag
+def test_clone_without_branch_no_branch_flag(cloner, storage_path: str):
+    """VS-1: clone_or_update without branch does not pass --branch flag."""
+    repo_id = "no-branch-repo"
+    url = "https://github.com/octocat/Hello-World"
+    expected_dest = os.path.join(storage_path, repo_id)
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        cloner.clone_or_update(repo_id, url)
+
+    cmd = mock_run.call_args_list[0][0][0]
+    assert "--branch" not in cmd
+    assert cmd == ["git", "clone", url, expected_dest]
+
+
+# [unit] T15: update with branch resets to origin/{branch}
+def test_update_with_branch_resets_to_origin_branch(cloner, storage_path: str):
+    """VS-3: update with branch='main' resets to origin/main."""
+    repo_id = "update-branch"
+    url = "https://github.com/octocat/Hello-World"
+    dest_path = os.path.join(storage_path, repo_id)
+    os.makedirs(os.path.join(dest_path, ".git"))
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        cloner.clone_or_update(repo_id, url, branch="main")
+
+    reset_cmd = mock_run.call_args_list[1][0][0]
+    assert reset_cmd == ["git", "reset", "--hard", "origin/main"]
+
+
+# [unit] T16: detect_default_branch parses symbolic-ref output
+def test_detect_default_branch(cloner, storage_path: str):
+    """VS-1: detect_default_branch returns branch name from symbolic-ref."""
+    repo_path = os.path.join(storage_path, "test-repo")
+    os.makedirs(os.path.join(repo_path, ".git"))
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="refs/remotes/origin/main\n", stderr=""
+        )
+        result = cloner.detect_default_branch(repo_path)
+
+    assert result == "main"
+
+
+# [unit] T17: list_remote_branches returns sorted list with origin/ stripped
+def test_list_remote_branches(cloner, storage_path: str):
+    """VS-5: list_remote_branches returns sorted branch names without origin/ prefix."""
+    repo_path = os.path.join(storage_path, "test-repo")
+    os.makedirs(os.path.join(repo_path, ".git"))
+
+    branch_output = (
+        "  origin/HEAD -> origin/main\n"
+        "  origin/develop\n"
+        "  origin/feature/xyz\n"
+        "  origin/main\n"
+    )
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=branch_output, stderr=""
+        )
+        result = cloner.list_remote_branches(repo_path)
+
+    assert result == ["develop", "feature/xyz", "main"]
+    # HEAD entry should be excluded
+    assert "HEAD -> origin/main" not in result
+
+
+# [unit] T18: list_remote_branches on failure raises CloneError
+def test_list_remote_branches_failure_raises_clone_error(cloner, storage_path: str):
+    """Error: list_remote_branches raises CloneError when git branch -r fails."""
+    repo_path = os.path.join(storage_path, "test-repo")
+    os.makedirs(os.path.join(repo_path, ".git"))
+
+    with patch("src.indexing.git_cloner.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=128, stdout="", stderr="fatal: not a git repository"
+        )
+        with pytest.raises(CloneError, match="not a git repository"):
+            cloner.list_remote_branches(repo_path)
