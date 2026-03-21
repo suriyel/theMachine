@@ -190,7 +190,9 @@
       "title": "Content Extraction",
       "description": "Implement ContentExtractor that classifies files by type (source, doc, example, rule) by extension/path patterns, skips binary/oversized files, and reads text content",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-5-content-extraction.md",
+      "st_case_count": 7,
       "verification_steps": [
         "Given a cloned repo with .py, .java, .md, and .png files, when extract_content() runs, then source files are classified as 'code', .md files as 'doc', and .png files are skipped",
         "Given a file larger than 1MB, when extraction runs, then the file is skipped with a logged warning",

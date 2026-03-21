@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 4/33 active features passing · Last: #4 Git Clone & Update (Wave 1 re-verify, 2026-03-21) · Next: #5 Content Extraction
+Progress: 5/33 active features passing · Last: #5 Content Extraction (2026-03-21) · Next: #6 Code Chunking
 
 ---
 
@@ -104,3 +104,16 @@ Progress: 4/33 active features passing · Last: #4 Git Clone & Update (Wave 1 re
 - **Review**: PASS — all compliance checks passed
 - **Result**: Feature #4 marked PASSING
 - **Next**: Feature #5 — Content Extraction
+
+### Session 8 — 2026-03-21 (Feature #5)
+- **Feature**: #5 — Content Extraction
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: ContentExtractor (extract, _classify_file, _is_binary), ContentType enum, ExtractedFile dataclass
+- **Classification**: code (.py/.java/.js/.ts/.c/.cpp), doc (.md/.rst/README/CHANGELOG/RELEASE*), example (examples/*/_example.*/_demo.*), rule (CLAUDE.md/CONTRIBUTING.md/.cursor/rules/*/.editorconfig)
+- **Tests**: 23 feature tests + 95 prior = 118/118 passing
+- **Coverage**: 98% line overall, 95% line / 100% branch for content_extractor.py
+- **Mutation**: known mutmut 3.2.0 __init__ mapping bug (manual verification confirms mutants caught)
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY), all Real
+- **Review**: PASS — 2 minor findings (module-level constants vs instance attrs, .cursor dir filter not in pseudocode)
+- **Result**: Feature #5 marked PASSING
+- **Next**: Feature #6 — Code Chunking
