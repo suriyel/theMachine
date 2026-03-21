@@ -1193,12 +1193,14 @@ classDiagram
         -api_key: str
         -base_url: str
         -model: str
+        -provider: str
         -retriever: Retriever
         +generate_queries(repo: EvalRepo, chunk_count: int, n_queries: int): list~EvalQuery~
         +annotate_relevance(query: EvalQuery, chunks: list~ScoredChunk~): list~Annotation~
         -dual_annotate(query: str, chunk: ScoredChunk): tuple~int, int~
         -resolve_disagreement(query: str, chunk: ScoredChunk, scores: tuple): int
         -compute_kappa(annotations: list~Annotation~): float
+        -_resolve_provider_config(provider: str): tuple~str, str, str~
     }
 
     class EvalQuery {
@@ -1331,6 +1333,7 @@ sequenceDiagram
 - **IR metrics implementation**: Standard formulas — MRR = 1/rank_of_first_relevant, NDCG = DCG/IDCG with log2 discounting, Recall@k = |relevant ∩ retrieved@k| / |relevant|, Precision@k = |relevant ∩ retrieved@k| / k. Relevance threshold: score >= 2.
 - **Stage evaluation**: Each stage evaluated independently. Stages not yet implemented return `StageMetrics` with all values = None and `status = "N/A"`.
 - **Report delta**: If a previous report exists at `eval/reports/`, the new report includes a delta table (Δ per metric per stage).
+- **Multi-provider LLM**: LLMAnnotator supports multiple OpenAI-compatible providers selected via `EVAL_LLM_PROVIDER` env var (`minimax` or `zhipu`). Each provider has its own API key, base URL, and model name env vars. The annotator uses a single `httpx` client configured per provider — no provider-specific code paths. This enables cross-provider comparison of annotation quality.
 - **Reproducibility**: `eval/repos.json` is version-controlled. LLM calls use `seed` parameter where supported. Golden datasets are cached — re-run only re-evaluates retrieval, not re-annotates.
 
 #### 4.7.5 File Structure

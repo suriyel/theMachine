@@ -216,6 +216,46 @@
         41
       ],
       "check_hint": "Set to MiniMax-M1-80k"
+    },
+    {
+      "name": "Zhipu API Key",
+      "type": "env",
+      "key": "ZHIPU_API_KEY",
+      "description": "API key for Zhipu CodeGeeX LLM (evaluation annotation)",
+      "required_by": [
+        41
+      ],
+      "check_hint": "Get from open.bigmodel.cn"
+    },
+    {
+      "name": "Zhipu Base URL",
+      "type": "env",
+      "key": "ZHIPU_BASE_URL",
+      "description": "Base URL for Zhipu OpenAI-compatible API",
+      "required_by": [
+        41
+      ],
+      "check_hint": "Set to https://open.bigmodel.cn/api/paas/v4"
+    },
+    {
+      "name": "Zhipu Model",
+      "type": "env",
+      "key": "ZHIPU_MODEL",
+      "description": "Zhipu model name for evaluation annotation",
+      "required_by": [
+        41
+      ],
+      "check_hint": "Set to codegeex-4"
+    },
+    {
+      "name": "Eval LLM Provider",
+      "type": "env",
+      "key": "EVAL_LLM_PROVIDER",
+      "description": "LLM provider for evaluation annotation (minimax or zhipu)",
+      "required_by": [
+        41
+      ],
+      "check_hint": "Set to minimax or zhipu"
     }
   ],
   "features": [
@@ -911,7 +951,7 @@
       "id": 41,
       "category": "evaluation",
       "title": "LLM Query Generation & Relevance Annotation",
-      "description": "Use MiniMax2.5 Code Plan API (OpenAI-compatible) to generate 50-100 NL queries per evaluation repo across 4 categories, retrieve top-20 chunks per query, and annotate relevance (0-3 scale) using dual annotation with Cohen Kappa consistency checking. Store as golden dataset in eval/golden/{slug}.json.",
+      "description": "Use OpenAI-compatible LLM API with multi-provider support (MiniMax, Zhipu) via EVAL_LLM_PROVIDER env var to generate 50-100 NL queries per evaluation repo across 4 categories, retrieve top-20 chunks per query, and annotate relevance (0-3 scale) using dual annotation with Cohen Kappa consistency checking. Store as golden dataset in eval/golden/{slug}.json.",
       "priority": "medium",
       "status": "failing",
       "wave": 3,
@@ -919,7 +959,8 @@
         "Given an indexed evaluation repo, when LLMAnnotator.generate_queries() runs, then 50-100 NL queries are produced covering API usage, bug diagnosis, configuration, and architecture understanding categories",
         "Given a (query, chunk) pair, when dual annotation runs, then two independent scores (0-3) are produced; if they disagree by >1, a third annotation resolves via majority vote",
         "Given all annotations complete, when Cohen Kappa is computed, then the inter-annotator agreement score is recorded in the golden dataset metadata",
-        "Given the golden dataset is saved, then eval/golden/{slug}.json contains query text, repo_id, language, category, and per-chunk annotations with scores"
+        "Given the golden dataset is saved, then eval/golden/{slug}.json contains query text, repo_id, language, category, and per-chunk annotations with scores",
+        "Given EVAL_LLM_PROVIDER='zhipu' and valid Zhipu credentials, when LLMAnnotator runs, then it uses the Zhipu API endpoint and produces annotations in the same format as MiniMax"
       ],
       "dependencies": [
         40

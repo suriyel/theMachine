@@ -459,12 +459,13 @@ Admin --> UC22
 <!-- Wave 3: Added 2026-03-21 — Retrieval Quality Evaluation Pipeline -->
 
 **Priority**: Should
-**EARS**: When an evaluation corpus has been indexed, the system shall use the MiniMax2.5 Code Plan LLM API (OpenAI-compatible endpoint) to generate 50-100 natural language queries per repository and annotate the relevance of retrieved chunks using a dual-annotation protocol with consistency checking.
+**EARS**: When an evaluation corpus has been indexed, the system shall use a configurable LLM provider (MiniMax or Zhipu, selected via EVAL_LLM_PROVIDER) via OpenAI-compatible endpoint to generate 50-100 natural language queries per repository and annotate the relevance of retrieved chunks using a dual-annotation protocol with consistency checking.
 **Acceptance Criteria**:
 - Given an indexed evaluation repo, when query generation runs, then 50-100 NL queries are generated across 4 categories (API usage, bug diagnosis, configuration, architecture understanding).
 - Given a (query, chunk) pair, when dual annotation runs, then two independent LLM relevance scores (0-3 scale) are produced; if they disagree by more than 1 point, a third annotation resolves via majority vote.
 - Given all annotations for a repo are complete, when consistency metrics are computed, then Cohen's Kappa inter-annotator agreement is recorded in the golden dataset metadata.
 - Given the golden dataset, when stored, then each repo's data is saved to `eval/golden/{repo_slug}.json` with query text, repo_id, language, category, and per-chunk annotations.
+- Given EVAL_LLM_PROVIDER set to 'zhipu', when query generation and annotation run, then the system uses the Zhipu API endpoint and credentials instead of MiniMax, producing the same golden dataset format.
 
 ---
 
