@@ -1160,6 +1160,205 @@ Prometheus metrics endpoint and structured JSON query logging to stdout.
 
 ---
 
+### 4.7 Feature Group: Retrieval Quality Evaluation Pipeline (FR-024 to FR-026) [Wave 3]
+
+#### 4.7.1 Overview
+
+Offline evaluation subsystem that measures retrieval relevance quality using LLM-generated golden datasets. Not in the query hot path — runs as a CLI tool (`python -m src.eval`). Three stages: corpus building (clone + index representative repos), LLM annotation (generate queries + annotate relevance via MiniMax2.5 Code Plan API), and metric computation (MRR@10, NDCG@10, Recall@200, Precision@3).
+
+#### 4.7.2 Class Diagram
+
+```mermaid
+classDiagram
+    class EvalCorpusBuilder {
+        -git_cloner: GitCloner
+        -content_extractor: ContentExtractor
+        -chunker: Chunker
+        -embedding_encoder: EmbeddingEncoder
+        -index_writer: IndexWriter
+        -repo_list: list~EvalRepo~
+        +build(repos_json_path: str): CorpusSummary
+        -clone_repo(repo: EvalRepo): Path
+        -index_repo(repo: EvalRepo, clone_path: Path): int
+    }
+
+    class EvalRepo {
+        +name: str
+        +url: str
+        +language: str
+        +branch: str
+    }
+
+    class LLMAnnotator {
+        -api_key: str
+        -base_url: str
+        -model: str
+        -retriever: Retriever
+        +generate_queries(repo: EvalRepo, chunk_count: int, n_queries: int): list~EvalQuery~
+        +annotate_relevance(query: EvalQuery, chunks: list~ScoredChunk~): list~Annotation~
+        -dual_annotate(query: str, chunk: ScoredChunk): tuple~int, int~
+        -resolve_disagreement(query: str, chunk: ScoredChunk, scores: tuple): int
+        -compute_kappa(annotations: list~Annotation~): float
+    }
+
+    class EvalQuery {
+        +text: str
+        +repo_id: str
+        +language: str
+        +category: str
+    }
+
+    class Annotation {
+        +chunk_id: str
+        +score: int
+        +annotator_run: int
+    }
+
+    class GoldenDataset {
+        +repo_slug: str
+        +queries: list~EvalQuery~
+        +annotations: dict~str, list~Annotation~~
+        +kappa: float
+        +save(path: str): None
+        +load(path: str): GoldenDataset
+    }
+
+    class EvalRunner {
+        -retriever: Retriever
+        -golden: GoldenDataset
+        +evaluate_stage(stage: str): StageMetrics
+        +compute_mrr(results: list, relevant: list, k: int): float
+        +compute_ndcg(results: list, relevant: list, k: int): float
+        +compute_recall(results: list, relevant: list, k: int): float
+        +compute_precision(results: list, relevant: list, k: int): float
+    }
+
+    class StageMetrics {
+        +stage: str
+        +mrr_at_10: float
+        +ndcg_at_10: float
+        +recall_at_200: float
+        +precision_at_3: float
+        +per_language: dict~str, dict~
+    }
+
+    class ReportGenerator {
+        +generate(stages: list~StageMetrics~, prev_report: str?): str
+    }
+
+    EvalCorpusBuilder --> EvalRepo : reads
+    EvalCorpusBuilder --> GitCloner : uses
+    EvalCorpusBuilder --> ContentExtractor : uses
+    EvalCorpusBuilder --> Chunker : uses
+    EvalCorpusBuilder --> EmbeddingEncoder : uses
+    EvalCorpusBuilder --> IndexWriter : uses
+    LLMAnnotator --> EvalQuery : produces
+    LLMAnnotator --> Annotation : produces
+    LLMAnnotator --> Retriever : uses
+    GoldenDataset --> EvalQuery : contains
+    GoldenDataset --> Annotation : contains
+    EvalRunner --> GoldenDataset : reads
+    EvalRunner --> Retriever : uses
+    EvalRunner --> StageMetrics : produces
+    ReportGenerator --> StageMetrics : reads
+```
+
+#### 4.7.3 Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant CLI
+    participant CB as EvalCorpusBuilder
+    participant GC as GitCloner
+    participant IX as IndexWriter
+    participant AN as LLMAnnotator
+    participant MM as MiniMax API
+    participant RET as Retriever
+    participant ER as EvalRunner
+    participant RG as ReportGenerator
+
+    CLI->>CB: build("eval/repos.json")
+    loop Each repo in repos.json
+        CB->>GC: clone_or_update(url, branch)
+        GC-->>CB: clone_path
+        CB->>IX: index pipeline (extract → chunk → embed → write)
+        IX-->>CB: chunk_count
+    end
+    CB-->>CLI: CorpusSummary
+
+    CLI->>AN: generate_queries(repo, chunk_count, n=50)
+    AN->>MM: POST /chat/completions (query generation prompt)
+    MM-->>AN: NL queries
+    AN-->>CLI: list[EvalQuery]
+
+    loop Each query
+        CLI->>RET: vector_code_search / bm25_code_search (top_k=20)
+        RET-->>CLI: top-20 chunks
+        loop Each chunk in top-20
+            CLI->>AN: annotate_relevance(query, chunk)
+            AN->>MM: POST /chat/completions (annotation prompt, run 1)
+            MM-->>AN: score_1
+            AN->>MM: POST /chat/completions (annotation prompt, run 2)
+            MM-->>AN: score_2
+            opt score_1 and score_2 disagree by >1
+                AN->>MM: POST /chat/completions (tiebreaker, run 3)
+                MM-->>AN: score_3
+            end
+            AN-->>CLI: final_score
+        end
+    end
+    CLI->>CLI: save GoldenDataset to eval/golden/{slug}.json
+
+    CLI->>ER: evaluate_stage("vector")
+    ER->>RET: vector_code_search for each golden query
+    ER->>ER: compute MRR@10, NDCG@10, Recall@200, Precision@3
+    ER-->>CLI: StageMetrics
+
+    CLI->>ER: evaluate_stage("bm25")
+    ER-->>CLI: StageMetrics
+
+    CLI->>RG: generate(stages, prev_report?)
+    RG-->>CLI: Markdown report
+```
+
+#### 4.7.4 Design Notes
+
+- **Evaluation index namespace**: All eval data uses index prefix `eval_` (e.g., `eval_code_chunks`, `eval_code_embeddings`) to isolate from production data. `EvalCorpusBuilder` passes these collection/index names to `IndexWriter`.
+- **MiniMax API integration**: OpenAI-compatible endpoint via `httpx`. Same proxy-clearing pattern as `EmbeddingEncoder`. Model: `MiniMax-M1-80k` (80K context window for long code chunks).
+- **Dual annotation**: Two independent LLM calls with different temperature (0.1 vs 0.3) for diversity. If `|score_1 - score_2| > 1`, third call at temperature=0.2 breaks tie via majority. Cohen's Kappa computed across all annotations to measure consistency.
+- **Query generation prompt**: Structured prompt requesting queries in 4 categories (API usage 30%, bug diagnosis 25%, configuration 25%, architecture 20%). Temperature=0.7 for diversity.
+- **Relevance scale**: 0=irrelevant, 1=marginally relevant, 2=relevant, 3=highly relevant. Maps to standard TREC-style graded relevance for NDCG computation.
+- **IR metrics implementation**: Standard formulas — MRR = 1/rank_of_first_relevant, NDCG = DCG/IDCG with log2 discounting, Recall@k = |relevant ∩ retrieved@k| / |relevant|, Precision@k = |relevant ∩ retrieved@k| / k. Relevance threshold: score >= 2.
+- **Stage evaluation**: Each stage evaluated independently. Stages not yet implemented return `StageMetrics` with all values = None and `status = "N/A"`.
+- **Report delta**: If a previous report exists at `eval/reports/`, the new report includes a delta table (Δ per metric per stage).
+- **Reproducibility**: `eval/repos.json` is version-controlled. LLM calls use `seed` parameter where supported. Golden datasets are cached — re-run only re-evaluates retrieval, not re-annotates.
+
+#### 4.7.5 File Structure
+
+```
+eval/
+├── repos.json                  # Repository list (version-controlled)
+├── golden/                     # Golden datasets (generated, gitignored)
+│   ├── flask.json
+│   ├── spring-boot.json
+│   └── ...
+├── reports/                    # Evaluation reports (version-controlled)
+│   └── 2026-03-21-eval-report.md
+└── prompts/                    # LLM prompt templates (version-controlled)
+    ├── query-generation.md
+    └── relevance-annotation.md
+src/eval/
+├── __init__.py
+├── __main__.py                 # CLI entry point
+├── corpus_builder.py           # EvalCorpusBuilder
+├── annotator.py                # LLMAnnotator
+├── golden_dataset.py           # GoldenDataset model
+├── runner.py                   # EvalRunner (IR metrics)
+└── report.py                   # ReportGenerator
+```
+
+---
+
 ## 5. Data Model
 
 ```mermaid
@@ -1608,6 +1807,7 @@ graph LR
 | M4: API & Integration | REST endpoints, MCP server, authentication, query handlers | Full API functional |
 | M5: UI & Operations | Web UI, language filter, scheduled refresh, manual reindex, metrics, logging | All FRs implemented |
 | M6: NFR & Release | Load testing, availability testing, scale testing, documentation | All NFRs verified |
+| M7: Evaluation | Retrieval quality evaluation pipeline — corpus, annotation, metrics | Golden dataset built, baseline metrics established |
 
 ### 11.2 Task Decomposition & Priority
 
@@ -1652,6 +1852,9 @@ graph LR
 | 37 | P1 | TypeScript: enum + namespace + decorator | FR-004 (Wave 2) | #6 | M2 |
 | 38 | P1 | C: typedef struct + 函数原型 + enum | FR-004 (Wave 2) | #6 | M2 |
 | 39 | P1 | C++: namespace + template | FR-004 (Wave 2) | #6 | M2 |
+| 40 | P2 | Evaluation Corpus Management | FR-024 (Wave 3) | #4, #5, #6, #7 | M7 |
+| 41 | P2 | LLM Query Generation & Relevance Annotation | FR-025 (Wave 3) | #40 | M7 |
+| 42 | P2 | Retrieval Quality Evaluation & Reporting | FR-026 (Wave 3) | #41, #8, #9 | M7 |
 
 ### 11.3 Dependency Chain
 
@@ -1694,6 +1897,15 @@ graph LR
     F17 --> F23["#23 Metrics<br/>P2"]
     F13 --> F24["#24 Query Logging<br/>P2"]
     F13 --> F25["#25 Query Cache<br/>P2"]
+
+    F4 --> F40["#40 Eval Corpus<br/>W3"]
+    F5 --> F40
+    F6 --> F40
+    F7 --> F40
+    F40 --> F41["#41 LLM Annotation<br/>W3"]
+    F41 --> F42["#42 Eval Metrics<br/>W3"]
+    F8 --> F42
+    F9 --> F42
 ```
 
 ### 11.4 Risk & Mitigation
