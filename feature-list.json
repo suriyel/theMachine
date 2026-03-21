@@ -152,10 +152,10 @@
       "title": "Repository Registration",
       "description": "Implement RepoManager service with register_repo() that validates Git URL, accepts optional branch parameter, checks for duplicates, creates Repository record with indexed_branch, and queues initial indexing job",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 1,
       "st_case_path": "docs/test-cases/feature-3-repository-registration.md",
-      "st_case_count": 5,
+      "st_case_count": 7,
       "verification_steps": [
         "Given a valid Git URL 'https://github.com/pallets/flask', when calling register_repo(url), then a Repository record is created with status='pending' and the repository ID is returned",
         "Given a valid Git URL with branch='develop', when calling register_repo(url, branch='develop'), then a Repository record is created with indexed_branch='develop'",

@@ -20,6 +20,9 @@
 - **Modified**: Feature #19 — Web UI Search Page includes branch selector in registration form
 - Features #3 and #4 reset to failing for re-verification
 
+### Wave 1 Re-verification
+- Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
+
 ### Changed
 - Updated alembic/env.py to import Base.metadata as target_metadata
 - Updated env-guide.md with additional mutmut 3.2.0 patch documentation

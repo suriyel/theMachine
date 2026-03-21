@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 2/33 active features passing · Last: Increment Wave 1 (2026-03-21) · Next: #3 Repository Registration (re-verify with branch support)
+Progress: 3/33 active features passing · Last: #3 Repository Registration (Wave 1 re-verify, 2026-03-21) · Next: #4 Git Clone & Update (Wave 1 re-verify)
 
 ---
 
@@ -78,3 +78,16 @@ Progress: 2/33 active features passing · Last: Increment Wave 1 (2026-03-21) ·
 - **New feature #33** depends on #4 and #17
 - **Result**: 2/33 active features passing (was 4/32)
 - **Next**: Feature #3 — Repository Registration (re-verify with branch param)
+
+### Session 6 — 2026-03-21 (Feature #3 Wave 1 Re-verify)
+- **Feature**: #3 — Repository Registration (Wave 1 branch support)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Change**: Added `branch: str | None = None` parameter to `RepoManager.register()`
+- **Implementation**: `indexed_branch=branch` on Repository, `IndexJob.branch = branch or "main"`
+- **Tests**: 18 feature tests + 71 prior = 89/89 passing (4 new branch tests + 14 existing)
+- **Coverage**: 98% line, 98% branch
+- **Mutation**: 100% for Feature #3 scope (18 killed, 0 surviving in repo_manager.py)
+- **ST**: 7/7 test cases PASS (5 FUNC, 2 BNDRY) — updated for branch parameter
+- **Review**: PASS — all S1-S5, D1-D5, P1-P6, T1-T2 checks passed
+- **Result**: Feature #3 marked PASSING
+- **Next**: Feature #4 — Git Clone & Update (Wave 1 re-verify)
