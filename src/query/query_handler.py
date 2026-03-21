@@ -1,4 +1,4 @@
-"""QueryHandler — orchestrates the hybrid retrieval pipeline for NL queries."""
+"""QueryHandler — orchestrates the hybrid retrieval pipeline for NL and symbol queries."""
 
 from __future__ import annotations
 
@@ -151,12 +151,95 @@ class QueryHandler:
 
         return response
 
-    def detect_query_type(self, query: str) -> str:
-        """Detect query type. Stub: always returns 'nl'.
+    # Compiled patterns for symbol detection (no spaces already confirmed)
+    _CAMEL_RE = re.compile(r"^[a-z]+[A-Z]")       # starts lower, has upper
+    _PASCAL_RE = re.compile(r"^[A-Z][a-z]+[A-Z]")  # starts Upper, has another Upper
+    _SNAKE_RE = re.compile(r"^[a-z][a-z0-9]*_[a-z]")  # lower_lower pattern
 
-        Feature #14 will extend with symbol detection heuristic.
+    def detect_query_type(self, query: str) -> str:
+        """Detect whether query is a symbol or natural language.
+
+        Symbol patterns: dots, ::, #, camelCase, PascalCase, snake_case (all without spaces).
         """
+        # Spaces → natural language
+        if " " in query:
+            return "nl"
+
+        # Explicit separator characters
+        if "." in query:
+            return "symbol"
+        if "::" in query:
+            return "symbol"
+        if "#" in query:
+            return "symbol"
+
+        # Naming convention patterns (no spaces confirmed above)
+        if self._CAMEL_RE.search(query):
+            return "symbol"
+        if self._PASCAL_RE.search(query):
+            return "symbol"
+        if self._SNAKE_RE.search(query):
+            return "symbol"
+
         return "nl"
+
+    async def handle_symbol_query(
+        self,
+        query: str,
+        repo: str,
+    ) -> QueryResponse:
+        """Execute the symbol query pipeline: ES term → fuzzy → NL fallback.
+
+        Raises:
+            ValidationError: If query is empty or exceeds 200 chars.
+            RetrievalError: If all retrieval paths fail.
+        """
+        # Step 1: Validate
+        if not query or not query.strip():
+            raise ValidationError("query must not be empty")
+        if len(query) > 200:
+            raise ValidationError("query exceeds 200 character limit")
+
+        # Step 2: ES term query (exact match on symbol.raw)
+        term_body = {
+            "query": {
+                "bool": {
+                    "must": [{"term": {"symbol.raw": query}}],
+                    "filter": [{"term": {"repo_id": repo}}],
+                }
+            }
+        }
+        term_hits = await self._retriever._execute_search(
+            self._retriever._code_index, term_body, 200
+        )
+
+        if term_hits:
+            chunks = self._retriever._parse_code_hits(term_hits)
+            reranked = self._reranker.rerank(query, chunks, top_k=6)
+            return self._response_builder.build(reranked, query, "symbol", repo)
+
+        # Step 3: ES fuzzy query (fuzziness=AUTO)
+        fuzzy_body = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"match": {"symbol": {"query": query, "fuzziness": "AUTO"}}}
+                    ],
+                    "filter": [{"term": {"repo_id": repo}}],
+                }
+            }
+        }
+        fuzzy_hits = await self._retriever._execute_search(
+            self._retriever._code_index, fuzzy_body, 200
+        )
+
+        if fuzzy_hits:
+            chunks = self._retriever._parse_code_hits(fuzzy_hits)
+            reranked = self._reranker.rerank(query, chunks, top_k=6)
+            return self._response_builder.build(reranked, query, "symbol", repo)
+
+        # Step 4: NL fallback
+        return await self.handle_nl_query(query, repo)
 
     def _extract_identifiers(self, query: str) -> list[str]:
         """Extract code identifiers from an NL query."""
