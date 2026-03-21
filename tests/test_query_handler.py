@@ -413,6 +413,44 @@ async def test_multiple_failures_with_symbol_boost_timeout(handler):
     assert response.degraded is True
 
 
+# --- T29: Error — pipeline_timeout enforced ---
+
+# [unit]
+@pytest.mark.asyncio
+async def test_pipeline_timeout_returns_degraded():
+    """VS-4: Pipeline exceeding pipeline_timeout returns degraded=True."""
+    from src.query.query_handler import QueryHandler
+
+    async def slow_search(*args, **kwargs):
+        await asyncio.sleep(5)  # Much longer than pipeline_timeout
+        return _make_chunks(3, "code")
+
+    retriever = MagicMock()
+    retriever.bm25_code_search = slow_search
+    retriever.vector_code_search = slow_search
+    retriever.bm25_doc_search = slow_search
+    retriever.vector_doc_search = slow_search
+
+    rank_fusion = MagicMock()
+    rank_fusion.fuse = MagicMock(return_value=[])
+    reranker = MagicMock()
+    reranker.rerank = MagicMock(return_value=[])
+    response_builder = MagicMock()
+    response_builder.build = MagicMock(return_value=_make_response())
+
+    qh = QueryHandler(
+        retriever=retriever,
+        rank_fusion=rank_fusion,
+        reranker=reranker,
+        response_builder=response_builder,
+        search_timeout=10.0,  # Individual timeout high (won't trigger)
+        pipeline_timeout=0.05,  # Overall pipeline very short
+    )
+
+    response = await qh.handle_nl_query("test query", "test-repo")
+    assert response.degraded is True
+
+
 # --- T25: Happy path — boost weight scaling value ---
 
 # [unit]

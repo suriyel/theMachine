@@ -63,6 +63,27 @@ class QueryHandler:
         # Step 2: Extract identifiers for symbol boost
         identifiers = self._extract_identifiers(query)
 
+        # Wrap entire pipeline in pipeline_timeout
+        try:
+            response = await asyncio.wait_for(
+                self._run_pipeline(query, repo, languages, identifiers),
+                timeout=self._pipeline_timeout,
+            )
+        except asyncio.TimeoutError:
+            log.warning("Pipeline exceeded %ss timeout, returning degraded empty response", self._pipeline_timeout)
+            response = self._response_builder.build([], query, "nl", repo)
+            response.degraded = True
+
+        return response
+
+    async def _run_pipeline(
+        self,
+        query: str,
+        repo: str,
+        languages: list[str] | None,
+        identifiers: list[str],
+    ) -> QueryResponse:
+        """Execute the retrieval pipeline (gather, fuse, rerank, build)."""
         # Step 3: Build retrieval tasks with individual timeouts
         tasks = [
             asyncio.wait_for(
