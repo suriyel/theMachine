@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 4/32 features passing · Last: #4 Git Clone & Update (2026-03-21) · Next: #5 Content Extraction
+Progress: 2/33 active features passing · Last: Increment Wave 1 (2026-03-21) · Next: #3 Repository Registration (re-verify with branch support)
 
 ---
 
@@ -67,3 +67,14 @@ Progress: 4/32 features passing · Last: #4 Git Clone & Update (2026-03-21) · N
 - **Infrastructure**: RabbitMQ deployed via Docker, REPO_CLONE_PATH configured
 - **Result**: Feature #4 marked PASSING
 - **Next**: Feature #5 — Content Extraction
+
+### Session 5 — 2026-03-21 (Increment Wave 1)
+- **Date**: 2026-03-21
+- **Phase**: Increment
+- **Scope**: Support branch selection for repository clone & indexing
+- **Changes**: Added 1 feature (#33 Branch Listing API), modified 3 features (#3 Registration, #4 Git Clone, #19 Web UI)
+- **Documents updated**: SRS, Design
+- **Features #3 and #4 reset to failing** — require re-verification with branch support
+- **New feature #33** depends on #4 and #17
+- **Result**: 2/33 active features passing (was 4/32)
+- **Next**: Feature #3 — Repository Registration (re-verify with branch param)

@@ -13,6 +13,13 @@
 - Feature #4: Git Clone & Update — GitCloner (clone_or_update, _clone, _update, _cleanup_partial, _run_git), CloneError exception, 300s timeout, partial file cleanup on failure
 - Example: 04-git-clone-update.py
 
+### Increment Wave 1 — Branch Selection Support (2026-03-21)
+- **New**: Feature #33 — Branch Listing API (`GET /api/v1/repos/{id}/branches`)
+- **Modified**: Feature #3 — Repository Registration now accepts optional `branch` parameter, stores in `indexed_branch`
+- **Modified**: Feature #4 — Git Clone & Update supports `--branch` flag, `detect_default_branch()`, `list_remote_branches()`, resets to `origin/{branch}`
+- **Modified**: Feature #19 — Web UI Search Page includes branch selector in registration form
+- Features #3 and #4 reset to failing for re-verification
+
 ### Changed
 - Updated alembic/env.py to import Base.metadata as target_metadata
 - Updated env-guide.md with additional mutmut 3.2.0 patch documentation
