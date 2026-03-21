@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 11/39 active features passing · Last: #7 Embedding Generation (2026-03-21) · Next: #8 Keyword Retrieval (BM25)
+Progress: 12/39 active features passing · Last: #8 Keyword Retrieval (BM25) (2026-03-21) · Next: #9 Semantic Retrieval
 
 ---
 
@@ -211,3 +211,16 @@ Progress: 11/39 active features passing · Last: #7 Embedding Generation (2026-0
 - **Review**: PASS — 3 minor findings (doc_prefix field, branch param, _retry_write consolidation), 2 important non-blocking (check_real_tests.py script absent, theoretical partial write atomicity)
 - **Result**: Feature #7 marked PASSING
 - **Next**: Feature #8 — Keyword Retrieval (BM25)
+
+### Session 16 — 2026-03-21 (Feature #8)
+- **Feature**: #8 — Keyword Retrieval (BM25)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Retriever (bm25_code_search multi-match on content/symbol^2/signature/doc_comment, bm25_doc_search match on content, filtered by repo_id + optional languages, top_k=200 default), ScoredChunk unified dataclass with content_type discriminator, RetrievalError exception wrapping ConnectionError/TransportError/NotFoundError
+- **Tests**: 19 feature tests + 327 prior = 346/346 passing (+ 2 real tests skipped, ES timeout)
+- **Coverage**: 100% retriever.py, 100% scored_chunk.py, 100% exceptions.py
+- **Mutation**: 8/8 manual mutations killed (mutmut 3.2.0 stats mapping bug)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS after fixing 1 Important issue (NotFoundError not caught in _execute_search)
+- **Fixed**: Pre-existing test_encoder_init_missing_api_key_raises_error made robust for mutmut env
+- **Result**: Feature #8 marked PASSING
+- **Next**: Feature #9 — Semantic Retrieval

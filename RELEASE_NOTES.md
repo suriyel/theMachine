@@ -72,6 +72,14 @@
 - **New**: Configs — EMBEDDING_MODEL, EMBEDDING_API_KEY, EMBEDDING_BASE_URL for DashScope API
 - Example: 11-embedding-generation.py
 
+### Feature #8: Keyword Retrieval (BM25)
+- **New**: Retriever — `bm25_code_search(query, repo_id, languages?, top_k=200)` multi-match on content/symbol^2/signature/doc_comment, `bm25_doc_search(query, repo_id, top_k=200)` match on content, filtered by repo_id and optionally languages
+- **New**: ScoredChunk — unified scored result dataclass with content_type discriminator ("code"/"doc"), code-specific fields (language, symbol, signature, doc_comment, line_start/end, parent_class), doc-specific fields (breadcrumb, heading_level)
+- **New**: RetrievalError — raised when ES is unreachable (ConnectionError, TransportError, NotFoundError), caller handles degradation
+- **New**: Input validation — empty/whitespace-only queries raise ValueError
+- **Fixed**: Pre-existing test `test_encoder_init_missing_api_key_raises_error` made robust for mutmut environment
+- Example: 12-keyword-retrieval.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
