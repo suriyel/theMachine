@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 8/39 active features passing · Last: #35 Java: enum + record + static initializer (2026-03-21) · Next: #36 JavaScript: prototype-assigned functions + require() imports
+Progress: 9/39 active features passing · Last: #36 JavaScript: prototype-assigned functions + require() imports (2026-03-21) · Next: #37 TypeScript: enum + namespace + decorator unwrapping
 
 ---
 
@@ -174,3 +174,15 @@ Progress: 8/39 active features passing · Last: #35 Java: enum + record + static
 - **Review**: N/A (minor scope, design-compliant configuration changes)
 - **Result**: Feature #35 marked PASSING
 - **Next**: Feature #36 — JavaScript: prototype-assigned functions + require() imports
+
+### Session 13 — 2026-03-21 (Feature #36)
+- **Feature**: #36 — JavaScript: prototype-assigned functions + require() imports (Wave 2)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Added `_is_prototype_assign` helper (expression_statement → assignment_expression → member_expression + function_expression/arrow_function → L3 chunk with symbol=property_name); `_collect_require_imports` + `_extract_require_arg` helpers for CommonJS require() → imports list; prototype symbols added to L1 top_level_symbols
+- **Tests**: 16 feature tests + 286 prior = 302/302 passing
+- **Coverage**: 92% chunker.py, 94% overall
+- **Mutation**: 96.5% (55 killed, 2 equivalent mutants)
+- **ST**: 9/9 test cases PASS (4 FUNC, 5 BNDRY), all Real
+- **Review**: PASS — all S1-S5, D1-D5, P1-P6, T1-T3 clear
+- **Result**: Feature #36 marked PASSING
+- **Next**: Feature #37 — TypeScript: enum + namespace + decorator unwrapping

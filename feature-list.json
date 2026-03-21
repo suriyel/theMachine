@@ -14,7 +14,13 @@
   },
   "real_test": {
     "marker_pattern": "@pytest.mark.real",
-    "mock_patterns": ["Mock", "MagicMock", "patch", "mocker", "monkeypatch.setattr"],
+    "mock_patterns": [
+      "Mock",
+      "MagicMock",
+      "patch",
+      "mocker",
+      "monkeypatch.setattr"
+    ],
     "test_dir": "tests/"
   },
   "constraints": [
@@ -46,7 +52,13 @@
       "type": "env",
       "key": "DATABASE_URL",
       "description": "PostgreSQL connection string for repository metadata, API keys, job tracking",
-      "required_by": [1, 2, 3, 4, 16],
+      "required_by": [
+        1,
+        2,
+        3,
+        4,
+        16
+      ],
       "check_hint": "Set to postgresql+asyncpg://user:pass@localhost:5432/codecontext"
     },
     {
@@ -54,7 +66,16 @@
       "type": "env",
       "key": "ELASTICSEARCH_URL",
       "description": "Elasticsearch cluster URL for BM25 keyword search",
-      "required_by": [8, 9, 10, 13, 14, 15, 17, 20],
+      "required_by": [
+        8,
+        9,
+        10,
+        13,
+        14,
+        15,
+        17,
+        20
+      ],
       "check_hint": "Set to http://localhost:9200"
     },
     {
@@ -62,7 +83,14 @@
       "type": "env",
       "key": "QDRANT_URL",
       "description": "Qdrant cluster URL for dense vector search",
-      "required_by": [7, 9, 13, 14, 15, 17],
+      "required_by": [
+        7,
+        9,
+        13,
+        14,
+        15,
+        17
+      ],
       "check_hint": "Set to http://localhost:6333"
     },
     {
@@ -70,7 +98,10 @@
       "type": "env",
       "key": "REDIS_URL",
       "description": "Redis instance URL for query caching and rate limiting",
-      "required_by": [16, 25],
+      "required_by": [
+        16,
+        25
+      ],
       "check_hint": "Set to redis://localhost:6379/0"
     },
     {
@@ -78,7 +109,11 @@
       "type": "env",
       "key": "RABBITMQ_URL",
       "description": "RabbitMQ broker URL for Celery task queue",
-      "required_by": [4, 21, 22],
+      "required_by": [
+        4,
+        21,
+        22
+      ],
       "check_hint": "Set to amqp://guest:guest@localhost:5672//"
     },
     {
@@ -86,7 +121,10 @@
       "type": "env",
       "key": "REPO_CLONE_PATH",
       "description": "Base directory for cloned Git repositories",
-      "required_by": [4, 5],
+      "required_by": [
+        4,
+        5
+      ],
       "check_hint": "Set to /tmp/codecontext/repos or a persistent volume path"
     },
     {
@@ -94,7 +132,9 @@
       "type": "env",
       "key": "SECRET_KEY",
       "description": "Secret key for API key hashing and session signing",
-      "required_by": [16],
+      "required_by": [
+        16
+      ],
       "check_hint": "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
     },
     {
@@ -102,7 +142,9 @@
       "type": "env",
       "key": "API_PORT",
       "description": "Port for the FastAPI query service",
-      "required_by": [17],
+      "required_by": [
+        17
+      ],
       "check_hint": "Set to 8000 (default)"
     },
     {
@@ -110,7 +152,9 @@
       "type": "env",
       "key": "MCP_PORT",
       "description": "Port for the MCP server",
-      "required_by": [18],
+      "required_by": [
+        18
+      ],
       "check_hint": "Set to 3000 (default)"
     }
   ],
@@ -144,7 +188,9 @@
         "Given the Repository model, when creating a record with name='test-repo', url='https://github.com/test/repo', then it persists with a generated UUID id, status='pending', and created_at timestamp",
         "Given the storage clients module, when importing ElasticsearchClient, QdrantClient, RedisClient, then all classes are importable and have connection/health-check methods"
       ],
-      "dependencies": [1]
+      "dependencies": [
+        1
+      ]
     },
     {
       "id": 3,
@@ -163,7 +209,9 @@
         "Given an invalid URL 'not-a-url', when calling register_repo(url), then a ValidationError is raised within 2 seconds without creating a record",
         "Given an already-registered URL, when calling register_repo(url) again, then a ConflictError is raised indicating the repository already exists"
       ],
-      "dependencies": [2]
+      "dependencies": [
+        2
+      ]
     },
     {
       "id": 4,
@@ -182,7 +230,9 @@
         "Given a clone operation that fails (unreachable URL), when clone_or_update() runs, then it raises a CloneError with the error message and cleans up partial files",
         "Given a cloned repository, when list_remote_branches() is called, then it returns a sorted list of remote branch names with origin/ prefix stripped"
       ],
-      "dependencies": [3]
+      "dependencies": [
+        3
+      ]
     },
     {
       "id": 5,
@@ -199,7 +249,9 @@
         "Given files in examples/ directory, when extraction runs, then they are classified as 'example' content type",
         "Given CLAUDE.md, CONTRIBUTING.md, .cursor/rules files, when extraction runs, then they are classified as 'rule' content type"
       ],
-      "dependencies": [4]
+      "dependencies": [
+        4
+      ]
     },
     {
       "id": 6,
@@ -216,7 +268,9 @@
         "Given a README.md with H1, H2, H3 headings, when chunk_markdown() runs, then it produces doc chunks split at H2 level with breadcrumb trails (e.g., 'Getting Started > Installation')",
         "Given a file in an unsupported language, when chunk_file() runs, then it falls back to L1 file-level chunking only"
       ],
-      "dependencies": [5]
+      "dependencies": [
+        5
+      ]
     },
     {
       "id": 7,
@@ -230,7 +284,9 @@
         "Given a query string 'how to configure timeout', when encode_query() runs, then it prepends 'Represent this code search query: ' and returns a single 1024-dim vector",
         "Given 100 chunks with embeddings, when IndexWriter.write_code_chunks() runs, then all 100 vectors are stored in the Qdrant 'code_embeddings' collection with correct payload metadata"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     },
     {
       "id": 8,
@@ -245,7 +301,9 @@
         "Given a query with no matching terms, when bm25_search() runs, then it returns an empty list without error",
         "Given Elasticsearch is unreachable, when bm25_search() runs, then it raises a retrieval error (caller handles degradation)"
       ],
-      "dependencies": [7]
+      "dependencies": [
+        7
+      ]
     },
     {
       "id": 9,
@@ -259,7 +317,9 @@
         "Given a query vector, when vector_search() runs, then it returns up to 200 candidates with cosine similarity scores from the Qdrant collection",
         "Given Qdrant is unreachable, when vector_search() runs, then it raises a retrieval error (caller handles degradation)"
       ],
-      "dependencies": [7]
+      "dependencies": [
+        7
+      ]
     },
     {
       "id": 10,
@@ -273,7 +333,10 @@
         "Given one empty result list and one non-empty list, when fuse() runs, then it returns results from the non-empty list only",
         "Given 4-way input (BM25 code, vector code, BM25 doc, vector doc), when fuse() runs, then all 4 lists are merged by RRF and execution completes within 10ms"
       ],
-      "dependencies": [8, 9]
+      "dependencies": [
+        8,
+        9
+      ]
     },
     {
       "id": 11,
@@ -287,7 +350,9 @@
         "Given fewer than 3 candidates, when rerank() runs, then it returns all available candidates without error",
         "Given a reranker model failure (OOM, load error), when rerank() runs, then it falls back to the fusion-ranked order and logs a degradation warning"
       ],
-      "dependencies": [10]
+      "dependencies": [
+        10
+      ]
     },
     {
       "id": 12,
@@ -301,7 +366,9 @@
         "Given a chunk with content exceeding 2000 characters, when build() runs, then the content is truncated to 2000 chars with a trailing '...' indicator",
         "Given a repository with rule chunks, when build() runs with include_rules=true, then the response includes a rules section with the full rule content"
       ],
-      "dependencies": [11]
+      "dependencies": [
+        11
+      ]
     },
     {
       "id": 13,
@@ -316,13 +383,15 @@
         "Given the NL query 'how does AuthService validate tokens', when query expansion runs, then it extracts 'AuthService' and fires a parallel symbol.raw term query merged into RRF with weight 0.3",
         "Given a pipeline that exceeds 1-second timeout, when handle_nl_query() runs, then it returns partial results with degraded=true flag"
       ],
-      "dependencies": [12]
+      "dependencies": [
+        12
+      ]
     },
     {
       "id": 14,
       "category": "core",
       "title": "Symbol Query Handler",
-      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match → fuzzy fallback → NL pipeline fallback",
+      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match \u2192 fuzzy fallback \u2192 NL pipeline fallback",
       "priority": "high",
       "status": "failing",
       "verification_steps": [
@@ -331,7 +400,9 @@
         "Given a symbol query for a non-existent symbol, when ES term and fuzzy queries return 0 results, then it falls back to the full NL pipeline using the query as-is",
         "Given a symbol query exceeding 200 characters, when submitted, then it raises a ValidationError"
       ],
-      "dependencies": [12]
+      "dependencies": [
+        12
+      ]
     },
     {
       "id": 15,
@@ -345,13 +416,15 @@
         "Given a repo_filter for a non-existent repository, when retrieval runs, then it returns an empty result set with 200 status",
         "Given a query without repo_filter, when retrieval runs, then it searches across all indexed repositories"
       ],
-      "dependencies": [12]
+      "dependencies": [
+        12
+      ]
     },
     {
       "id": 16,
       "category": "core",
       "title": "API Key Authentication",
-      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute → 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
+      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute \u2192 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
       "priority": "high",
       "status": "failing",
       "verification_steps": [
@@ -360,7 +433,9 @@
         "Given more than 10 failed auth attempts from the same IP within 1 minute, when another attempt is made, then the middleware returns 429 Too Many Requests",
         "Given APIKeyManager.create_key(name='test', role='read'), when called, then it generates a key, stores the SHA-256 hash in PostgreSQL, and returns the plaintext key once"
       ],
-      "dependencies": [2]
+      "dependencies": [
+        2
+      ]
     },
     {
       "id": 17,
@@ -375,7 +450,12 @@
         "Given a GET to /api/v1/health without authentication, when processed, then it returns service health status with ES/Qdrant/Redis connectivity",
         "Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message"
       ],
-      "dependencies": [13, 14, 15, 16]
+      "dependencies": [
+        13,
+        14,
+        15,
+        16
+      ]
     },
     {
       "id": 18,
@@ -390,7 +470,9 @@
         "Given an MCP client calling search_code_context without the optional repo parameter, when executed, then it searches across all repositories",
         "Given an MCP tool call with missing required 'query' field, then it returns an MCP error response with a descriptive message"
       ],
-      "dependencies": [13]
+      "dependencies": [
+        13
+      ]
     },
     {
       "id": 19,
@@ -403,12 +485,14 @@
       "ui": true,
       "ui_entry": "/",
       "verification_steps": [
-        "[devtools] Navigate / → EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' → click Search → EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
-        "[devtools] Navigate / → submit empty query → EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
+        "[devtools] Navigate / \u2192 EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' \u2192 click Search \u2192 EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
+        "[devtools] Navigate / \u2192 submit empty query \u2192 EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
         "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling",
-        "[devtools] Navigate to repository registration form → enter a repo URL → EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch → submit → EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
+        "[devtools] Navigate to repository registration form \u2192 enter a repo URL \u2192 EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch \u2192 submit \u2192 EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
       ],
-      "dependencies": [17]
+      "dependencies": [
+        17
+      ]
     },
     {
       "id": 20,
@@ -423,7 +507,10 @@
         "Given an unrecognized language value 'rust', when submitted, then a ValidationError is raised listing supported languages",
         "Given an empty language filter list, when retrieval runs, then no language filtering is applied"
       ],
-      "dependencies": [8, 9]
+      "dependencies": [
+        8,
+        9
+      ]
     },
     {
       "id": 21,
@@ -437,7 +524,9 @@
         "Given a scheduled job that fails, when the failure is detected, then the system retries once after 1 hour; if retry also fails, it logs an error and skips until next window",
         "Given a re-index already in progress for a repository, when the schedule fires, then it skips the duplicate and logs an informational message"
       ],
-      "dependencies": [4]
+      "dependencies": [
+        4
+      ]
     },
     {
       "id": 22,
@@ -451,7 +540,9 @@
         "Given a reindex request for a non-existent repository, when processed, then it returns 404",
         "Given a reindex request with a read-only API key, when processed, then it returns 403 Forbidden"
       ],
-      "dependencies": [17]
+      "dependencies": [
+        17
+      ]
     },
     {
       "id": 23,
@@ -464,7 +555,9 @@
         "Given a GET to /metrics without authentication, when processed, then the response contains Prometheus text format with all required metric names: query_latency_seconds, retrieval_latency_seconds, rerank_latency_seconds, index_size_chunks, cache_hit_ratio",
         "Given several queries have been processed, when /metrics is called, then the histogram buckets for query_latency_seconds contain observed values"
       ],
-      "dependencies": [17]
+      "dependencies": [
+        17
+      ]
     },
     {
       "id": 24,
@@ -477,7 +570,9 @@
         "Given a completed query, when logging executes, then a structured JSON log entry is written to stdout containing: query, query_type, result_count, retrieval_ms, rerank_ms, total_ms, timestamp",
         "Given a logging I/O failure, when it occurs during query processing, then the query response is not blocked or delayed"
       ],
-      "dependencies": [13]
+      "dependencies": [
+        13
+      ]
     },
     {
       "id": 25,
@@ -491,7 +586,9 @@
         "Given a cached query result, when a repository reindex completes, then the cache entries for that repository are invalidated",
         "Given Redis is unavailable, when cache operations are attempted, then the system degrades gracefully to no-cache mode without errors"
       ],
-      "dependencies": [13]
+      "dependencies": [
+        13
+      ]
     },
     {
       "id": 26,
@@ -503,7 +600,9 @@
       "verification_steps": [
         "Given a Locust load test with 100 concurrent users sending diverse NL and symbol queries, when run for 5 minutes, then p95 end-to-end latency is < 1000ms"
       ],
-      "dependencies": [25]
+      "dependencies": [
+        25
+      ]
     },
     {
       "id": 27,
@@ -515,7 +614,9 @@
       "verification_steps": [
         "Given a Locust load test ramping to 1000+ QPS, when sustained for 5 minutes, then the system maintains >= 1000 QPS with < 1% error rate"
       ],
-      "dependencies": [26]
+      "dependencies": [
+        26
+      ]
     },
     {
       "id": 28,
@@ -527,7 +628,9 @@
       "verification_steps": [
         "Given 100+ registered repositories with indexed content, when querying across all repos, then results are returned within the latency budget"
       ],
-      "dependencies": [3]
+      "dependencies": [
+        3
+      ]
     },
     {
       "id": 29,
@@ -539,7 +642,9 @@
       "verification_steps": [
         "Given a repository approaching 1GB, when indexing runs, then all files are processed and chunks are indexed without OOM or timeout"
       ],
-      "dependencies": [4]
+      "dependencies": [
+        4
+      ]
     },
     {
       "id": 30,
@@ -551,7 +656,9 @@
       "verification_steps": [
         "Given the query service running with health check endpoint, when monitored over a test window, then uptime exceeds 99.9% with automatic recovery from transient failures"
       ],
-      "dependencies": [17]
+      "dependencies": [
+        17
+      ]
     },
     {
       "id": 31,
@@ -563,7 +670,9 @@
       "verification_steps": [
         "Given N query nodes achieving X QPS, when deploying N+1 nodes, then throughput increases by >= 0.7 * (X/N)"
       ],
-      "dependencies": [27]
+      "dependencies": [
+        27
+      ]
     },
     {
       "id": 32,
@@ -575,7 +684,9 @@
       "verification_steps": [
         "Given a multi-node query cluster under load, when one node is killed, then remaining nodes continue serving requests without failures"
       ],
-      "dependencies": [30]
+      "dependencies": [
+        30
+      ]
     },
     {
       "id": 33,
@@ -590,7 +701,10 @@
         "Given a repository ID that does not exist, when the endpoint is called, then it returns 404 Not Found",
         "Given a repository that has not been cloned yet, when the endpoint is called, then it returns 409 Conflict"
       ],
-      "dependencies": [4, 17]
+      "dependencies": [
+        4,
+        17
+      ]
     },
     {
       "id": 34,
@@ -608,7 +722,9 @@
         "Given a Python file with @dataclass decorated class containing fields, when chunking completes, then the class produces an L2 chunk with symbol equal to the class name",
         "Given a Python file with a top-level @app.route('/') decorated function, when chunking completes, then the function produces an L3 chunk with parent_class empty"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     },
     {
       "id": 35,
@@ -625,7 +741,9 @@
         "Given a Java file with a record declaration (Java 16+), when chunking completes, then the record produces an L2 chunk with correct symbol name",
         "Given a Java file with a static initializer block inside a class, when chunking completes, then the static block produces an L3 chunk with parent_class set to the class name"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     },
     {
       "id": 36,
@@ -633,7 +751,7 @@
       "title": "JavaScript: prototype-assigned functions + require() imports",
       "description": "Detect expression_statement > assignment_expression where right side is function_expression or arrow_function, extracting property name as symbol for L3 chunk. Detect require() calls in variable_declaration and extract module path as import.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
       "verification_steps": [
         "Given a JavaScript file with res.status = function(code){...}, when chunking completes, then an L3 chunk is produced with symbol='status'",
@@ -641,7 +759,11 @@
         "Given a JavaScript file with var express = require('express'), when chunking completes, then the L1 file chunk's imports list includes 'express'",
         "Given a JavaScript file with multiple require() calls, when chunking completes, then all required module paths appear in imports"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ],
+      "st_case_path": "docs/test-cases/feature-36-js-prototype-require.md",
+      "st_case_count": 9
     },
     {
       "id": 37,
@@ -657,7 +779,9 @@
         "Given a TypeScript file with nested namespaces (namespace A { namespace B { class C {} } }), when chunking completes, then class C produces an L2 chunk",
         "Given a TypeScript file with @Component-decorated class, when chunking completes, then the class produces an L2 chunk with correct symbol name"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     },
     {
       "id": 38,
@@ -673,7 +797,9 @@
         "Given a C file with enum Color { RED, GREEN, BLUE };, when chunking completes, then an L2 chunk is produced with symbol='Color'",
         "Given a C header with both typedef structs and function prototypes inside #ifndef guards, when chunking completes, then all are correctly detected (not blocked by preproc_ifdef)"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     },
     {
       "id": 39,
@@ -689,7 +815,9 @@
         "Given a C++ file with template<typename T> class Container { void push(T val) {} }, when chunking completes, then Container produces an L2 chunk and push produces an L3 chunk",
         "Given a C++ file with template<typename T> T max_val(T a, T b) {}, when chunking completes, then max_val produces an L3 chunk"
       ],
-      "dependencies": [6]
+      "dependencies": [
+        6
+      ]
     }
   ],
   "waves": [
@@ -701,7 +829,7 @@
     {
       "id": 2,
       "date": "2026-03-21",
-      "description": "Strengthen AST parsing accuracy for 6 supported languages — decorator/namespace/template/enum/prototype/require/typedef patterns"
+      "description": "Strengthen AST parsing accuracy for 6 supported languages \u2014 decorator/namespace/template/enum/prototype/require/typedef patterns"
     }
   ]
 }
