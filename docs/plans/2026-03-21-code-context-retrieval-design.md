@@ -395,7 +395,15 @@ flowchart TD
     S([Start: ExtractedFile]) --> P{tree-sitter parse OK?}
     P -- YES --> L1[Create L1 file chunk:<br/>imports + symbol list]
     L1 --> WALK[Walk AST top-level nodes]
-    WALK --> CLS{class node?}
+    WALK --> WRAP{wrapper node?<br/>decorated_definition /<br/>export_statement /<br/>namespace / template}
+    WRAP -- YES --> UNWRAP[Unwrap: descend into<br/>children to find<br/>class/function nodes]
+    UNWRAP --> CLS
+    WRAP -- NO --> PROTO{JS prototype assign?<br/>obj.x = function/arrow}
+    PROTO -- YES --> L3P[Create L3 function chunk:<br/>symbol = property name]
+    PROTO -- NO --> CDECL{C declaration with<br/>function_declarator?}
+    CDECL -- YES --> L3D[Create L3 prototype chunk:<br/>content = declaration text]
+    CDECL -- NO --> CLS
+    CLS{class node?}
     CLS -- YES --> L2[Create L2 class chunk:<br/>signature + method list + docstring]
     L2 --> METHODS[Walk class children]
     METHODS --> FN1{function node?}
@@ -410,22 +418,58 @@ flowchart TD
     FB --> E([End: list of CodeChunks])
     L3A --> E
     L3B --> E
+    L3P --> WALK
+    L3D --> WALK
 ```
 
 **Language-specific AST node mappings**:
 
+<!-- Wave 2: Modified 2026-03-21 — expanded node mappings for competitive accuracy -->
+
 | Language | Class Nodes | Function Nodes | Import Nodes |
 |----------|------------|----------------|-------------|
 | Python | `class_definition` | `function_definition` | `import_statement`, `import_from_statement` |
-| Java | `class_declaration`, `interface_declaration` | `method_declaration`, `constructor_declaration` | `import_declaration` |
+| Java | `class_declaration`, `interface_declaration`, `enum_declaration`, `record_declaration` | `method_declaration`, `constructor_declaration`, `static_initializer` | `import_declaration` |
 | JavaScript | `class_declaration` | `function_declaration`, `arrow_function`, `method_definition` | `import_statement` |
-| TypeScript | `class_declaration`, `interface_declaration` | `function_declaration`, `arrow_function`, `method_definition` | `import_statement` |
-| C | — | `function_definition` | `preproc_include` |
+| TypeScript | `class_declaration`, `interface_declaration`, `enum_declaration` | `function_declaration`, `arrow_function`, `method_definition` | `import_statement` |
+| C | `enum_specifier` | `function_definition` | `preproc_include` |
 | C++ | `class_specifier`, `struct_specifier` | `function_definition` | `preproc_include`, `using_declaration` |
+
+**AST wrapper node unwrapping rules** (Wave 2):
+
+The walker must recursively unwrap the following wrapper nodes before matching class/function nodes:
+
+| Wrapper Node | Languages | Unwrap Strategy | Rationale |
+|-------------|-----------|-----------------|-----------|
+| `decorated_definition` | Python, TS/JS | Descend into children to find inner `class_definition` / `function_definition` | `@property`, `@dataclass`, `@app.route`, `@Component` wrap the target node |
+| `export_statement` | JS, TS | Descend into children to find inner class/function/enum node | `export function`, `export class`, `export enum` |
+| `namespace_definition` | C++ | Recurse into `declaration_list` body to find all class/function nodes | `namespace foo { class X {} }` — recursive for nested namespaces |
+| `internal_module` / `module` | TS | Recurse into `statement_block` body | `namespace Foo { class Bar {} }` |
+| `template_declaration` | C++ | Single-level unwrap: check immediate children for class_specifier / function_definition | `template<typename T> class Foo {}` |
+| `preproc_ifdef` / `preproc_if` | C, C++ | Recurse into children for import nodes | `#ifndef HEADER_H` wrapping `#include` directives |
+| `type_definition` | C | Check for inner `struct_specifier` → create L2 chunk | `typedef struct { ... } name;` pattern |
+
+**Prototype-assigned function detection** (JS):
+
+When an `expression_statement` contains an `assignment_expression` where:
+- Left side is a `member_expression` (e.g., `res.status`)
+- Right side is a `function_expression` or `arrow_function`
+
+→ Create an L3 function chunk with `symbol = property_name` (e.g., `"status"`).
+
+**C function prototype detection**:
+
+When a `declaration` node contains a `function_declarator` child but has no body (`;`-terminated):
+→ Create an L3 function chunk with `content = declaration text` (the signature IS the content).
+
+**CommonJS require() import detection** (JS):
+
+When a `variable_declaration` contains a `call_expression` where the function is `require`:
+→ Extract the argument string as an import (e.g., `require('express')` → `"express"`).
 
 **Signature extraction**: For each function/class node, extract the first line(s) up to the body delimiter (`:` in Python, `{` in C-family). For docstrings, extract the first child string literal or comment block.
 
-**Import extraction**: Collect all import nodes from file root. Store as a flat list of imported names (e.g., `["jwt", "datetime", "typing.Optional"]`).
+**Import extraction**: Collect all import nodes from file root, recursively descending into `preproc_ifdef`/`preproc_if` for C/C++ header guards. Store as a flat list of imported names (e.g., `["jwt", "datetime", "typing.Optional"]`).
 
 **Size limits**: If a single function body exceeds 500 lines, split into 500-line windows with 50-line overlap. Each window becomes a separate L3 chunk with `_part_N` suffix on chunk_id.
 
@@ -1602,6 +1646,12 @@ graph LR
 | 31 | P3 | NFR-006: Linear Scalability | — | #27 | M6 |
 | 32 | P3 | NFR-007: Single-Node Failure | — | #30 | M6 |
 | 33 | P1 | Branch Listing API | FR-023 | #4, #17 | M4 |
+| 34 | P1 | Python: decorated_definition 展开 | FR-004 (Wave 2) | #6 | M2 |
+| 35 | P1 | Java: enum + record + static initializer | FR-004 (Wave 2) | #6 | M2 |
+| 36 | P1 | JavaScript: prototype函数 + require() imports | FR-004 (Wave 2) | #6 | M2 |
+| 37 | P1 | TypeScript: enum + namespace + decorator | FR-004 (Wave 2) | #6 | M2 |
+| 38 | P1 | C: typedef struct + 函数原型 + enum | FR-004 (Wave 2) | #6 | M2 |
+| 39 | P1 | C++: namespace + template | FR-004 (Wave 2) | #6 | M2 |
 
 ### 11.3 Dependency Chain
 
@@ -1635,6 +1685,12 @@ graph LR
     F17 --> F22["#22 Manual Reindex<br/>P1"]
     F4 --> F33["#33 Branch Listing API<br/>P1"]
     F17 --> F33
+    F6 --> F34["#34 PY decorator<br/>W2"]
+    F6 --> F35["#35 Java enum/record<br/>W2"]
+    F6 --> F36["#36 JS prototype/require<br/>W2"]
+    F6 --> F37["#37 TS enum/ns/decorator<br/>W2"]
+    F6 --> F38["#38 C typedef/proto/enum<br/>W2"]
+    F6 --> F39["#39 C++ ns/template<br/>W2"]
     F17 --> F23["#23 Metrics<br/>P2"]
     F13 --> F24["#24 Query Logging<br/>P2"]
     F13 --> F25["#25 Query Cache<br/>P2"]
