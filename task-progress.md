@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 16/42 active features passing · Last: #12 Context Response Builder (2026-03-21) · Next: #13 Natural Language Query Handler
+Progress: 17/42 active features passing · Last: #13 Natural Language Query Handler (2026-03-21) · Next: #14 Symbol Query Handler
 
 ---
 
@@ -281,3 +281,15 @@ Progress: 16/42 active features passing · Last: #12 Context Response Builder (2
 - **Review**: PASS — S1-S5 pass, D1-D5 pass, P1-P6 pass, T1-T3 pass; minor: upstream ScoredChunk missing imports/code_examples/content_tokens fields (not ResponseBuilder defect)
 - **Result**: Feature #12 marked PASSING
 - **Next**: Feature #13 — Natural Language Query Handler
+
+### Session 22 — 2026-03-21 (Feature #13)
+- **Feature**: #13 — Natural Language Query Handler
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: QueryHandler with handle_nl_query() — async 4-way parallel retrieval via asyncio.gather(return_exceptions=True), unified RRF fusion (top-50), neural rerank (top-6), response building with degraded flag; query expansion via _extract_identifiers() (camelCase/PascalCase/snake_case/dot.sep regex), symbol boost search (ES term queries on symbol.raw) with weight 0.3; ValidationError for empty/whitespace/>500 char queries; RetrievalError when all 4 primary paths fail; detect_query_type() stub returning "nl"
+- **Tests**: 28 feature tests + 421 prior = 449/449 passing (5 skipped)
+- **Coverage**: 100% line, 100% branch on query_handler.py
+- **Mutation**: 10/10 representative mutations killed (100%); mutmut 3.2.0 trampoline bug (manual verification)
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY)
+- **Review**: PASS — implementation matches design pseudocode, all VS covered
+- **Result**: Feature #13 marked PASSING
+- **Next**: Feature #14 — Symbol Query Handler

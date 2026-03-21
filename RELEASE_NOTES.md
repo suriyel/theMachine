@@ -115,6 +115,15 @@
 - **New**: Pydantic response models — QueryResponse, CodeResult, DocResult, RulesSection
 - **New**: Pure computation — stateless transformer, no external dependencies
 - Example: 12-context-response-builder.py
+
+### Feature #13: Natural Language Query Handler
+- **New**: QueryHandler — `handle_nl_query(query, repo, languages?)` orchestrates 4-way async parallel retrieval (BM25 code + vector code + BM25 doc + vector doc), unified RRF fusion (top-50), neural rerank (top-6), and response building
+- **New**: Query expansion — `_extract_identifiers()` extracts camelCase/PascalCase/snake_case/dot-separated identifiers from NL queries; symbol boost search fires ES term queries on `symbol.raw` with weight 0.3
+- **New**: Degraded response — `degraded=True` on QueryResponse when any retrieval path fails or times out; partial results returned from successful paths
+- **New**: Input validation — `ValidationError` for empty/whitespace queries and queries exceeding 500 chars
+- **New**: `detect_query_type()` stub returning "nl" (Feature #14 will extend)
+- **Modified**: QueryResponse model — added `degraded: bool = False` field
+- Example: 13-nl-query-handler.py
 - Example: 15-neural-reranking.py
 
 ### Wave 1 Re-verification

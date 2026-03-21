@@ -528,7 +528,7 @@
       "title": "Natural Language Query Handler",
       "description": "Implement QueryHandler.handle_nl_query() that runs the full hybrid pipeline: 4-way parallel retrieval, unified RRF fusion, single rerank, with query expansion for embedded code identifiers",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given the NL query 'how to use grpc java interceptor', when handle_nl_query() runs, then it executes 4-way parallel retrieval (BM25 code + vector code + BM25 doc + vector doc), fuses with RRF, reranks, and returns structured context results",
         "Given an empty query string, when handle_nl_query() is called, then it raises a ValidationError with a descriptive message",
@@ -537,7 +537,9 @@
       ],
       "dependencies": [
         12
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-13-natural-language-query-handler.md",
+      "st_case_count": 7
     },
     {
       "id": 14,
