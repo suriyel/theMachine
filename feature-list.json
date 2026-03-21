@@ -862,7 +862,7 @@
       "title": "Branch Listing API",
       "description": "Implement GET /api/v1/repos/{id}/branches endpoint that returns list of remote branches for a registered repository, using GitCloner.list_remote_branches(). Returns 404 for unknown repos, 409 if not yet cloned.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 1,
       "verification_steps": [
         "Given a registered and cloned repository, when GET /api/v1/repos/{id}/branches is called, then it returns 200 with {branches: ['main', 'develop', ...], default_branch: 'main'} sorted alphabetically",
@@ -872,7 +872,9 @@
       "dependencies": [
         4,
         17
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-33-branch-listing-api.md",
+      "st_case_count": 5
     },
     {
       "id": 34,

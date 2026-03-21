@@ -159,6 +159,13 @@
 - Admin role required (403 for read-only keys), 404 for non-existent repos
 - Creates IndexJob with status="pending" and returns job_id
 
+### Feature #33: Branch Listing API
+- **New**: `GET /api/v1/repos/{id}/branches` endpoint — returns sorted list of remote branch names and `default_branch` for a registered+cloned repository
+- **New**: `BranchListResponse` schema (branches: list[str], default_branch: str)
+- **Modified**: `ROLE_PERMISSIONS` — added `list_branches` to `read` and `admin` roles
+- **New**: 404 for unknown repo, 409 for uncloned repo, 500 for GitCloner failure
+- Example: 20-branch-listing-api.py
+
 ### Feature #21: Scheduled Index Refresh
 - **New**: `create_celery_app(broker_url, schedule_cron=None)` — Celery app factory with Beat schedule configuration, configurable cron (default: weekly Sunday 02:00 UTC), 5-field cron string parsing
 - **New**: `scheduled_reindex_all` — periodic Celery task that queries active repos, skips those with in-progress jobs (pending/running IndexJob), enqueues `reindex_repo_task` for eligible repos

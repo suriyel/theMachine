@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 24/42 active features passing · Last: #22 Manual Reindex Trigger (2026-03-22) · Next: #33 Branch Listing API
+Progress: 25/42 active features passing · Last: #33 Branch Listing API (2026-03-22) · Next: #38 C: typedef struct + function prototypes + enum
 
 ---
 
@@ -374,3 +374,15 @@ Progress: 24/42 active features passing · Last: #22 Manual Reindex Trigger (202
 - **ST**: 4/4 test cases PASS (2 FUNC, 2 BNDRY)
 - **Result**: Feature #22 marked PASSING
 - **Next**: Feature #33 — Branch Listing API
+
+### Session 30 — 2026-03-22 (Feature #33)
+- **Feature**: #33 — Branch Listing API
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: GET /api/v1/repos/{repo_id}/branches endpoint in repos_router, BranchListResponse schema, list_branches permission added to read/admin roles, delegates to GitCloner.list_remote_branches()
+- **Tests**: 12 feature tests (11 unit + 1 real integration) + 598 prior = 610/610 passing (3 infra connectivity expected failures)
+- **Coverage**: 99% line, 100% branch on repos.py; 95% overall
+- **Mutation**: 6/6 manual mutations killed (100%); mutmut 3.2.0 stats mapping bug (manual verification)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS — S1-S5, D1-D5, P1-P6, T1-T3 all pass
+- **Result**: Feature #33 marked PASSING
+- **Next**: Feature #38 — C: typedef struct + function prototypes + enum
