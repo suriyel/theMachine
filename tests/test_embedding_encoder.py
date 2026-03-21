@@ -227,9 +227,15 @@ def test_encoder_init_defaults():
 
 def test_encoder_init_missing_api_key_raises_error():
     """Missing API key should raise EmbeddingModelError."""
-    with patch.dict("os.environ", {}, clear=True):
+    import os
+
+    saved = os.environ.pop("EMBEDDING_API_KEY", None)
+    try:
         with pytest.raises(EmbeddingModelError, match="EMBEDDING_API_KEY is required"):
             EmbeddingEncoder(api_key="", model_name="test")
+    finally:
+        if saved is not None:
+            os.environ["EMBEDDING_API_KEY"] = saved
 
 
 # ---------------------------------------------------------------------------
