@@ -100,7 +100,7 @@ LANGUAGE_NODE_MAPS: dict[str, LanguageNodeMap] = {
         body_delimiter="{",
     ),
     "c": LanguageNodeMap(
-        class_nodes=[],
+        class_nodes=["struct_specifier", "enum_specifier"],
         function_nodes=["function_definition"],
         import_nodes=["preproc_include"],
         body_delimiter="{",
@@ -240,6 +240,31 @@ class Chunker:
                     result = _is_prototype_assign(child)
                     if result is not None:
                         top_level_symbols.append(result[0])
+                elif (
+                    child.type == "type_definition"
+                    and language in ("c", "cpp")
+                ):
+                    inner = _find_child_of_type(child, all_interesting)
+                    if inner is not None:
+                        name = _get_typedef_name(child) or _get_node_name(inner)
+                        if name:
+                            top_level_symbols.append(name)
+                elif (
+                    child.type in ("preproc_ifdef", "preproc_if")
+                    and language in ("c", "cpp")
+                ):
+                    # Recurse into header guards for symbols
+                    for inner in child.children:
+                        if inner.type in all_interesting:
+                            name = _get_node_name(inner)
+                            if name:
+                                top_level_symbols.append(name)
+                        elif inner.type == "type_definition":
+                            sub = _find_child_of_type(inner, all_interesting)
+                            if sub is not None:
+                                name = _get_typedef_name(inner) or _get_node_name(sub)
+                                if name:
+                                    top_level_symbols.append(name)
 
         content_parts = imports + ([""] if imports else []) + top_level_symbols
         content = "\n".join(content_parts)
@@ -322,6 +347,53 @@ class Chunker:
                             body, file, repo_id, branch,
                             language, node_map, chunks,
                         )
+                continue
+            # C: unwrap type_definition containing struct_specifier
+            if child.type == "type_definition" and language in ("c", "cpp"):
+                inner = _find_child_of_type(child, node_map.class_nodes)
+                if inner is not None:
+                    # Symbol is the typedef alias (last type_identifier in declarator)
+                    name = _get_typedef_name(child) or _get_node_name(inner)
+                    signature = self.extract_signature(inner, language)
+                    doc_comment = self.extract_doc_comment(child, language)
+                    method_sigs: list[str] = []
+                    body = _get_body_node(inner, language)
+                    if body:
+                        for member in body.children:
+                            if member.type in node_map.function_nodes:
+                                m_name = _get_node_name(member)
+                                m_sig = self.extract_signature(member, language)
+                                method_sigs.append(m_sig if m_sig else m_name)
+                    content = signature + "\n" + doc_comment
+                    if method_sigs:
+                        content += "\n" + "\n".join(method_sigs)
+                    chunk_id = (
+                        f"{repo_id}:{branch}:{file.path}:"
+                        f"{name}:class:{child.start_point[0]}"
+                    )
+                    chunks.append(
+                        CodeChunk(
+                            chunk_id=chunk_id,
+                            repo_id=repo_id,
+                            branch=branch,
+                            file_path=file.path,
+                            language=language,
+                            chunk_type="class",
+                            symbol=name,
+                            signature=signature,
+                            doc_comment=doc_comment,
+                            parent_class="",
+                            content=content,
+                            line_start=child.start_point[0],
+                            line_end=child.end_point[0],
+                        )
+                    )
+                continue
+            # C/C++: recurse into preproc_ifdef / preproc_if to find class nodes
+            if child.type in ("preproc_ifdef", "preproc_if") and language in ("c", "cpp"):
+                self._walk_classes(
+                    child, file, repo_id, branch, language, node_map, chunks
+                )
                 continue
             # Unwrap decorated_definition: find inner class node
             if child.type == "decorated_definition":
@@ -490,6 +562,39 @@ class Chunker:
     ) -> None:
         """Recursively find function nodes and create L3 chunks."""
         for child in node.children:
+            # C: declaration with function_declarator but no body = prototype
+            if child.type == "declaration" and language == "c":
+                func_decl = _find_child_of_type(child, ["function_declarator"])
+                has_body = any(
+                    sub.type == "compound_statement" for sub in child.children
+                )
+                if func_decl is not None and not has_body:
+                    name = _get_node_name(func_decl)
+                    if name:
+                        self._add_function_chunk(
+                            child,
+                            name,
+                            file,
+                            repo_id,
+                            branch,
+                            language,
+                            parent_class,
+                            chunks,
+                        )
+                continue
+            # C/C++: recurse into preproc_ifdef / preproc_if
+            if child.type in ("preproc_ifdef", "preproc_if") and language in ("c", "cpp"):
+                self._walk_functions(
+                    child,
+                    file,
+                    repo_id,
+                    branch,
+                    language,
+                    node_map,
+                    chunks,
+                    parent_class=parent_class,
+                )
+                continue
             if child.type == "decorated_definition":
                 # Unwrap decorated_definition to find inner class/function
                 all_targets = (
@@ -1089,3 +1194,28 @@ def _extract_require_arg(
                     arg_str = raw.strip("'\"")
     if func_name == "require" and arg_str:
         imports.append(arg_str)
+
+
+def _find_child_of_type(
+    node: ts.Node, target_types: list[str]
+) -> "ts.Node | None":
+    """Return the first direct child whose type is in target_types."""
+    for child in node.children:
+        if child.type in target_types:
+            return child
+    return None
+
+
+def _get_typedef_name(node: ts.Node) -> str:
+    """Get the typedef alias from a type_definition node.
+
+    In C tree-sitter AST the typedef alias is the last type_identifier
+    that appears as a *direct* child of type_definition (the declarator).
+    """
+    # The declarator child holds the alias name for simple typedefs.
+    # Iterate in reverse to pick the last type_identifier (the alias).
+    last: str = ""
+    for child in node.children:
+        if child.type == "type_identifier":
+            last = child.text.decode("utf-8") if child.text else ""
+    return last

@@ -13,6 +13,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 18 | MCP Server (#18) | [18-mcp-server.py](18-mcp-server.py) | `python examples/18-mcp-server.py` |
 | 19 | Scheduled Index Refresh (#21) | [19-scheduled-index-refresh.py](19-scheduled-index-refresh.py) | `python examples/19-scheduled-index-refresh.py` |
 | 20 | Branch Listing API (#33) | [20-branch-listing-api.py](20-branch-listing-api.py) | `python examples/20-branch-listing-api.py` |
+| 21 | C: typedef struct + prototypes + enum (#38) | [21-c-typedef-prototype-enum.py](21-c-typedef-prototype-enum.py) | `python examples/21-c-typedef-prototype-enum.py` |
 
 ---
 
