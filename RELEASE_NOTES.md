@@ -10,6 +10,8 @@
 - Example: 02-data-models.py
 - Feature #3: Repository Registration — RepoManager service (register, _validate_url, _derive_name), ValidationError/ConflictError exceptions, URL normalization (scheme, host, .git, trailing slash, SSH shorthand)
 - Example: 03-repository-registration.py
+- Feature #4: Git Clone & Update — GitCloner (clone_or_update, _clone, _update, _cleanup_partial, _run_git), CloneError exception, 300s timeout, partial file cleanup on failure
+- Example: 04-git-clone-update.py
 
 ### Changed
 - Updated alembic/env.py to import Base.metadata as target_metadata

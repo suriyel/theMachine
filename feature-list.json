@@ -168,7 +168,9 @@
       "title": "Git Clone & Update",
       "description": "Implement GitCloner with clone_or_update() that performs git clone for new repos or git fetch+reset for existing repos, with error handling for network/auth/disk failures",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-4-git-clone-update.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given a newly registered repository, when clone_or_update() runs, then the repo is cloned to REPO_CLONE_PATH/{repo_id} and the working copy contains the default branch HEAD",
         "Given a previously cloned repository, when clone_or_update() runs again, then it performs git fetch and resets to latest HEAD without re-cloning",

@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 3/32 features passing · Last: #3 Repository Registration (2026-03-21) · Next: #4 Git Clone & Update
+Progress: 4/32 features passing · Last: #4 Git Clone & Update (2026-03-21) · Next: #5 Content Extraction
 
 ---
 
@@ -54,3 +54,16 @@ Progress: 3/32 features passing · Last: #3 Repository Registration (2026-03-21)
 - **Review findings fixed**: Added RepoManager export to __init__.py (Important), created example file (Important)
 - **Result**: Feature #3 marked PASSING
 - **Next**: Feature #4 — Git Clone & Update
+
+### Session 4 — 2026-03-21 (Feature #4)
+- **Feature**: #4 — Git Clone & Update
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: GitCloner (clone_or_update, _clone, _update, _cleanup_partial, _run_git), CloneError exception
+- **Tests**: 15 feature tests + 70 prior = 85/85 passing (12 unit + 3 real)
+- **Coverage**: 100% line, 100% branch (git_cloner.py), 98% overall
+- **Mutation**: known mutmut 3.2.0 __init__ mapping bug (manual verification confirms all paths tested)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY), 3 Real tests passed
+- **Review**: PASS — plan deps typo fixed, example created
+- **Infrastructure**: RabbitMQ deployed via Docker, REPO_CLONE_PATH configured
+- **Result**: Feature #4 marked PASSING
+- **Next**: Feature #5 — Content Extraction
