@@ -45,7 +45,7 @@ class QueryHandler:
     async def handle_nl_query(
         self,
         query: str,
-        repo: str,
+        repo: str | None = None,
         languages: list[str] | None = None,
     ) -> QueryResponse:
         """Execute the full NL retrieval pipeline.
@@ -79,7 +79,7 @@ class QueryHandler:
     async def _run_pipeline(
         self,
         query: str,
-        repo: str,
+        repo: str | None,
         languages: list[str] | None,
         identifiers: list[str],
     ) -> QueryResponse:
@@ -186,7 +186,7 @@ class QueryHandler:
     async def handle_symbol_query(
         self,
         query: str,
-        repo: str,
+        repo: str | None = None,
     ) -> QueryResponse:
         """Execute the symbol query pipeline: ES term → fuzzy → NL fallback.
 
@@ -201,14 +201,10 @@ class QueryHandler:
             raise ValidationError("query exceeds 200 character limit")
 
         # Step 2: ES term query (exact match on symbol.raw)
-        term_body = {
-            "query": {
-                "bool": {
-                    "must": [{"term": {"symbol.raw": query}}],
-                    "filter": [{"term": {"repo_id": repo}}],
-                }
-            }
-        }
+        term_bool: dict = {"must": [{"term": {"symbol.raw": query}}]}
+        if repo is not None:
+            term_bool["filter"] = [{"term": {"repo_id": repo}}]
+        term_body = {"query": {"bool": term_bool}}
         term_hits = await self._retriever._execute_search(
             self._retriever._code_index, term_body, 200
         )
@@ -219,16 +215,14 @@ class QueryHandler:
             return self._response_builder.build(reranked, query, "symbol", repo)
 
         # Step 3: ES fuzzy query (fuzziness=AUTO)
-        fuzzy_body = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {"match": {"symbol": {"query": query, "fuzziness": "AUTO"}}}
-                    ],
-                    "filter": [{"term": {"repo_id": repo}}],
-                }
-            }
+        fuzzy_bool: dict = {
+            "must": [
+                {"match": {"symbol": {"query": query, "fuzziness": "AUTO"}}}
+            ],
         }
+        if repo is not None:
+            fuzzy_bool["filter"] = [{"term": {"repo_id": repo}}]
+        fuzzy_body = {"query": {"bool": fuzzy_bool}}
         fuzzy_hits = await self._retriever._execute_search(
             self._retriever._code_index, fuzzy_body, 200
         )
@@ -254,24 +248,21 @@ class QueryHandler:
         return identifiers
 
     async def _symbol_boost_search(
-        self, identifiers: list[str], repo: str
+        self, identifiers: list[str], repo: str | None
     ) -> list[ScoredChunk]:
         """Fire parallel ES term queries on symbol.raw for each identifier."""
-        tasks = [
-            self._retriever._execute_search(
-                self._retriever._code_index,
-                {
-                    "query": {
-                        "bool": {
-                            "must": [{"term": {"symbol.raw": ident}}],
-                            "filter": [{"term": {"repo_id": repo}}],
-                        }
-                    }
-                },
-                10,
+        tasks = []
+        for ident in identifiers:
+            boost_bool: dict = {"must": [{"term": {"symbol.raw": ident}}]}
+            if repo is not None:
+                boost_bool["filter"] = [{"term": {"repo_id": repo}}]
+            tasks.append(
+                self._retriever._execute_search(
+                    self._retriever._code_index,
+                    {"query": {"bool": boost_bool}},
+                    10,
+                )
             )
-            for ident in identifiers
-        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         chunks: list[ScoredChunk] = []

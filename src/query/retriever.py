@@ -57,7 +57,7 @@ class Retriever:
     async def bm25_code_search(
         self,
         query: str,
-        repo_id: str,
+        repo_id: str | None = None,
         languages: list[str] | None = None,
         top_k: int = 200,
     ) -> list[ScoredChunk]:
@@ -79,7 +79,7 @@ class Retriever:
     async def bm25_doc_search(
         self,
         query: str,
-        repo_id: str,
+        repo_id: str | None = None,
         top_k: int = 200,
     ) -> list[ScoredChunk]:
         """Execute BM25 keyword search on doc_chunks index.
@@ -104,7 +104,7 @@ class Retriever:
     async def vector_code_search(
         self,
         query: str,
-        repo_id: str,
+        repo_id: str | None = None,
         languages: list[str] | None = None,
         top_k: int = 200,
     ) -> list[ScoredChunk]:
@@ -130,7 +130,7 @@ class Retriever:
     async def vector_doc_search(
         self,
         query: str,
-        repo_id: str,
+        repo_id: str | None = None,
         top_k: int = 200,
     ) -> list[ScoredChunk]:
         """Execute vector similarity search on doc_embeddings Qdrant collection.
@@ -156,7 +156,7 @@ class Retriever:
     def _build_code_query(
         self,
         query: str,
-        repo_id: str,
+        repo_id: str | None,
         languages: list[str] | None,
         top_k: int,
     ) -> dict:
@@ -169,29 +169,24 @@ class Retriever:
             }
         }
 
-        filter_clauses: list[dict] = [{"term": {"repo_id": repo_id}}]
+        filter_clauses: list[dict] = []
+        if repo_id is not None:
+            filter_clauses.append({"term": {"repo_id": repo_id}})
         if languages and len(languages) > 0:
             filter_clauses.append({"terms": {"language": languages}})
 
-        return {
-            "query": {
-                "bool": {
-                    "must": [must_clause],
-                    "filter": filter_clauses,
-                }
-            }
-        }
+        bool_clause: dict = {"must": [must_clause]}
+        if filter_clauses:
+            bool_clause["filter"] = filter_clauses
 
-    def _build_doc_query(self, query: str, repo_id: str, top_k: int) -> dict:
+        return {"query": {"bool": bool_clause}}
+
+    def _build_doc_query(self, query: str, repo_id: str | None, top_k: int) -> dict:
         """Build ES query DSL for doc_chunks match search."""
-        return {
-            "query": {
-                "bool": {
-                    "must": [{"match": {"content": query}}],
-                    "filter": [{"term": {"repo_id": repo_id}}],
-                }
-            }
-        }
+        bool_clause: dict = {"must": [{"match": {"content": query}}]}
+        if repo_id is not None:
+            bool_clause["filter"] = [{"term": {"repo_id": repo_id}}]
+        return {"query": {"bool": bool_clause}}
 
     async def _execute_search(
         self, index: str, body: dict, size: int
@@ -262,23 +257,27 @@ class Retriever:
             raise RetrievalError(f"Embedding failed: {exc}") from exc
 
     def _build_qdrant_filter(
-        self, repo_id: str, languages: list[str] | None
-    ) -> Filter:
-        """Build a Qdrant filter for repo_id and optional language restriction."""
-        conditions: list[FieldCondition] = [
-            FieldCondition(key="repo_id", match=MatchValue(value=repo_id))
-        ]
+        self, repo_id: str | None, languages: list[str] | None
+    ) -> Filter | None:
+        """Build a Qdrant filter for optional repo_id and language restriction."""
+        conditions: list[FieldCondition] = []
+        if repo_id is not None:
+            conditions.append(
+                FieldCondition(key="repo_id", match=MatchValue(value=repo_id))
+            )
         if languages and len(languages) > 0:
             conditions.append(
                 FieldCondition(key="language", match=MatchAny(any=languages))
             )
+        if not conditions:
+            return None
         return Filter(must=conditions)
 
     async def _execute_qdrant_search(
         self,
         collection: str,
         query_vector: list[float],
-        qfilter: Filter,
+        qfilter: Filter | None,
         limit: int,
     ) -> list:
         """Execute Qdrant vector search, wrapping errors into RetrievalError."""
