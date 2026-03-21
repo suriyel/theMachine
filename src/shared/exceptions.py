@@ -7,3 +7,7 @@ class ValidationError(Exception):
 
 class ConflictError(Exception):
     """Raised when a resource already exists."""
+
+
+class CloneError(Exception):
+    """Raised when a git clone or update operation fails."""
