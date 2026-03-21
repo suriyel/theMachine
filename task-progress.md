@@ -202,9 +202,10 @@ Progress: 11/39 active features passing · Last: #7 Embedding Generation (2026-0
 ### Session 15 — 2026-03-21 (Feature #7)
 - **Feature**: #7 — Embedding Generation
 - **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
-- **Implementation**: EmbeddingEncoder (CodeSage-large via sentence-transformers, encode_batch with batch_size=64, encode_query with instruction prefix), IndexWriter (write_code_chunks to ES+Qdrant, write_doc_chunks to ES+Qdrant, write_rule_chunks to ES only, delete_repo_index from all indices), _retry_write with 3x exponential backoff, EmbeddingModelError/IndexWriteError exceptions
-- **Tests**: 21 feature tests + 265 prior = 286/286 passing (+ 2 real tests)
-- **Coverage**: 95% embedding_encoder.py, 92% index_writer.py, 100% exceptions.py
+- **Implementation**: EmbeddingEncoder (DashScope text-embedding-v3 via OpenAI-compatible API/httpx, encode_batch with auto-batching 6/request, encode_query with instruction prefix), IndexWriter (write_code_chunks to ES+Qdrant, write_doc_chunks to ES+Qdrant, write_rule_chunks to ES only, delete_repo_index from all indices), _retry_write with 3x exponential backoff, EmbeddingModelError/IndexWriteError exceptions
+- **Refactor**: Replaced sentence-transformers local model with DashScope API (user requirement)
+- **Tests**: 24 feature tests + 265 prior = 289/289 passing (+ 2 real tests including DashScope API)
+- **Coverage**: 97% embedding_encoder.py, 92% index_writer.py, 100% exceptions.py
 - **Mutation**: 100% on new code (12/12 killed, 2 equivalent excluded)
 - **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
 - **Review**: PASS — 3 minor findings (doc_prefix field, branch param, _retry_write consolidation), 2 important non-blocking (check_real_tests.py script absent, theoretical partial write atomicity)

@@ -65,10 +65,11 @@
 - Example: 08-java-enum-record-static.py
 
 ### Feature #7: Embedding Generation
-- **New**: EmbeddingEncoder — CodeSage-large via sentence-transformers, `encode_batch(texts, is_query)` for batch indexing (64 chunks/batch), `encode_query(query)` with instruction prefix "Represent this code search query: "
+- **New**: EmbeddingEncoder — DashScope text-embedding-v3 via OpenAI-compatible API (httpx), `encode_batch(texts, is_query)` with automatic batching (6/request), `encode_query(query)` with instruction prefix "Represent this code search query: "
 - **New**: IndexWriter — `write_code_chunks()` (ES code_chunks + Qdrant code_embeddings), `write_doc_chunks()` (ES doc_chunks + Qdrant doc_embeddings), `write_rule_chunks()` (ES rule_chunks only, no vector), `delete_repo_index()` (all indices + collections)
 - **New**: Retry logic — 3 retries with exponential backoff (1s, 2s, 4s) for ES/Qdrant write failures
 - **New**: Custom exceptions — EmbeddingModelError, IndexWriteError
+- **New**: Configs — EMBEDDING_MODEL, EMBEDDING_API_KEY, EMBEDDING_BASE_URL for DashScope API
 - Example: 11-embedding-generation.py
 
 ### Wave 1 Re-verification
