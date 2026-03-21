@@ -148,6 +148,21 @@ sed -i "s/module_name = strip_prefix(str(filename)\[:-len(filename.suffix)\].rep
   .venv/lib/python3.12/site-packages/mutmut/__main__.py
 ```
 
+### Patch 2: Stats KeyError on third-party `__init__`
+
+**File**: `.venv/lib/python3.12/site-packages/mutmut/__main__.py` line 702
+
+```python
+# BEFORE (crashes on third-party __init__ calls in stats):
+mutmut.tests_by_mangled_function_name[function].add(...)
+
+# AFTER (skip unknown functions):
+if function in mutmut.tests_by_mangled_function_name:
+    mutmut.tests_by_mangled_function_name[function].add(...)
+```
+
+This also causes `__init__` methods in project classes to report "no tests" (🫥). These are a tooling limitation — verify manually that tests cover the `__init__` behavior.
+
 ### conftest.py Hook
 
 `tests/conftest.py` includes a hook for when `MUTANT_UNDER_TEST` is set — it prepends CWD to `sys.path` and clears stale `src.*` module cache so trampolined code in `mutants/` takes priority over the editable install.
