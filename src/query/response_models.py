@@ -47,3 +47,4 @@ class QueryResponse(BaseModel):
     code_results: list[CodeResult] = []
     doc_results: list[DocResult] = []
     rules: RulesSection | None = None
+    degraded: bool = False
