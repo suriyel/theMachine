@@ -88,6 +88,12 @@
 - **New**: Degradation warning — logs warning when Qdrant is unreachable per SRS FR-007 AC-3
 - Example: 13-semantic-retrieval.py
 
+### Increment Wave 3 — Retrieval Quality Evaluation Pipeline (2026-03-21)
+- **New**: Feature #40 — Evaluation Corpus Management (`EvalCorpusBuilder`, `eval/repos.json`, `eval_` index namespace)
+- **New**: Feature #41 — LLM Query Generation & Relevance Annotation (`LLMAnnotator`, MiniMax2.5 API, dual annotation, Cohen's Kappa, golden dataset)
+- **New**: Feature #42 — Retrieval Quality Evaluation & Reporting (`EvalRunner`, MRR@10/NDCG@10/Recall@200/Precision@3, per-language/per-stage breakdown)
+- **New configs**: MINIMAX_API_KEY, MINIMAX_BASE_URL, MINIMAX_MODEL
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

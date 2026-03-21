@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 13/39 active features passing · Last: #9 Semantic Retrieval (Vector) (2026-03-21) · Next: #10 Rank Fusion (RRF)
+Progress: 13/42 active features passing · Last: Increment Wave 3 (2026-03-21) · Next: #10 Rank Fusion (RRF)
 
 ---
 
@@ -235,4 +235,13 @@ Progress: 13/39 active features passing · Last: #9 Semantic Retrieval (Vector) 
 - **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
 - **Review**: PASS after fixing 1 Important issue (SRS AC-3 degradation warning not logged — added logger.warning)
 - **Result**: Feature #9 marked PASSING
+- **Next**: Feature #10 — Rank Fusion (RRF)
+
+### Session 18 — 2026-03-21 (Increment Wave 3)
+- **Phase**: Increment
+- **Scope**: Retrieval Quality Evaluation Pipeline — corpus management, LLM annotation, IR metrics & reporting
+- **Changes**: Added 3 features (#40 Eval Corpus, #41 LLM Annotation, #42 Eval Metrics), 0 modified, 0 deprecated
+- **New configs**: MINIMAX_API_KEY, MINIMAX_BASE_URL, MINIMAX_MODEL
+- **Documents updated**: SRS (FR-024 to FR-026), Design (§4.7 + M7 milestone + dependency chain)
+- **Result**: 13/42 active features passing (was 13/39)
 - **Next**: Feature #10 — Rank Fusion (RRF)
