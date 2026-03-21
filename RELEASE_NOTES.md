@@ -39,6 +39,16 @@
 - **New**: Arrow function detection for JavaScript/TypeScript (lexical_declaration/export_statement)
 - Example: 06-code-chunking.py
 
+### Increment Wave 2 — AST Parsing Accuracy Enhancement (2026-03-21)
+- **Modified**: FR-004 — expanded EARS and 12 new acceptance criteria covering decorator/namespace/template/enum/prototype/require/typedef patterns
+- **New**: Feature #34 — Python: `decorated_definition` unwrapping (@property, @dataclass, @app.route, @staticmethod, @classmethod)
+- **New**: Feature #35 — Java: `enum_declaration`, `record_declaration`, `static_initializer` support
+- **New**: Feature #36 — JavaScript: prototype-assigned function detection + `require()` import extraction
+- **New**: Feature #37 — TypeScript: `enum_declaration`, `namespace`/`module` unwrapping, decorator unwrapping
+- **New**: Feature #38 — C: `typedef struct` → L2, function prototype declarations → L3, `enum_specifier` → L2
+- **New**: Feature #39 — C++: `namespace_definition` recursive unwrapping, `template_declaration` single-level unwrapping
+- **Design updated**: AST node mapping table expanded, wrapper unwrapping rules table added, chunking flowchart updated
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

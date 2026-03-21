@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 6/33 active features passing · Last: #6 Code Chunking (2026-03-21) · Next: #7 Embedding Generation
+Progress: 6/39 active features passing · Last: Increment Wave 2 (2026-03-21) · Next: #34 Python decorated_definition Unwrapping
 
 ---
 
@@ -131,3 +131,19 @@ Progress: 6/33 active features passing · Last: #6 Code Chunking (2026-03-21) ·
 - **Review**: PASS — 3 minor findings (extra language param, Python signature enhancement, DocChunk branch asymmetry)
 - **Result**: Feature #6 marked PASSING
 - **Next**: Feature #7 — Embedding Generation
+
+### Session 10 — 2026-03-21 (Increment Wave 2)
+- **Phase**: Increment
+- **Scope**: Strengthen AST parsing accuracy for 6 supported languages
+- **Trigger**: Independent review scored chunker 4.4/10 — per-language accuracy gaps identified for decorator, namespace, template, enum, prototype, require, typedef patterns
+- **Changes**: Added 6 features (#34-#39), modified FR-004 (12 new acceptance criteria)
+- **Documents updated**: SRS (FR-004 expanded), Design (node mapping table, unwrapping rules, flowchart updated)
+- **New features**:
+  - #34: Python decorated_definition unwrapping (@property, @dataclass, @app.route)
+  - #35: Java enum_declaration + record_declaration + static_initializer
+  - #36: JavaScript prototype-assigned functions + require() imports
+  - #37: TypeScript enum + namespace + decorator unwrapping
+  - #38: C typedef struct + function prototypes + enum_specifier
+  - #39: C++ namespace (recursive) + template (single-level)
+- **Total**: 39 features (6 passing, 33 failing)
+- **Next**: Feature #34 — Python decorated_definition Unwrapping
