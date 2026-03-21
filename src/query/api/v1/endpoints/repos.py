@@ -7,9 +7,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 
+from src.indexing.git_cloner import GitCloner
 from src.query.api.v1.deps import get_auth_middleware, get_authenticated_key, require_permission
-from src.query.api.v1.schemas import RegisterRepoRequest, ReindexResponse, RepoResponse
-from src.shared.exceptions import ConflictError, ValidationError
+from src.query.api.v1.schemas import BranchListResponse, RegisterRepoRequest, ReindexResponse, RepoResponse
+from src.shared.exceptions import CloneError, ConflictError, ValidationError
 from src.shared.models.api_key import ApiKey
 from src.shared.models.index_job import IndexJob
 from src.shared.models.repository import Repository
@@ -111,3 +112,44 @@ async def reindex_repo(
             repo_id=repo.id,
             status=job.status,
         )
+
+
+@repos_router.get("/repos/{repo_id}/branches", response_model=BranchListResponse)
+async def list_branches(
+    repo_id: uuid.UUID,
+    request: Request,
+    api_key: ApiKey = Depends(get_authenticated_key),
+    auth_middleware: AuthMiddleware = Depends(get_auth_middleware),
+) -> BranchListResponse:
+    """List remote branches for a registered repository."""
+    require_permission(api_key, "list_branches", auth_middleware)
+
+    session_factory = request.app.state.session_factory
+    async with session_factory() as session:
+        result = await session.execute(
+            select(Repository).where(Repository.id == repo_id)
+        )
+        repo = result.scalar_one_or_none()
+
+        if repo is None:
+            raise HTTPException(status_code=404, detail="Repository not found")
+
+        if repo.clone_path is None:
+            raise HTTPException(
+                status_code=409, detail="Repository has not been cloned yet"
+            )
+
+        try:
+            cloner = GitCloner(storage_path="")
+            branches = cloner.list_remote_branches(repo.clone_path)
+        except CloneError:
+            raise HTTPException(
+                status_code=500, detail="Failed to list branches"
+            )
+
+        default_branch = repo.default_branch or "main"
+
+    return BranchListResponse(
+        branches=branches,
+        default_branch=default_branch,
+    )

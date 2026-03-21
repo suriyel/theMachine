@@ -43,6 +43,13 @@ class RepoResponse(BaseModel):
     created_at: datetime | None = None
 
 
+class BranchListResponse(BaseModel):
+    """Response model for GET /api/v1/repos/{repo_id}/branches."""
+
+    branches: list[str]
+    default_branch: str
+
+
 class ReindexResponse(BaseModel):
     """Response model for POST /api/v1/repos/{repo_id}/reindex."""
 

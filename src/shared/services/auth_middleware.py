@@ -15,8 +15,8 @@ from src.shared.models.api_key_repo_access import ApiKeyRepoAccess
 logger = logging.getLogger(__name__)
 
 ROLE_PERMISSIONS: dict[str, set[str]] = {
-    "admin": {"query", "list_repos", "register_repo", "reindex", "manage_keys", "metrics"},
-    "read": {"query", "list_repos"},
+    "admin": {"query", "list_repos", "register_repo", "reindex", "manage_keys", "metrics", "list_branches"},
+    "read": {"query", "list_repos", "list_branches"},
 }
 
 RATE_LIMIT_WINDOW = 60
