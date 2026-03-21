@@ -132,6 +132,14 @@
 - **New**: Input validation — `ValidationError` for empty/whitespace queries and queries exceeding 200 chars
 - Example: 14-symbol-query.py
 
+### Feature #17: REST API Endpoints
+- **New**: query_router — `POST /api/v1/query` with query type detection (NL/symbol), AuthMiddleware dependency, permission check, error mapping (ValidationError→400, RetrievalError→500)
+- **New**: repos_router — `GET /api/v1/repos` (list), `POST /api/v1/repos` (register with URL+branch), `POST /api/v1/repos/{id}/reindex` (admin trigger), error mapping (ConflictError→409, KeyError→404)
+- **New**: keys_router — `POST/GET /api/v1/keys`, `DELETE /api/v1/keys/{id}`, `POST /api/v1/keys/{id}/rotate` — admin-only API key CRUD
+- **Modified**: health_router — enhanced `GET /api/v1/health` with per-service connectivity checks (ES, Qdrant, Redis, PostgreSQL), unauthenticated
+- **New**: Pydantic schemas and FastAPI dependency injection (deps.py)
+- Example: 17-rest-api-endpoints.py
+
 ### Feature #16: API Key Authentication
 - **New**: AuthMiddleware — FastAPI dependency for X-API-Key header validation, SHA-256 hash lookup (Redis cache TTL=300s → PostgreSQL fallback), rate limiting (10 failures/IP/minute → 429 via Redis INCR/EXPIRE), role-based permissions (read: query+list_repos, admin: all), repository access control (admin bypasses, read checks ApiKeyRepoAccess), graceful Redis failure (fail-open rate limit, DB fallback for key lookup)
 - **New**: APIKeyManager — create_key(name, role, repo_ids) generates secrets.token_urlsafe(32), stores SHA-256 hash, returns plaintext once; revoke_key deactivates + invalidates Redis cache; rotate_key revokes old + creates new with same name/role/repos; list_keys returns all keys

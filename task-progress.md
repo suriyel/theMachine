@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 20/42 active features passing · Last: #16 API Key Authentication (2026-03-21) · Next: #20 Language Filter
+Progress: 21/42 active features passing · Last: #17 REST API Endpoints (2026-03-22) · Next: #18 MCP Server
 
 ---
 
@@ -329,3 +329,14 @@ Progress: 20/42 active features passing · Last: #16 API Key Authentication (202
 - **Review**: PASS — S1-S5 pass, D1-D5 pass (FastAPI dependency approved deviation), P1-P6 pass, T1-T3 pass
 - **Result**: Feature #16 marked PASSING
 - **Next**: Feature #20 — Language Filter
+
+### Session 26 — 2026-03-22 (Feature #17)
+- **Feature**: #17 — REST API Endpoints
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: 4 FastAPI routers (query, repos, keys, health) with Pydantic schemas, AuthMiddleware dependency injection, permission checks, error mapping; enhanced health with per-service connectivity checks
+- **Tests**: 33 feature tests + 510 prior = 543/543 passing
+- **Coverage**: 92-100% on all endpoint files; 95% overall
+- **ST**: 10/10 test cases PASS (5 FUNC, 3 BNDRY, 2 SEC)
+- **Review**: PASS (subagent review)
+- **Result**: Feature #17 marked PASSING
+- **Next**: Feature #18 — MCP Server
