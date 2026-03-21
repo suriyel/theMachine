@@ -8,10 +8,13 @@
 - Example: 01-health-check.py
 - Feature #2: Data Model & Migrations — SQLAlchemy models (Repository, IndexJob, ApiKey, ApiKeyRepoAccess, QueryLog), Alembic migration, async client wrappers (ElasticsearchClient, QdrantClientWrapper, RedisClient)
 - Example: 02-data-models.py
+- Feature #3: Repository Registration — RepoManager service (register, _validate_url, _derive_name), ValidationError/ConflictError exceptions, URL normalization (scheme, host, .git, trailing slash, SSH shorthand)
+- Example: 03-repository-registration.py
 
 ### Changed
 - Updated alembic/env.py to import Base.metadata as target_metadata
 - Updated env-guide.md with additional mutmut 3.2.0 patch documentation
+- Updated alembic.ini with correct PostgreSQL credentials
 
 ### Fixed
 - Added missing pydantic-settings dependency to pyproject.toml

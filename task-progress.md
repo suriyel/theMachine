@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 2/32 features passing · Last: #2 Data Model & Migrations (2026-03-21) · Next: #3 Repository Registration
+Progress: 3/32 features passing · Last: #3 Repository Registration (2026-03-21) · Next: #4 Git Clone & Update
 
 ---
 
@@ -41,3 +41,16 @@ Progress: 2/32 features passing · Last: #2 Data Model & Migrations (2026-03-21)
 - **Review findings fixed**: Created Alembic migration file (Critical), updated alembic/env.py target_metadata (Critical), added T20 downgrade test (Important), created example file (Important)
 - **Result**: Feature #2 marked PASSING
 - **Next**: Feature #3 — Repository Registration
+
+### Session 3 — 2026-03-21 (Feature #3)
+- **Feature**: #3 — Repository Registration
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: RepoManager (register, _validate_url, _derive_name), ValidationError, ConflictError
+- **Tests**: 14 feature tests + 56 prior = 70/70 passing
+- **Coverage**: 98% line, 98% branch
+- **Mutation**: 86% (18 killed, 3 equivalent from prior features, 34 mutmut __init__ bug)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY) — executed against real PostgreSQL
+- **Real integration**: Docker PostgreSQL started, Alembic migration applied, all tests verified against live DB
+- **Review findings fixed**: Added RepoManager export to __init__.py (Important), created example file (Important)
+- **Result**: Feature #3 marked PASSING
+- **Next**: Feature #4 — Git Clone & Update

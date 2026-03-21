@@ -152,7 +152,9 @@
       "title": "Repository Registration",
       "description": "Implement RepoManager service with register_repo() that validates Git URL, checks for duplicates, creates Repository record, and queues initial indexing job",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-3-repository-registration.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given a valid Git URL 'https://github.com/pallets/flask', when calling register_repo(url), then a Repository record is created with status='pending' and the repository ID is returned",
         "Given an invalid URL 'not-a-url', when calling register_repo(url), then a ValidationError is raised within 2 seconds without creating a record",
