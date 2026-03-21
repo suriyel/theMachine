@@ -65,8 +65,17 @@ LANGUAGE_NODE_MAPS: dict[str, LanguageNodeMap] = {
         body_delimiter=":",
     ),
     "java": LanguageNodeMap(
-        class_nodes=["class_declaration", "interface_declaration"],
-        function_nodes=["method_declaration", "constructor_declaration"],
+        class_nodes=[
+            "class_declaration",
+            "interface_declaration",
+            "enum_declaration",
+            "record_declaration",
+        ],
+        function_nodes=[
+            "method_declaration",
+            "constructor_declaration",
+            "static_initializer",
+        ],
         import_nodes=["import_declaration"],
         body_delimiter="{",
     ),
@@ -822,6 +831,9 @@ def _find_decorated_inner(
 
 def _get_node_name(node: ts.Node) -> str:
     """Extract the name/identifier from a class or function node."""
+    # Java static_initializer has no identifier — use sentinel name
+    if node.type == "static_initializer":
+        return "<static>"
     # First pass: look for direct 'identifier' or 'name'
     for child in node.children:
         if child.type in ("identifier", "name", "property_identifier"):
@@ -855,6 +867,12 @@ def _get_body_node(node: ts.Node, language: str) -> ts.Node | None:
                 "field_declaration_list",
                 "declaration_list",
             ):
+                return child
+            # Java enum: enum_body > enum_body_declarations holds methods
+            if child.type == "enum_body":
+                for sub in child.children:
+                    if sub.type == "enum_body_declarations":
+                        return sub
                 return child
     return None
 
