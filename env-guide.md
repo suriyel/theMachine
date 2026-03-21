@@ -115,6 +115,84 @@ netstat -ano | findstr :3000    # expect no output
 
 ---
 
+## Proxy Configuration
+
+This machine has system-level HTTP/SOCKS proxy (`ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`). Localhost services are **not** reachable through the proxy.
+
+**For real integration tests** (connecting to localhost ES/Qdrant/Redis/PostgreSQL):
+- The `.env` file includes `NO_PROXY=localhost,127.0.0.1`
+- `aiohttp` (used by elasticsearch-py async) ignores `NO_PROXY` when `ALL_PROXY` (SOCKS) is set
+- **Solution**: Clear `ALL_PROXY` before running real tests:
+  ```bash
+  # In test file (module level, before imports):
+  import os
+  for k in ("ALL_PROXY", "all_proxy"):
+      os.environ.pop(k, None)
+
+  # Or from shell:
+  env -u ALL_PROXY -u all_proxy pytest -m real tests/
+  ```
+- The `conftest.py` autouse fixture `_clear_proxy_env` clears proxy for non-`@pytest.mark.real` tests. Real tests that connect to localhost must handle proxy clearing themselves.
+
+## Elasticsearch Operational Notes
+
+### Disk Watermark (Critical)
+
+ES refuses to allocate shards when disk usage exceeds the high watermark (default 90%). Symptoms:
+- `indices.create()` returns `acknowledged=true, shards_acknowledged=false`
+- Subsequent `index()` calls timeout or return `503 unavailable_shards_exception`
+- Cluster status: **red**
+
+**Diagnosis**:
+```bash
+curl -s http://localhost:9200/_cluster/allocation/explain | python3 -m json.tool | grep -A3 disk_threshold
+```
+
+**Fix**: Free disk space or lower watermarks:
+```bash
+curl -XPUT http://localhost:9200/_cluster/settings -H 'Content-Type: application/json' -d '{
+  "persistent": {
+    "cluster.routing.allocation.disk.watermark.low": "95%",
+    "cluster.routing.allocation.disk.watermark.high": "98%",
+    "cluster.routing.allocation.disk.watermark.flood_stage": "99%"
+  }
+}'
+```
+
+### Test Index Cleanup (Mandatory)
+
+**Every real test that creates ES indices MUST clean them up in fixture teardown.** Leaked indices cause:
+1. Unassigned shards → cluster goes red/yellow
+2. Disk space waste → triggers watermark → blocks ALL new index creation
+
+**Test index rules**:
+- Always use `number_of_shards=1, number_of_replicas=0` (single-node cluster)
+- Always delete in fixture teardown: `await es.indices.delete(index=name, ignore=[404])`
+- Use unique index names with UUID suffix to avoid collisions: `f"test_{uuid.uuid4().hex[:8]}"`
+
+**Manual cleanup** (if leaked indices exist):
+```bash
+# List test indices
+curl -s http://localhost:9200/_cat/indices?v | grep test_
+
+# Delete one by one (wildcard may be disabled)
+curl -s http://localhost:9200/_cat/indices?v | grep test_ | awk '{print $3}' | while read idx; do
+  curl -s -XDELETE "http://localhost:9200/$idx"
+  echo " deleted $idx"
+done
+
+# Check health recovers
+curl -s http://localhost:9200/_cat/health
+```
+
+**Before running ES real tests**, always verify:
+```bash
+curl -s http://localhost:9200/_cat/health  # Must be green or yellow (NOT red)
+curl -s http://localhost:9200/_cat/shards | grep UNASSIGNED  # Must be empty
+```
+
+---
+
 ## Mutation Testing (mutmut 3.2.0)
 
 ### Known Issue: `src` as top-level package
