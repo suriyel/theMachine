@@ -202,13 +202,27 @@ Admin --> UC22
 
 ### FR-004: Code Chunking
 
+<!-- Wave 2: Modified 2026-03-21 — expanded EARS and acceptance criteria for 6-language accuracy -->
+
 **Priority**: Must
-**EARS**: When source code content is extracted, the system shall parse it using tree-sitter and segment it into multi-granularity chunks at file, class, function, and symbol levels.
+**EARS**: When source code content is extracted, the system shall parse it using tree-sitter and segment it into multi-granularity chunks at file, class/struct/enum, and function/method levels, correctly unwrapping language-specific wrapper nodes (decorators, exports, namespaces, templates) to ensure all structurally significant symbols are indexed.
 **Acceptance Criteria**:
 - Given a Java source file containing 2 classes and 5 methods, when chunking completes, then the system shall produce 1 file-level chunk, 2 class-level chunks, and 5 method-level chunks (8 total).
 - Given a Python file with top-level functions and no classes, when chunking completes, then the system shall produce 1 file-level chunk and N function-level chunks.
-- Given a documentation file (.md), when chunking completes, then the system shall produce 1 file-level chunk (no AST parsing).
+- Given a documentation file (.md), when chunking completes, then the system shall produce section-level doc chunks split at H2 headings with breadcrumb trails.
 - Given a file in an unsupported language, when chunking attempts parsing, then the system shall fall back to file-level chunking only.
+- Given a Python file with `@decorator`-wrapped functions/classes (e.g., `@property`, `@dataclass`, `@app.route`), when chunking completes, then each decorated function shall produce an L3 chunk and each decorated class shall produce an L2 chunk with the decorator preserved in chunk content.
+- Given a Java file with `enum` declarations (with methods) and `record` declarations, when chunking completes, then each enum/record shall produce an L2 chunk with its members as L3 chunks.
+- Given a Java file with a `static {}` initializer block, when chunking completes, then the static initializer shall produce an L3 chunk.
+- Given a JavaScript file with prototype-assigned functions (`obj.method = function(...){}` or `obj.method = (...) => {}`), when chunking completes, then each assignment shall produce an L3 chunk with symbol equal to the property name.
+- Given a JavaScript file with `require()` calls, when chunking completes, then the L1 file chunk's imports list shall include the required module paths.
+- Given a TypeScript file with `enum` declarations and `namespace`/`module` blocks containing classes, when chunking completes, then enums shall produce L2 chunks and classes inside namespaces shall produce L2/L3 chunks.
+- Given a TypeScript/JavaScript file with decorator-wrapped classes (`@Component`, `@Injectable`), when chunking completes, then the decorated class shall produce an L2 chunk.
+- Given a C file with `typedef struct { ... } Name;` patterns, when chunking completes, then each typedef struct shall produce an L2 chunk with symbol equal to the typedef name.
+- Given a C header file (`.h`) with function prototype declarations (signature only, no body), when chunking completes, then each prototype shall produce an L3 chunk with content equal to the declaration text.
+- Given a C file with `enum { ... }` declarations, when chunking completes, then each enum shall produce an L2 chunk.
+- Given a C++ file with `namespace foo { class X {} }` (including nested namespaces), when chunking completes, then classes/functions inside all namespace levels shall produce L2/L3 chunks.
+- Given a C++ file with `template<typename T> class Foo {}`, when chunking completes, then the template class shall produce an L2 chunk (single-level unwrap).
 
 ---
 
