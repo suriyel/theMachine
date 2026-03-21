@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 10/39 active features passing · Last: #37 TypeScript: enum + namespace + decorator unwrapping (2026-03-21) · Next: #38 C: typedef struct + function prototypes + enum
+Progress: 11/39 active features passing · Last: #7 Embedding Generation (2026-03-21) · Next: #8 Keyword Retrieval (BM25)
 
 ---
 
@@ -198,3 +198,15 @@ Progress: 10/39 active features passing · Last: #37 TypeScript: enum + namespac
 - **Review**: PASS — all checklists clear
 - **Result**: Feature #37 marked PASSING
 - **Next**: Feature #38 — C: typedef struct + function prototypes + enum
+
+### Session 15 — 2026-03-21 (Feature #7)
+- **Feature**: #7 — Embedding Generation
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: EmbeddingEncoder (CodeSage-large via sentence-transformers, encode_batch with batch_size=64, encode_query with instruction prefix), IndexWriter (write_code_chunks to ES+Qdrant, write_doc_chunks to ES+Qdrant, write_rule_chunks to ES only, delete_repo_index from all indices), _retry_write with 3x exponential backoff, EmbeddingModelError/IndexWriteError exceptions
+- **Tests**: 21 feature tests + 265 prior = 286/286 passing (+ 2 real tests)
+- **Coverage**: 95% embedding_encoder.py, 92% index_writer.py, 100% exceptions.py
+- **Mutation**: 100% on new code (12/12 killed, 2 equivalent excluded)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS — 3 minor findings (doc_prefix field, branch param, _retry_write consolidation), 2 important non-blocking (check_real_tests.py script absent, theoretical partial write atomicity)
+- **Result**: Feature #7 marked PASSING
+- **Next**: Feature #8 — Keyword Retrieval (BM25)

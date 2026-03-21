@@ -278,7 +278,7 @@
       "title": "Embedding Generation",
       "description": "Implement EmbeddingEncoder using CodeSage-large model via sentence-transformers, with encode_documents() for batch indexing and encode_query() with instruction prefix for query-time embedding. Write embeddings to Qdrant.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a list of 10 code chunks, when encode_documents() runs in batch, then it produces 10 vectors of 1024 dimensions each as float32 arrays",
         "Given a query string 'how to configure timeout', when encode_query() runs, then it prepends 'Represent this code search query: ' and returns a single 1024-dim vector",
@@ -286,7 +286,9 @@
       ],
       "dependencies": [
         6
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-7-embedding-generation.md",
+      "st_case_count": 5
     },
     {
       "id": 8,
