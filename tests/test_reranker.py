@@ -1,20 +1,13 @@
-"""Tests for Reranker — Neural Reranking (Feature #11).
+"""Tests for Reranker — Neural Reranking via API (Feature #11).
 
 Security: N/A — internal utility with no user-facing input.
-
-# [no integration test] — pure computation with mocked model, no external I/O.
-# The CrossEncoder model is an external ML dependency that requires large model
-# downloads; real model testing is covered by ST acceptance tests.
 """
 
 from __future__ import annotations
 
 import logging
-import math
-from dataclasses import replace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import numpy as np
 import pytest
 
 from src.query.scored_chunk import ScoredChunk
@@ -38,99 +31,135 @@ def _make_chunks(n: int, *, score_start: float = 0.5) -> list[ScoredChunk]:
     ]
 
 
+def _mock_api_response(results: list[dict]) -> dict:
+    """Build a DashScope-style API response."""
+    return {
+        "output": {"results": results},
+        "usage": {"total_tokens": 100},
+        "request_id": "test-request-id",
+    }
+
+
 # ---------- Happy Path Tests ----------
 
 
-# [unit] — mock CrossEncoder, verify reranking logic
-def test_rerank_50_candidates_returns_top6_rescored():
-    """T1: 50 fused candidates → rerank returns top-6 re-scored by cross-encoder."""
-    from src.query.reranker import Reranker
-
-    candidates = _make_chunks(50)
-    # Mock cross-encoder scores: higher score for later chunks (reversed order)
-    mock_scores = np.array([float(i) for i in range(50)])
-
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
-
-        reranker = Reranker(model_name="test-model")
-        result = reranker.rerank("spring webclient timeout", candidates, top_k=6)
-
-    assert len(result) == 6
-    # Highest CE scores are 49, 48, 47, 46, 45, 44 (for chunks 49..44)
-    assert result[0].chunk_id == "chunk-49"
-    assert result[5].chunk_id == "chunk-44"
-    # Scores should be cross-encoder scores, not original fusion scores
-    assert result[0].score == 49.0
-    assert result[5].score == 44.0
-
-
-# [unit] — verify truncation with fewer than 50 candidates
-def test_rerank_10_candidates_top6():
-    """T2: 10 candidates, top_k=6 → returns exactly 6."""
+# [unit] — mock API, verify reranking logic
+def test_rerank_candidates_returns_top6_rescored():
+    """T1: Fused candidates → rerank returns top-6 re-scored via API."""
     from src.query.reranker import Reranker
 
     candidates = _make_chunks(10)
-    mock_scores = np.array([float(9 - i) for i in range(10)])  # descending
+    # API returns top-6 sorted by relevance_score descending
+    api_results = [
+        {"index": 9, "relevance_score": 0.95},
+        {"index": 7, "relevance_score": 0.90},
+        {"index": 5, "relevance_score": 0.85},
+        {"index": 3, "relevance_score": 0.80},
+        {"index": 1, "relevance_score": 0.75},
+        {"index": 0, "relevance_score": 0.70},
+    ]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
-        result = reranker.rerank("query", candidates, top_k=6)
+        reranker = Reranker(
+            model_name="qwen3-rerank",
+            api_key="test-key",
+            base_url="https://example.com/v1",
+        )
+        result = reranker.rerank("spring webclient timeout", candidates, top_k=6)
 
     assert len(result) == 6
-    assert result[0].chunk_id == "chunk-0"  # highest score = 9.0
+    assert result[0].chunk_id == "chunk-9"
+    assert result[0].score == pytest.approx(0.95)
+    assert result[5].chunk_id == "chunk-0"
+    assert result[5].score == pytest.approx(0.70)
 
 
-# [unit] — verify scores are replaced with CE scores
+# [unit] — verify scores are replaced with API scores
 def test_rerank_scores_replaced():
-    """T9: Returned chunk scores must be cross-encoder values, not originals."""
+    """T9: Returned chunk scores must be API relevance scores, not originals."""
     from src.query.reranker import Reranker
 
-    candidates = _make_chunks(5, score_start=100.0)  # original scores are high
-    mock_scores = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    candidates = _make_chunks(3, score_start=100.0)  # original scores are high
+    api_results = [
+        {"index": 2, "relevance_score": 0.8},
+        {"index": 1, "relevance_score": 0.5},
+        {"index": 0, "relevance_score": 0.3},
+    ]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
-        result = reranker.rerank("query", candidates, top_k=5)
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
+        result = reranker.rerank("query", candidates, top_k=3)
 
-    # None of the original scores (100.0+) should remain
     for chunk in result:
-        assert chunk.score < 1.0, f"Score {chunk.score} looks like original, not CE score"
-    # Best CE score should be first
-    assert result[0].score == pytest.approx(0.5)
+        assert chunk.score < 1.0, f"Score {chunk.score} looks like original, not API score"
+    assert result[0].score == pytest.approx(0.8)
 
 
 # [unit] — verify descending sort order
 def test_rerank_descending_order():
-    """T11: Results must be sorted descending by cross-encoder score."""
+    """T11: Results must be sorted descending by relevance score."""
     from src.query.reranker import Reranker
 
-    candidates = _make_chunks(8)
-    # Random-ish scores to ensure sort is applied
-    mock_scores = np.array([0.3, 0.9, 0.1, 0.7, 0.5, 0.2, 0.8, 0.4])
+    candidates = _make_chunks(5)
+    # Return in non-sorted order from API
+    api_results = [
+        {"index": 0, "relevance_score": 0.3},
+        {"index": 1, "relevance_score": 0.9},
+        {"index": 2, "relevance_score": 0.1},
+        {"index": 3, "relevance_score": 0.7},
+        {"index": 4, "relevance_score": 0.5},
+    ]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
-        result = reranker.rerank("query", candidates, top_k=8)
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
+        result = reranker.rerank("query", candidates, top_k=5)
 
     for i in range(len(result) - 1):
-        assert result[i].score >= result[i + 1].score, (
-            f"Not descending at index {i}: {result[i].score} < {result[i + 1].score}"
+        assert result[i].score >= result[i + 1].score
+
+
+# [unit] — verify API request payload
+def test_rerank_sends_correct_payload():
+    """Verify the API is called with correct model, query, documents, top_n."""
+    from src.query.reranker import Reranker
+
+    candidates = _make_chunks(3)
+    api_results = [
+        {"index": 0, "relevance_score": 0.9},
+        {"index": 1, "relevance_score": 0.8},
+        {"index": 2, "relevance_score": 0.7},
+    ]
+
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
+
+        reranker = Reranker(
+            model_name="my-model",
+            api_key="test-key",
+            base_url="https://example.com/v1",
         )
+        reranker.rerank("test query", candidates, top_k=2)
+
+    call_kwargs = mock_post.call_args
+    payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+    assert payload["model"] == "my-model"
+    assert payload["input"]["query"] == "test query"
+    assert len(payload["input"]["documents"]) == 3
+    assert payload["parameters"]["top_n"] == 2
 
 
 # ---------- Boundary Tests ----------
@@ -142,14 +171,17 @@ def test_rerank_fewer_than_topk():
     from src.query.reranker import Reranker
 
     candidates = _make_chunks(2)
-    mock_scores = np.array([0.8, 0.3])
+    api_results = [
+        {"index": 0, "relevance_score": 0.8},
+        {"index": 1, "relevance_score": 0.3},
+    ]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
         result = reranker.rerank("query", candidates, top_k=6)
 
     assert len(result) == 2
@@ -163,19 +195,18 @@ def test_rerank_single_candidate():
     from src.query.reranker import Reranker
 
     candidates = _make_chunks(1)
-    mock_scores = np.array([0.95])
+    api_results = [{"index": 0, "relevance_score": 0.95}]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
         result = reranker.rerank("query", candidates, top_k=6)
 
     assert len(result) == 1
     assert result[0].score == pytest.approx(0.95)
-    assert result[0].chunk_id == "chunk-0"
 
 
 # [unit] — empty candidates
@@ -183,118 +214,282 @@ def test_rerank_empty_candidates():
     """T5: Empty candidate list → returns []."""
     from src.query.reranker import Reranker
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        MockCE.return_value = MagicMock()
-        reranker = Reranker(model_name="test-model")
-        result = reranker.rerank("query", [], top_k=6)
-
+    reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
+    result = reranker.rerank("query", [], top_k=6)
     assert result == []
 
 
 # [unit] — top_k=1
 def test_rerank_topk_one():
-    """T8: top_k=1 with 10 candidates → returns exactly 1 (the highest)."""
+    """T8: top_k=1 with 5 candidates → returns exactly 1."""
     from src.query.reranker import Reranker
 
-    candidates = _make_chunks(10)
-    mock_scores = np.array([float(i) for i in range(10)])  # chunk-9 has highest
+    candidates = _make_chunks(5)
+    api_results = [{"index": 3, "relevance_score": 0.99}]
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = mock_scores
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
 
-        reranker = Reranker(model_name="test-model")
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
         result = reranker.rerank("query", candidates, top_k=1)
 
     assert len(result) == 1
-    assert result[0].chunk_id == "chunk-9"
-    assert result[0].score == 9.0
+    assert result[0].chunk_id == "chunk-3"
+    assert result[0].score == 0.99
+
+
+# [unit] — threshold filtering
+def test_rerank_threshold_filters_low_scores():
+    """Candidates below threshold are excluded from results."""
+    from src.query.reranker import Reranker
+
+    candidates = _make_chunks(5)
+    api_results = [
+        {"index": 0, "relevance_score": 0.9},
+        {"index": 1, "relevance_score": 0.5},
+        {"index": 2, "relevance_score": 0.2},  # below threshold
+        {"index": 3, "relevance_score": 0.1},  # below threshold
+        {"index": 4, "relevance_score": 0.05},  # below threshold
+    ]
+
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
+
+        reranker = Reranker(
+            api_key="test-key",
+            base_url="https://example.com/v1",
+            threshold=0.3,
+        )
+        result = reranker.rerank("query", candidates, top_k=5)
+
+    assert len(result) == 2
+    assert result[0].score == pytest.approx(0.9)
+    assert result[1].score == pytest.approx(0.5)
+
+
+# [unit] — all below threshold → fallback
+def test_rerank_all_below_threshold_fallback(caplog):
+    """All candidates below threshold → fallback to fusion order."""
+    from src.query.reranker import Reranker
+
+    candidates = _make_chunks(3, score_start=1.0)
+    api_results = [
+        {"index": 0, "relevance_score": 0.1},
+        {"index": 1, "relevance_score": 0.05},
+        {"index": 2, "relevance_score": 0.01},
+    ]
+
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = _mock_api_response(api_results)
+
+        reranker = Reranker(
+            api_key="test-key",
+            base_url="https://example.com/v1",
+            threshold=0.5,
+        )
+        with caplog.at_level(logging.WARNING):
+            result = reranker.rerank("query", candidates, top_k=3)
+
+    assert len(result) == 3
+    assert result[0].chunk_id == "chunk-0"  # original order
+    assert result[0].score == pytest.approx(1.0)  # original score
+    assert any("threshold" in msg.lower() or "fallback" in msg.lower()
+               for msg in caplog.messages)
 
 
 # ---------- Error / Fallback Tests ----------
 
 
-# [unit] — model load failure → fallback
-def test_rerank_model_load_failure_fallback(caplog):
-    """T6: Model fails to load → rerank returns fusion-order candidates, logs warning."""
+# [unit] — API key missing → fallback
+def test_rerank_no_api_key_fallback(caplog, monkeypatch):
+    """T6: No API key → rerank returns fusion-order candidates, logs warning."""
     from src.query.reranker import Reranker
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        MockCE.side_effect = RuntimeError("OOM: cannot allocate memory")
+    monkeypatch.delenv("RERANKER_API_KEY", raising=False)
 
-        with caplog.at_level(logging.WARNING):
-            reranker = Reranker(model_name="bad-model")
+    with caplog.at_level(logging.WARNING):
+        reranker = Reranker(api_key="", base_url="https://example.com/v1")
 
     candidates = _make_chunks(10, score_start=1.0)
-
     with caplog.at_level(logging.WARNING):
         result = reranker.rerank("query", candidates, top_k=6)
 
-    # Fallback: return first 6 in original order with original scores
     assert len(result) == 6
     assert result[0].chunk_id == "chunk-0"
     assert result[5].chunk_id == "chunk-5"
-    # Original scores preserved
     assert result[0].score == pytest.approx(1.0)
-    assert result[5].score == pytest.approx(1.05)
-    # Must log the "not loaded" warning specifically (not inference error)
-    assert any("not loaded" in msg for msg in caplog.messages), (
-        f"Expected 'not loaded' warning, got: {caplog.messages}"
-    )
+    assert any("not configured" in msg.lower() or "not set" in msg.lower()
+               for msg in caplog.messages)
 
 
-# [unit] — inference failure → fallback
-def test_rerank_inference_failure_fallback(caplog):
-    """T7: Model loaded but predict() raises → fallback to fusion order, warning logged."""
+# [unit] — API call failure → fallback
+def test_rerank_api_failure_fallback(caplog):
+    """T7: API call raises exception → fallback to fusion order, warning logged."""
     from src.query.reranker import Reranker
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.side_effect = RuntimeError("CUDA OOM")
-        MockCE.return_value = mock_model
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.side_effect = httpx.ConnectError("Connection refused")
 
-        reranker = Reranker(model_name="test-model")
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
 
     candidates = _make_chunks(5, score_start=2.0)
-
     with caplog.at_level(logging.WARNING):
         result = reranker.rerank("query", candidates, top_k=3)
 
     assert len(result) == 3
-    # Original order preserved (fusion order)
     assert result[0].chunk_id == "chunk-0"
-    assert result[2].chunk_id == "chunk-2"
-    # Original scores preserved
     assert result[0].score == pytest.approx(2.0)
-    # Warning was logged
-    assert any("falling back" in msg.lower() or "fallback" in msg.lower() or "failed" in msg.lower()
-               for msg in caplog.messages), f"Expected fallback warning in logs: {caplog.messages}"
+    assert any("failed" in msg.lower() or "fallback" in msg.lower()
+               for msg in caplog.messages)
 
 
-# [unit] — NaN scores → fallback
-def test_rerank_nan_scores_fallback(caplog):
-    """T10: Model returns NaN scores → fallback to fusion order, warning logged."""
+# [unit] — HTTP 500 → fallback
+def test_rerank_http_error_fallback(caplog):
+    """API returns HTTP 500 → fallback to fusion order."""
     from src.query.reranker import Reranker
 
-    candidates = _make_chunks(5, score_start=1.0)
-    nan_scores = np.array([float("nan"), 0.5, float("nan"), 0.3, float("nan")])
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        response = mock_post.return_value
+        response.status_code = 500
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Server Error", request=None, response=response
+        )
 
-    with patch("src.query.reranker.CrossEncoder") as MockCE:
-        mock_model = MagicMock()
-        mock_model.predict.return_value = nan_scores
-        MockCE.return_value = mock_model
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
 
-        reranker = Reranker(model_name="test-model")
-
+    candidates = _make_chunks(4, score_start=1.0)
     with caplog.at_level(logging.WARNING):
+        result = reranker.rerank("query", candidates, top_k=2)
+
+    assert len(result) == 2
+    assert result[0].chunk_id == "chunk-0"
+    assert result[0].score == pytest.approx(1.0)
+
+
+# [unit] — OpenAI-compatible response format
+def test_rerank_openai_compatible_format():
+    """Handles OpenAI-compatible response format (results at top level)."""
+    from src.query.reranker import Reranker
+
+    candidates = _make_chunks(3)
+    # OpenAI-compatible format: {"results": [...]} without "output" wrapper
+    openai_response = {
+        "results": [
+            {"index": 2, "relevance_score": 0.9},
+            {"index": 0, "relevance_score": 0.7},
+            {"index": 1, "relevance_score": 0.5},
+        ]
+    }
+
+    with patch("src.query.reranker.httpx.post") as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.raise_for_status = lambda: None
+        mock_post.return_value.json.return_value = openai_response
+
+        reranker = Reranker(api_key="test-key", base_url="https://example.com/v1")
         result = reranker.rerank("query", candidates, top_k=3)
 
-    # Should fall back to fusion order since NaN detected
     assert len(result) == 3
-    assert result[0].chunk_id == "chunk-0"
-    assert result[1].chunk_id == "chunk-1"
-    assert result[2].chunk_id == "chunk-2"
-    # Warning logged
-    assert any("nan" in msg.lower() or "fallback" in msg.lower()
-               for msg in caplog.messages), f"Expected NaN fallback warning: {caplog.messages}"
+    assert result[0].chunk_id == "chunk-2"
+    assert result[0].score == pytest.approx(0.9)
+
+
+# ---------- Real Integration Tests ----------
+
+
+import httpx  # noqa: E402 — needed for test_rerank_api_failure_fallback above
+
+
+@pytest.mark.real
+def test_reranker_real_api():
+    """[integration] — calls real DashScope reranker API, verifies scoring."""
+    import os
+    from src.query.reranker import Reranker
+
+    api_key = os.environ.get("RERANKER_API_KEY", "")
+    if not api_key:
+        pytest.skip("RERANKER_API_KEY not set")
+
+    reranker = Reranker(
+        model_name=os.environ.get("RERANKER_MODEL", "qwen3-rerank"),
+        api_key=api_key,
+        base_url=os.environ.get(
+            "RERANKER_BASE_URL",
+            "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank",
+        ),
+    )
+
+    candidates = [
+        ScoredChunk(
+            chunk_id="c1", content_type="code", repo_id="r1",
+            file_path="src/timeout.py", score=0.5,
+            content="def configure_timeout(client, timeout_ms): client.timeout = timeout_ms",
+            language="python", chunk_type="function", symbol="configure_timeout",
+        ),
+        ScoredChunk(
+            chunk_id="c2", content_type="code", repo_id="r1",
+            file_path="src/utils.py", score=0.4,
+            content="def sort_list(items): return sorted(items)",
+            language="python", chunk_type="function", symbol="sort_list",
+        ),
+        ScoredChunk(
+            chunk_id="c3", content_type="code", repo_id="r1",
+            file_path="src/webclient.py", score=0.3,
+            content="class WebClient:\n    def __init__(self, base_url, timeout=30):\n        self.timeout = timeout",
+            language="python", chunk_type="class", symbol="WebClient",
+        ),
+    ]
+
+    result = reranker.rerank("webclient timeout configuration", candidates, top_k=3)
+
+    # Should return results with real relevance scores
+    assert len(result) >= 1
+    assert len(result) <= 3
+    # Scores should be real floats from the API
+    for chunk in result:
+        assert isinstance(chunk.score, float)
+        assert 0.0 <= chunk.score <= 1.0
+    # Results should be sorted descending
+    for i in range(len(result) - 1):
+        assert result[i].score >= result[i + 1].score
+    # The most relevant result should be timeout or webclient related
+    assert result[0].chunk_id in ("c1", "c3")
+
+
+@pytest.mark.real
+def test_reranker_real_api_few_candidates():
+    """[integration] — real API with fewer candidates than top_k."""
+    import os
+    from src.query.reranker import Reranker
+
+    api_key = os.environ.get("RERANKER_API_KEY", "")
+    if not api_key:
+        pytest.skip("RERANKER_API_KEY not set")
+
+    reranker = Reranker(
+        model_name=os.environ.get("RERANKER_MODEL", "qwen3-rerank"),
+        api_key=api_key,
+        base_url=os.environ.get(
+            "RERANKER_BASE_URL",
+            "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank",
+        ),
+    )
+
+    candidates = [
+        ScoredChunk(
+            chunk_id="c1", content_type="code", repo_id="r1",
+            file_path="src/main.py", score=0.5,
+            content="def main(): print('hello')",
+            language="python", chunk_type="function", symbol="main",
+        ),
+    ]
+
+    result = reranker.rerank("hello world", candidates, top_k=6)
+    assert len(result) == 1
+    assert isinstance(result[0].score, float)

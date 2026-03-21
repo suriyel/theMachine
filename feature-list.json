@@ -256,6 +256,46 @@
         41
       ],
       "check_hint": "Set to minimax or zhipu"
+    },
+    {
+      "name": "Reranker Model",
+      "type": "env",
+      "key": "RERANKER_MODEL",
+      "description": "Reranker model name for neural reranking (e.g. qwen3-rerank)",
+      "required_by": [
+        11
+      ],
+      "check_hint": "Set to qwen3-rerank"
+    },
+    {
+      "name": "Reranker API Key",
+      "type": "env",
+      "key": "RERANKER_API_KEY",
+      "description": "API key for DashScope reranker service",
+      "required_by": [
+        11
+      ],
+      "check_hint": "Same as EMBEDDING_API_KEY if using DashScope"
+    },
+    {
+      "name": "Reranker Base URL",
+      "type": "env",
+      "key": "RERANKER_BASE_URL",
+      "description": "Base URL for reranker API",
+      "required_by": [
+        11
+      ],
+      "check_hint": "Set to https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank"
+    },
+    {
+      "name": "Reranker Threshold",
+      "type": "env",
+      "key": "RERANKER_THRESHOLD",
+      "description": "Minimum relevance score threshold for reranker results",
+      "required_by": [
+        11
+      ],
+      "check_hint": "Set to 0.3"
     }
   ],
   "features": [
