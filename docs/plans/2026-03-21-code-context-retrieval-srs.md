@@ -441,6 +441,47 @@ Admin --> UC22
 
 ---
 
+### FR-024: Evaluation Corpus Management [Wave 3]
+
+<!-- Wave 3: Added 2026-03-21 — Retrieval Quality Evaluation Pipeline -->
+
+**Priority**: Should
+**EARS**: When an evaluation run is initiated, the system shall read the repository list from `eval/repos.json`, clone each repository via the existing GitCloner, and run the full indexing pipeline (ContentExtractor → Chunker → EmbeddingEncoder → IndexWriter) to populate a dedicated evaluation index namespace.
+**Acceptance Criteria**:
+- Given `eval/repos.json` containing 2 repos per supported language (12 total), when the corpus builder runs, then all accessible repos are cloned and indexed with chunks in ES and Qdrant under an `eval_` prefix namespace.
+- Given a previously built corpus with no changes, when the corpus builder runs again, then it skips already-indexed repos (idempotent).
+- Given an inaccessible repo URL in the list, when the corpus builder runs, then it logs an error for that repo and continues indexing the remaining repos.
+
+---
+
+### FR-025: LLM Query Generation & Relevance Annotation [Wave 3]
+
+<!-- Wave 3: Added 2026-03-21 — Retrieval Quality Evaluation Pipeline -->
+
+**Priority**: Should
+**EARS**: When an evaluation corpus has been indexed, the system shall use the MiniMax2.5 Code Plan LLM API (OpenAI-compatible endpoint) to generate 50-100 natural language queries per repository and annotate the relevance of retrieved chunks using a dual-annotation protocol with consistency checking.
+**Acceptance Criteria**:
+- Given an indexed evaluation repo, when query generation runs, then 50-100 NL queries are generated across 4 categories (API usage, bug diagnosis, configuration, architecture understanding).
+- Given a (query, chunk) pair, when dual annotation runs, then two independent LLM relevance scores (0-3 scale) are produced; if they disagree by more than 1 point, a third annotation resolves via majority vote.
+- Given all annotations for a repo are complete, when consistency metrics are computed, then Cohen's Kappa inter-annotator agreement is recorded in the golden dataset metadata.
+- Given the golden dataset, when stored, then each repo's data is saved to `eval/golden/{repo_slug}.json` with query text, repo_id, language, category, and per-chunk annotations.
+
+---
+
+### FR-026: Retrieval Quality Evaluation & Reporting [Wave 3]
+
+<!-- Wave 3: Added 2026-03-21 — Retrieval Quality Evaluation Pipeline -->
+
+**Priority**: Should
+**EARS**: When a golden dataset exists and retrieval stages are available, the system shall evaluate each stage using standard IR metrics (MRR@10, NDCG@10, Recall@200, Precision@3) and produce a Markdown quality report with per-language and per-stage breakdowns.
+**Acceptance Criteria**:
+- Given a golden dataset and the vector retrieval stage, when evaluation runs, then MRR@10, NDCG@10, Recall@200, and Precision@3 are computed for vector-only retrieval.
+- Given a retrieval stage that is not yet implemented (e.g., RRF fusion), when evaluation runs, then that stage is skipped and marked N/A in the report without errors.
+- Given all evaluable stages complete, when the report is generated, then it is saved to `eval/reports/YYYY-MM-DD-eval-report.md` with per-language breakdown, per-stage breakdown, overall scores, and identified weak spots.
+- Given a previous evaluation report exists, when a new evaluation runs, then the report includes a delta section showing metric changes per stage.
+
+---
+
 ### 4.1 Process Flows
 
 #### Flow: Repository Indexing Pipeline
