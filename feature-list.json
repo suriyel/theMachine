@@ -136,7 +136,9 @@
       "title": "Data Model & Migrations",
       "description": "Implement SQLAlchemy models for Repository, IndexJob, ApiKey, ApiKeyRepoAccess, QueryLog and create Alembic migration. Implement ES/Qdrant/Redis client wrappers in src/shared/clients/",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-2-data-model-migrations.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given the data models, when running Alembic migration against a test database, then tables REPOSITORY, INDEX_JOB, API_KEY, API_KEY_REPO_ACCESS, QUERY_LOG are created with correct columns and constraints",
         "Given the Repository model, when creating a record with name='test-repo', url='https://github.com/test/repo', then it persists with a generated UUID id, status='pending', and created_at timestamp",

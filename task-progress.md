@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 1/32 features passing · Last: #1 Project Skeleton & CI · Next: #2 Data Model & Migrations
+Progress: 2/32 features passing · Last: #2 Data Model & Migrations (2026-03-21) · Next: #3 Repository Registration
 
 ---
 
@@ -27,3 +27,17 @@ Progress: 1/32 features passing · Last: #1 Project Skeleton & CI · Next: #2 Da
 - **Review findings fixed**: Added pydantic-settings to pyproject.toml (Critical), created examples/01-health-check.py (Important), fixed docstring ValueError (Minor)
 - **Result**: Feature #1 marked PASSING
 - **Next**: Feature #2 — Data Model & Migrations
+
+### Session 2 — 2026-03-21 (Feature #2)
+- **Feature**: #2 — Data Model & Migrations
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Models**: Repository, IndexJob, ApiKey, ApiKeyRepoAccess, QueryLog (SQLAlchemy 2.0 + DeclarativeBase)
+- **Clients**: ElasticsearchClient, QdrantClientWrapper, RedisClient (async connect/health_check/close)
+- **Migration**: alembic/versions/d28628c2148c_create_core_tables.py (upgrade + downgrade)
+- **Tests**: 41 feature tests + 15 skeleton tests = 56/56 passing
+- **Coverage**: 99% line, 100% branch
+- **Mutation**: 100% (excluding 3 equivalent mutants from Feature #1 + 33 mutmut __init__ mapping bug)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review findings fixed**: Created Alembic migration file (Critical), updated alembic/env.py target_metadata (Critical), added T20 downgrade test (Important), created example file (Important)
+- **Result**: Feature #2 marked PASSING
+- **Next**: Feature #3 — Repository Registration
