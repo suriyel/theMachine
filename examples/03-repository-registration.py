@@ -2,8 +2,10 @@
 
 Demonstrates:
 - Registering a Git repository URL
+- Registering with an explicit branch (Wave 1)
+- Registering without a branch (default branch detected at clone time)
 - URL validation and normalization
-- Duplicate detection
+- Duplicate detection (branch-independent)
 - Error handling for invalid URLs
 
 Requires: DATABASE_URL environment variable set (or .env file).
@@ -34,35 +36,46 @@ async def main() -> None:
     async with async_session_factory() as session:
         manager = RepoManager(session=session)
 
-        # 1. Register a valid repository
-        print("1. Registering https://github.com/pallets/flask ...")
+        # 1. Register a valid repository (no branch → default detection)
+        print("1. Registering https://github.com/pallets/flask (no branch) ...")
         repo = await manager.register("https://github.com/pallets/flask")
         print(f"   -> id={repo.id}")
         print(f"   -> name={repo.name}")
         print(f"   -> url={repo.url}")
         print(f"   -> status={repo.status}")
+        print(f"   -> indexed_branch={repo.indexed_branch}  (None = detect default)")
 
-        # 2. URL normalization: .git suffix and trailing slash are stripped
-        print("\n2. Registering https://github.com/psf/requests.git/ ...")
-        repo2 = await manager.register("https://github.com/psf/requests.git/")
-        print(f"   -> url={repo2.url}  (normalized)")
+        # 2. Register with explicit branch (Wave 1)
+        print("\n2. Registering with branch='develop' ...")
+        repo2 = await manager.register(
+            "https://github.com/psf/requests", branch="develop"
+        )
+        print(f"   -> url={repo2.url}")
+        print(f"   -> indexed_branch={repo2.indexed_branch}")
 
-        # 3. Duplicate detection
-        print("\n3. Attempting duplicate registration ...")
+        # 3. URL normalization: .git suffix and trailing slash are stripped
+        print("\n3. Registering https://github.com/django/django.git/ ...")
+        repo3 = await manager.register("https://github.com/django/django.git/")
+        print(f"   -> url={repo3.url}  (normalized)")
+
+        # 4. Duplicate detection (branch-independent)
+        print("\n4. Attempting duplicate with different branch ...")
         try:
-            await manager.register("https://github.com/pallets/flask")
+            await manager.register(
+                "https://github.com/pallets/flask", branch="develop"
+            )
         except ConflictError as e:
             print(f"   -> ConflictError: {e}")
 
-        # 4. Invalid URL handling
-        print("\n4. Attempting invalid URL ...")
+        # 5. Invalid URL handling
+        print("\n5. Attempting invalid URL ...")
         try:
             await manager.register("not-a-url")
         except ValidationError as e:
             print(f"   -> ValidationError: {e}")
 
-        # 5. Empty URL handling
-        print("\n5. Attempting empty URL ...")
+        # 6. Empty URL handling
+        print("\n6. Attempting empty URL ...")
         try:
             await manager.register("")
         except ValidationError as e:

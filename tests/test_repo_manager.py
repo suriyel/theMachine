@@ -1,12 +1,14 @@
 """Tests for Feature #3: Repository Registration — RepoManager service.
 
+Wave 1 update: Added branch parameter tests (T2b, T3b, T15, T16).
+
 Test categories covered:
-- Happy path: valid URL registration, normalization, SSH URL, IndexJob creation
+- Happy path: valid URL registration, normalization, SSH URL, IndexJob creation, branch parameter
 - Error handling: invalid URL, empty URL, unsupported scheme, duplicate registration
-- Boundary: no path, no host, whitespace-padded URL
+- Boundary: no path, no host, whitespace-padded URL, duplicate with different branch
 - Security: N/A — URL validation is the security boundary; covered by error tests
 
-Negative tests: T4, T5, T6, T7, T8, T10 = 6/12 = 50% >= 40%
+Negative tests: T4, T5, T6, T7, T8, T10, T15 = 8/18 = 44% >= 40%
 """
 
 import uuid
@@ -72,6 +74,8 @@ async def test_register_valid_url(repo_manager, async_session):
     assert repo.name == "pallets/flask"
     assert repo.url == "https://github.com/pallets/flask"
     assert repo.status == "pending"
+    # Wave 1: no branch specified → indexed_branch is None
+    assert repo.indexed_branch is None, "indexed_branch should be None when no branch specified"
 
     # Verify IndexJob was also created
     result = await async_session.execute(
@@ -264,4 +268,101 @@ async def test_real_register_persists_to_database(async_session):
     )
     persisted_job = result.scalar_one()
     assert persisted_job.branch == "main"
+    assert persisted_job.status == "pending"
+
+
+# --- Wave 1: Branch parameter tests ---
+
+
+# [unit] T2b: register with explicit branch, verify indexed_branch and IndexJob.branch
+async def test_register_with_branch(repo_manager, async_session):
+    """VS-2: Given a valid URL with branch='develop', repo has indexed_branch='develop'."""
+    from src.shared.models import IndexJob
+
+    repo = await repo_manager.register(
+        "https://github.com/pallets/flask", branch="develop"
+    )
+
+    assert repo.indexed_branch == "develop", (
+        f"Expected indexed_branch='develop', got {repo.indexed_branch!r}"
+    )
+    assert repo.status == "pending"
+    assert repo.name == "pallets/flask"
+
+    # IndexJob should also use the specified branch
+    result = await async_session.execute(
+        select(IndexJob).where(IndexJob.repo_id == repo.id)
+    )
+    job = result.scalar_one()
+    assert job.branch == "develop", (
+        f"Expected IndexJob.branch='develop', got {job.branch!r}"
+    )
+
+
+# [unit] T3b: register without branch, verify indexed_branch=None and IndexJob.branch="main"
+async def test_register_without_branch_sets_null(repo_manager, async_session):
+    """VS-3: Given no branch parameter, indexed_branch=None, IndexJob.branch='main'."""
+    from src.shared.models import IndexJob
+
+    repo = await repo_manager.register("https://github.com/owner/myrepo")
+
+    assert repo.indexed_branch is None, (
+        f"Expected indexed_branch=None, got {repo.indexed_branch!r}"
+    )
+
+    result = await async_session.execute(
+        select(IndexJob).where(IndexJob.repo_id == repo.id)
+    )
+    job = result.scalar_one()
+    assert job.branch == "main", (
+        f"Expected IndexJob.branch='main' as placeholder, got {job.branch!r}"
+    )
+
+
+# [unit] T15: same URL with different branch still raises ConflictError (URL dedup)
+async def test_register_duplicate_different_branch_raises_conflict(repo_manager):
+    """VS-5: Duplicate detection is branch-independent — same URL, different branch → ConflictError."""
+    from src.shared.exceptions import ConflictError
+
+    await repo_manager.register(
+        "https://github.com/pallets/flask", branch="main"
+    )
+
+    with pytest.raises(ConflictError, match="already registered"):
+        await repo_manager.register(
+            "https://github.com/pallets/flask", branch="develop"
+        )
+
+
+# [integration] T16: Real test with branch parameter — verify full DB persistence
+@pytest.mark.real
+async def test_real_register_with_branch_persists(async_session):
+    """Real test: register with branch='release', verify all fields persisted in DB."""
+    from src.shared.models import IndexJob, Repository
+    from src.shared.services.repo_manager import RepoManager
+
+    manager = RepoManager(session=async_session)
+    repo = await manager.register(
+        "https://github.com/django/django", branch="release"
+    )
+
+    # Re-query from DB to confirm persistence
+    result = await async_session.execute(
+        select(Repository).where(Repository.id == repo.id)
+    )
+    persisted_repo = result.scalar_one()
+    assert persisted_repo.url == "https://github.com/django/django"
+    assert persisted_repo.indexed_branch == "release", (
+        f"Expected indexed_branch='release', got {persisted_repo.indexed_branch!r}"
+    )
+    assert persisted_repo.status == "pending"
+
+    # Verify IndexJob branch matches
+    result = await async_session.execute(
+        select(IndexJob).where(IndexJob.repo_id == repo.id)
+    )
+    persisted_job = result.scalar_one()
+    assert persisted_job.branch == "release", (
+        f"Expected IndexJob.branch='release', got {persisted_job.branch!r}"
+    )
     assert persisted_job.status == "pending"

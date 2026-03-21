@@ -18,11 +18,15 @@ class RepoManager:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def register(self, url: str) -> Repository:
+    async def register(
+        self, url: str, branch: str | None = None
+    ) -> Repository:
         """Register a new repository.
 
         Args:
             url: Git repository URL.
+            branch: Optional branch to index. If None, default branch
+                is detected at clone time.
 
         Returns:
             The created Repository record.
@@ -42,13 +46,17 @@ class RepoManager:
         if existing is not None:
             raise ConflictError(f"Repository already registered: {normalized}")
 
-        # Create repository record
-        repo = Repository(name=name, url=normalized, status="pending")
+        # Create repository record with optional branch
+        repo = Repository(
+            name=name, url=normalized, status="pending",
+            indexed_branch=branch,
+        )
         self._session.add(repo)
         await self._session.flush()
 
         # Create initial index job
-        job = IndexJob(repo_id=repo.id, branch="main", status="pending")
+        job_branch = branch if branch is not None else "main"
+        job = IndexJob(repo_id=repo.id, branch=job_branch, status="pending")
         self._session.add(job)
         await self._session.flush()
 
