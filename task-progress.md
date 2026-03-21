@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 9/39 active features passing · Last: #36 JavaScript: prototype-assigned functions + require() imports (2026-03-21) · Next: #37 TypeScript: enum + namespace + decorator unwrapping
+Progress: 10/39 active features passing · Last: #37 TypeScript: enum + namespace + decorator unwrapping (2026-03-21) · Next: #38 C: typedef struct + function prototypes + enum
 
 ---
 
@@ -186,3 +186,15 @@ Progress: 9/39 active features passing · Last: #36 JavaScript: prototype-assign
 - **Review**: PASS — all S1-S5, D1-D5, P1-P6, T1-T3 clear
 - **Result**: Feature #36 marked PASSING
 - **Next**: Feature #37 — TypeScript: enum + namespace + decorator unwrapping
+
+### Session 14 — 2026-03-21 (Feature #37)
+- **Feature**: #37 — TypeScript: enum + namespace + decorator unwrapping (Wave 2)
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Added `enum_declaration` to TS class_nodes; `_get_namespace_body` helper; namespace unwrapping in `_walk_classes` and `_walk_functions` for `expression_statement > internal_module` and `export > internal_module`; verified TS decorators already work (decorator is child of class_declaration)
+- **Tests**: 9 feature tests + 302 prior = 311/311 passing
+- **Coverage**: 92% chunker.py, 94% overall
+- **Mutation**: 100% on new code (2/2 killed)
+- **ST**: 9/9 test cases PASS (4 FUNC, 5 BNDRY), all Real
+- **Review**: PASS — all checklists clear
+- **Result**: Feature #37 marked PASSING
+- **Next**: Feature #38 — C: typedef struct + function prototypes + enum

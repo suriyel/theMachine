@@ -44,7 +44,7 @@
 - **New**: Feature #34 — Python: `decorated_definition` unwrapping (@property, @dataclass, @app.route, @staticmethod, @classmethod)
 - **New**: Feature #35 — Java: `enum_declaration`, `record_declaration`, `static_initializer` support
 - **New**: Feature #36 — JavaScript: prototype-assigned function detection (`obj.x = function/arrow` → L3 chunk) + CommonJS `require()` import extraction to L1 imports list
-- **New**: Feature #37 — TypeScript: `enum_declaration`, `namespace`/`module` unwrapping, decorator unwrapping
+- **New**: Feature #37 — TypeScript: `enum_declaration` → L2, `internal_module` (namespace) recursive unwrapping, `export namespace` support; decorator verification (already works natively)
 - **New**: Feature #38 — C: `typedef struct` → L2, function prototype declarations → L3, `enum_specifier` → L2
 - **New**: Feature #39 — C++: `namespace_definition` recursive unwrapping, `template_declaration` single-level unwrapping
 - **Design updated**: AST node mapping table expanded, wrapper unwrapping rules table added, chunking flowchart updated

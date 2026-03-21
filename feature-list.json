@@ -771,7 +771,7 @@
       "title": "TypeScript: enum + namespace + decorator unwrapping",
       "description": "Add enum_declaration to TS class_nodes. Unwrap internal_module/module (namespace) to recurse into body for class/function detection. Unwrap decorator-wrapped classes/functions (same strategy as Python decorated_definition).",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
       "verification_steps": [
         "Given a TypeScript file with an enum declaration containing 3 members, when chunking completes, then the enum produces an L2 chunk",
@@ -781,7 +781,9 @@
       ],
       "dependencies": [
         6
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-37-ts-enum-namespace-decorator.md",
+      "st_case_count": 9
     },
     {
       "id": 38,
