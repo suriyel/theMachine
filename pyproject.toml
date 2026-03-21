@@ -70,4 +70,4 @@ exclude_lines = [
 [tool.mutmut]
 paths_to_mutate = "src/"
 tests_dir = "tests/"
-runner = "python -m pytest -x --tb=short -k 'not test_project_structure'"
+runner = "python -m pytest -x --tb=short -k 'not test_project_structure and not real'"
