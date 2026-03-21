@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 21/42 active features passing · Last: #17 REST API Endpoints (2026-03-22) · Next: #18 MCP Server
+Progress: 22/42 active features passing · Last: #18 MCP Server (2026-03-22) · Next: #19 Web UI Search Page
 
 ---
 
@@ -340,3 +340,15 @@ Progress: 21/42 active features passing · Last: #17 REST API Endpoints (2026-03
 - **Review**: PASS (subagent review)
 - **Result**: Feature #17 marked PASSING
 - **Next**: Feature #18 — MCP Server
+
+### Session 27 — 2026-03-22 (Feature #18)
+- **Feature**: #18 — MCP Server
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: create_mcp_server factory using FastMCP SDK (mcp 1.9.0), 3 tools (search_code_context, list_repositories, get_chunk), delegates to QueryHandler for search, direct DB query for repos, ES client for chunks
+- **Tests**: 20 feature tests + 556 prior = 576/576 passing (2 Qdrant connectivity expected failures)
+- **Coverage**: 100% line, 100% branch on src/query/mcp_server.py; 95% overall
+- **Mutation**: mutmut 3.2.0 nested closure activation bug; manual verification of 13 representative mutants — all killed by tests (1 equivalent: default value mutation)
+- **ST**: 6/6 test cases PASS (4 FUNC, 2 BNDRY)
+- **Review**: PASS — S1-S5 pass (top_k/max_tokens documented as reserved), D1-D5 pass, P1-P6 pass, T1-T3 pass
+- **Result**: Feature #18 marked PASSING
+- **Next**: Feature #19 — Web UI Search Page

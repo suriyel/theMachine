@@ -625,7 +625,7 @@
       "title": "MCP Server",
       "description": "Implement standalone MCP server exposing 3 tools: search_code_context (with max_tokens param), list_repositories, get_chunk. Uses the same query handler as REST API.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given an MCP client calling search_code_context with {query: 'spring webclient timeout', repo: 'spring-framework'}, when executed, then it returns structured context results matching REST API format",
         "Given an MCP client calling list_repositories, when executed, then it returns the list of indexed repositories with status",
@@ -634,7 +634,9 @@
       ],
       "dependencies": [
         13
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-18-mcp-server.md",
+      "st_case_count": 6
     },
     {
       "id": 19,

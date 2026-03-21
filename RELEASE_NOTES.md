@@ -140,6 +140,14 @@
 - **New**: Pydantic schemas and FastAPI dependency injection (deps.py)
 - Example: 17-rest-api-endpoints.py
 
+### Feature #18: MCP Server
+- **New**: `create_mcp_server(query_handler, session_factory, es_client)` factory — creates FastMCP instance with 3 tools
+- **New**: `search_code_context` tool — validates query, detects query type (NL/symbol), delegates to QueryHandler, returns JSON matching REST API response format. `top_k` and `max_tokens` params reserved for future use.
+- **New**: `list_repositories` tool — queries DB for all repos with optional case-insensitive fuzzy filter on name/URL
+- **New**: `get_chunk` tool — retrieves full chunk content from ES by document ID (code_chunks then doc_chunks), bypasses truncation limit
+- **New**: Error handling — ValueError for input validation (empty query/chunk_id), RuntimeError for retrieval/DB failures, all caught by FastMCP as MCP error responses
+- Example: 18-mcp-server.py
+
 ### Feature #16: API Key Authentication
 - **New**: AuthMiddleware — FastAPI dependency for X-API-Key header validation, SHA-256 hash lookup (Redis cache TTL=300s → PostgreSQL fallback), rate limiting (10 failures/IP/minute → 429 via Redis INCR/EXPIRE), role-based permissions (read: query+list_repos, admin: all), repository access control (admin bypasses, read checks ApiKeyRepoAccess), graceful Redis failure (fail-open rate limit, DB fallback for key lookup)
 - **New**: APIKeyManager — create_key(name, role, repo_ids) generates secrets.token_urlsafe(32), stores SHA-256 hash, returns plaintext once; revoke_key deactivates + invalidates Redis cache; rotate_key revokes old + creates new with same name/role/repos; list_keys returns all keys
