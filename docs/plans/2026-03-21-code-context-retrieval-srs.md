@@ -159,10 +159,13 @@ Admin --> UC22
 
 ### FR-001: Repository Registration
 
+<!-- Wave 1: Modified 2026-03-21 — add optional branch parameter for branch-specific indexing -->
+
 **Priority**: Must
-**EARS**: When an administrator submits a repository URL, the system shall validate the URL, create a repository record, and queue an initial indexing job.
+**EARS**: When an administrator submits a repository URL with an optional branch name, the system shall validate the URL, create a repository record storing the selected branch, and queue an initial indexing job.
 **Acceptance Criteria**:
 - Given a valid Git repository URL, when the administrator submits it via the admin API, then the system shall create a repository record with status "pending" and return the repository ID.
+- Given a valid Git repository URL with an optional `branch` parameter, when the administrator submits it, then the system shall store the branch in the `indexed_branch` field. If no branch is specified, `indexed_branch` shall be null (clone will detect default branch).
 - Given an invalid or unreachable URL, when the administrator submits it, then the system shall return a validation error within 2 seconds without creating a record.
 - Given a URL that is already registered, when the administrator submits it, then the system shall return a conflict error indicating the repository already exists.
 
@@ -170,14 +173,18 @@ Admin --> UC22
 
 ### FR-002: Git Clone & Update
 
+<!-- Wave 1: Modified 2026-03-21 — add branch parameter, detect default_branch, list_remote_branches -->
+
 **Priority**: Must
-**EARS**: When a repository indexing job is triggered, the system shall clone the repository (if first time) or fetch updates (if previously cloned), checking out the default branch.
+**EARS**: When a repository indexing job is triggered, the system shall clone the repository (if first time) or fetch updates (if previously cloned), checking out the specified branch or the default branch if none is specified. The system shall detect and record the repository's default branch.
 **Acceptance Criteria**:
-- Given a newly registered repository, when the indexing job starts, then the system shall perform a full `git clone` and store the working copy in the configured storage path.
-- Given a previously cloned repository, when a re-index job starts, then the system shall perform `git fetch` and `git reset` to the latest default branch HEAD.
+- Given a newly registered repository with no branch specified, when the indexing job starts, then the system shall perform a full `git clone`, detect the default branch, store it in `default_branch`, and set `indexed_branch` to the default branch.
+- Given a newly registered repository with branch "develop" specified, when the indexing job starts, then the system shall perform `git clone --branch develop` and set `indexed_branch` to "develop".
+- Given a previously cloned repository with `indexed_branch` = "main", when a re-index job starts, then the system shall perform `git fetch` and `git reset --hard origin/main`.
 - Given a repository that requires authentication, when credentials (SSH key or access token) are configured, then the system shall use them for clone/fetch operations.
 - Given a clone/fetch operation that fails (network error, auth failure), then the system shall mark the indexing job as "failed" with the error message and not proceed to parsing.
 - Given insufficient disk space during clone, then the system shall mark the job as "failed" with a disk-space error and clean up partial files.
+- Given a cloned repository, when `list_remote_branches()` is called, then the system shall return a list of all remote branch names (stripped of `origin/` prefix).
 
 ---
 
@@ -344,12 +351,15 @@ Admin --> UC22
 
 ### FR-017: Web UI Search Page
 
+<!-- Wave 1: Modified 2026-03-21 — add branch selector to repository registration form -->
+
 **Priority**: Should
-**EARS**: When a developer accesses the Web UI, the system shall display a search interface supporting natural language search, symbol search, repository filtering, and language filtering, with results displayed as syntax-highlighted code snippets with metadata.
+**EARS**: When a developer accesses the Web UI, the system shall display a search interface supporting natural language search, symbol search, repository filtering, and language filtering, with results displayed as syntax-highlighted code snippets with metadata. The repository registration form shall include a branch selector.
 **Acceptance Criteria**:
 - Given a developer accessing the Web UI root URL, when the page loads, then it shall display a search input, repository filter dropdown, and language filter checkboxes.
 - Given a search query submitted via the Web UI, when results are returned, then each result shall display: code snippet with syntax highlighting, repository name, file path, symbol name, and relevance score.
 - Given no results for a query, when displayed, then the UI shall show a "No results found" message.
+- Given the repository registration form, when the user enters a repository URL and the repo is already cloned, then the UI shall fetch available branches via the Branch Listing API and display a branch selector dropdown defaulting to the repo's default branch.
 
 ---
 
@@ -403,6 +413,17 @@ Admin --> UC22
 **Acceptance Criteria**:
 - Given a completed query, when logging executes, then the system shall write a structured JSON log entry to stdout containing: `query`, `result_count`, `retrieval_ms`, `rerank_ms`, `total_ms`, `timestamp`.
 - Given a logging failure (I/O error), then the system shall not block or delay the query response; logging failures are non-fatal.
+
+---
+
+### FR-023: Branch Listing API [Wave 1]
+
+**Priority**: Must
+**EARS**: When an API consumer requests the list of branches for a registered repository, the system shall return all remote branch names available in the repository's local clone.
+**Acceptance Criteria**:
+- Given a registered repository that has been cloned, when `GET /api/v1/repos/{id}/branches` is called, then the system shall return a JSON object with `branches` (sorted list of branch names) and `default_branch` (the repository's detected default branch).
+- Given a repository ID that does not exist, when the endpoint is called, then the system shall return 404.
+- Given a repository that has not been cloned yet (no clone_path), when the endpoint is called, then the system shall return 409 Conflict indicating the clone is not ready.
 
 ---
 
@@ -593,8 +614,8 @@ flowchart TD
 
 | Requirement | Pass Criterion |
 |-------------|---------------|
-| FR-001 | Repository registered, initial indexing job queued; invalid/duplicate URLs rejected |
-| FR-002 | Repository cloned/updated successfully; failure path marks job failed; disk-full handled |
+| FR-001 | Repository registered with optional branch, initial indexing job queued; invalid/duplicate URLs rejected |
+| FR-002 | Repository cloned/updated on specified or default branch; default_branch detected; remote branches listable; failure path marks job failed; disk-full handled |
 | FR-003 | Files classified by type; unsupported/binary/unreadable files skipped gracefully |
 | FR-004 | Multi-granularity chunks produced (file, class, function, symbol); fallback for unsupported languages |
 | FR-005 | All chunks have 1024-dim vectors in Qdrant; Qdrant-unreachable retries and fails gracefully |
@@ -609,12 +630,13 @@ flowchart TD
 | FR-014 | Valid API key passes; invalid/missing returns 401; brute-force returns 429 |
 | FR-015 | REST endpoints respond correctly for query, repos, health; malformed JSON returns 400 |
 | FR-016 | MCP tool `search_code_context` returns structured results; invalid params return MCP error |
-| FR-017 | Web UI displays search interface with syntax-highlighted results and filters |
+| FR-017 | Web UI displays search interface with syntax-highlighted results, filters, and branch selector for registration |
 | FR-018 | Language filter restricts results; invalid language returns 400; empty filter = no filter |
 | FR-019 | Cron-scheduled re-indexing triggers; failed jobs retry once; in-progress jobs not duplicated |
 | FR-020 | Manual reindex queues job and returns job ID; non-existent repo returns 404 |
 | FR-021 | Prometheus metrics endpoint returns all specified metrics |
 | FR-022 | Query logs written to stdout as structured JSON; logging failure is non-fatal |
+| FR-023 | Branch listing returns remote branches for cloned repo; 404 for unknown repo; 409 if not cloned |
 | NFR-001 | p95 query latency < 1000 ms under load |
 | NFR-002 | Sustained 1000 QPS throughput |
 | NFR-003 | 100–1000 repos indexed without degradation |
@@ -656,6 +678,7 @@ flowchart TD
 | FR-020 | Platform Engineer: on-demand re-indexing | Automated API test |
 | FR-021 | Platform Engineer: operational monitoring | Automated metrics scrape test |
 | FR-022 | Platform Engineer: query audit trail | Log format verification test |
+| FR-023 | Developer/UI: discover available branches for a repository | Automated API test |
 | NFR-001 | Interactive latency for IDE/AI agent usage | Load test (Locust) |
 | NFR-002 | Enterprise concurrent AI agent usage | Load test (Locust) |
 | NFR-003 | Enterprise repository portfolio capacity | Scale test |
