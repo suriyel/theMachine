@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 17/42 active features passing · Last: #13 Natural Language Query Handler (2026-03-21) · Next: #14 Symbol Query Handler
+Progress: 18/42 active features passing · Last: #14 Symbol Query Handler (2026-03-21) · Next: #15 Repository-Scoped Query
 
 ---
 
@@ -293,3 +293,15 @@ Progress: 17/42 active features passing · Last: #13 Natural Language Query Hand
 - **Review**: PASS — implementation matches design pseudocode, all VS covered
 - **Result**: Feature #13 marked PASSING
 - **Next**: Feature #14 — Symbol Query Handler
+
+### Session 23 — 2026-03-21 (Feature #14)
+- **Feature**: #14 — Symbol Query Handler
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: detect_query_type() heuristic (dots, ::, #, camelCase, PascalCase, snake_case → "symbol"; spaces or no pattern → "nl"); handle_symbol_query() — ES term on symbol.raw → fuzzy (fuzziness=AUTO) → NL pipeline fallback; ValidationError for empty/whitespace/>200 char queries; rerank top-6, build with query_type="symbol"
+- **Tests**: 22 feature tests + 453 prior = 475/475 passing (2 skipped)
+- **Coverage**: 100% line, 100% branch on query_handler.py; 95% overall
+- **Mutation**: 9/9 representative mutations killed (100%); mutmut 3.2.0 trampoline bug (manual verification)
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY)
+- **Review**: PASS — S1-S5 pass, D1-D5 pass; SRS AC-2 tension noted (NL fallback vs empty result for non-existent symbols — approved design refinement)
+- **Result**: Feature #14 marked PASSING
+- **Next**: Feature #15 — Repository-Scoped Query

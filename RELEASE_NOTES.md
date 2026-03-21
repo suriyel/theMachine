@@ -126,6 +126,12 @@
 - Example: 13-nl-query-handler.py
 - Example: 15-neural-reranking.py
 
+### Feature #14: Symbol Query Handler
+- **New**: `detect_query_type(query)` — auto-detection heuristic classifies queries as "symbol" (dots, `::`, `#`, camelCase, PascalCase, snake_case with no spaces) or "nl" (natural language)
+- **New**: `handle_symbol_query(query, repo)` — ES term exact match on `symbol.raw` → fuzzy fallback (`fuzziness=AUTO`) → NL pipeline fallback; reranks results (top-6), builds response with `query_type="symbol"`
+- **New**: Input validation — `ValidationError` for empty/whitespace queries and queries exceeding 200 chars
+- Example: 14-symbol-query.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
