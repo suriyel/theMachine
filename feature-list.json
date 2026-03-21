@@ -961,7 +961,7 @@
       "title": "C: typedef struct + function prototypes + enum",
       "description": "Detect type_definition containing struct_specifier as L2 chunk with typedef name as symbol. Detect declaration nodes with function_declarator (no body) as L3 prototype chunks. Add enum_specifier to C class_nodes.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
       "verification_steps": [
         "Given a C file with typedef struct { int x; } Point;, when chunking completes, then an L2 chunk is produced with symbol='Point'",
@@ -971,7 +971,9 @@
       ],
       "dependencies": [
         6
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-38-c-typedef-prototype-enum.md",
+      "st_case_count": 6
     },
     {
       "id": 39,

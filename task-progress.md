@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 25/42 active features passing · Last: #33 Branch Listing API (2026-03-22) · Next: #38 C: typedef struct + function prototypes + enum
+Progress: 26/42 active features passing · Last: #38 C: typedef struct + prototypes + enum (2026-03-22) · Next: #39 C++: namespace + template unwrapping
 
 ---
 
@@ -386,3 +386,15 @@ Progress: 25/42 active features passing · Last: #33 Branch Listing API (2026-03
 - **Review**: PASS — S1-S5, D1-D5, P1-P6, T1-T3 all pass
 - **Result**: Feature #33 marked PASSING
 - **Next**: Feature #38 — C: typedef struct + function prototypes + enum
+
+### Session 31 — 2026-03-22 (Feature #38)
+- **Feature**: #38 — C: typedef struct + function prototypes + enum
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: C class_nodes updated (struct_specifier, enum_specifier), type_definition unwrap in _walk_classes, declaration+function_declarator prototype detection in _walk_functions, preproc_ifdef/preproc_if recursion for C/C++, _find_child_of_type and _get_typedef_name helpers
+- **Tests**: 22 feature tests (20 unit + 2 real) + 610 prior = 632/632 passing (3 infra expected failures)
+- **Coverage**: 85% on chunker.py
+- **Mutation**: 6/6 manual mutations killed (100%); mutmut 3.2.0 stats mapping bug
+- **ST**: 6/6 test cases PASS (4 FUNC, 2 BNDRY)
+- **Review**: PASS — all verification steps covered, design-aligned
+- **Result**: Feature #38 marked PASSING
+- **Next**: Feature #39 — C++: namespace + template unwrapping

@@ -159,6 +159,13 @@
 - Admin role required (403 for read-only keys), 404 for non-existent repos
 - Creates IndexJob with status="pending" and returns job_id
 
+### Feature #38: C: typedef struct + function prototypes + enum
+- **New**: C `class_nodes` now includes `struct_specifier` and `enum_specifier` — typedef structs produce L2 chunks with typedef alias as symbol, enums produce L2 chunks
+- **New**: C function prototype detection — `declaration` nodes with `function_declarator` (no body) produce L3 chunks
+- **New**: `preproc_ifdef`/`preproc_if` recursion in `_walk_classes` and `_walk_functions` for C/C++ header guard unwrapping
+- **New**: `_find_child_of_type` and `_get_typedef_name` helper functions
+- Example: 21-c-typedef-prototype-enum.py
+
 ### Feature #33: Branch Listing API
 - **New**: `GET /api/v1/repos/{id}/branches` endpoint — returns sorted list of remote branch names and `default_branch` for a registered+cloned repository
 - **New**: `BranchListResponse` schema (branches: list[str], default_branch: str)
