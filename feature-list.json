@@ -591,6 +591,101 @@
         "Given a repository that has not been cloned yet, when the endpoint is called, then it returns 409 Conflict"
       ],
       "dependencies": [4, 17]
+    },
+    {
+      "id": 34,
+      "category": "core",
+      "title": "Python: decorated_definition Unwrapping",
+      "description": "Unwrap decorated_definition AST nodes in Python so that @property, @staticmethod, @classmethod, @dataclass, @app.route and other decorator-wrapped functions produce L3 chunks and decorator-wrapped classes produce L2 chunks. Decorator text preserved in chunk content.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a Python file with @property-decorated getter and @property.setter, when chunking completes, then each produces an L3 chunk with correct symbol name and parent_class",
+        "Given a Python file with @staticmethod and @classmethod decorated functions inside a class, when chunking completes, then each produces an L3 chunk with parent_class set to the class name",
+        "Given a Python file with @dataclass decorated class containing fields, when chunking completes, then the class produces an L2 chunk with symbol equal to the class name",
+        "Given a Python file with a top-level @app.route('/') decorated function, when chunking completes, then the function produces an L3 chunk with parent_class empty"
+      ],
+      "dependencies": [6]
+    },
+    {
+      "id": 35,
+      "category": "core",
+      "title": "Java: enum + record + static initializer",
+      "description": "Add enum_declaration and record_declaration to Java class_nodes so enums (with methods) and records produce L2 chunks. Add static_initializer to function_nodes so static {} blocks produce L3 chunks.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a Java file with an enum declaration containing 2 enum constants and 1 method, when chunking completes, then the enum produces an L2 chunk and the method produces an L3 chunk with parent_class equal to the enum name",
+        "Given a Java file with a record declaration (Java 16+), when chunking completes, then the record produces an L2 chunk with correct symbol name",
+        "Given a Java file with a static initializer block inside a class, when chunking completes, then the static block produces an L3 chunk with parent_class set to the class name"
+      ],
+      "dependencies": [6]
+    },
+    {
+      "id": 36,
+      "category": "core",
+      "title": "JavaScript: prototype-assigned functions + require() imports",
+      "description": "Detect expression_statement > assignment_expression where right side is function_expression or arrow_function, extracting property name as symbol for L3 chunk. Detect require() calls in variable_declaration and extract module path as import.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a JavaScript file with res.status = function(code){...}, when chunking completes, then an L3 chunk is produced with symbol='status'",
+        "Given a JavaScript file with obj.handler = (req, res) => {...}, when chunking completes, then an L3 chunk is produced with symbol='handler'",
+        "Given a JavaScript file with var express = require('express'), when chunking completes, then the L1 file chunk's imports list includes 'express'",
+        "Given a JavaScript file with multiple require() calls, when chunking completes, then all required module paths appear in imports"
+      ],
+      "dependencies": [6]
+    },
+    {
+      "id": 37,
+      "category": "core",
+      "title": "TypeScript: enum + namespace + decorator unwrapping",
+      "description": "Add enum_declaration to TS class_nodes. Unwrap internal_module/module (namespace) to recurse into body for class/function detection. Unwrap decorator-wrapped classes/functions (same strategy as Python decorated_definition).",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a TypeScript file with an enum declaration containing 3 members, when chunking completes, then the enum produces an L2 chunk",
+        "Given a TypeScript file with namespace Foo { class Bar { method() {} } }, when chunking completes, then Bar produces an L2 chunk and method produces an L3 chunk",
+        "Given a TypeScript file with nested namespaces (namespace A { namespace B { class C {} } }), when chunking completes, then class C produces an L2 chunk",
+        "Given a TypeScript file with @Component-decorated class, when chunking completes, then the class produces an L2 chunk with correct symbol name"
+      ],
+      "dependencies": [6]
+    },
+    {
+      "id": 38,
+      "category": "core",
+      "title": "C: typedef struct + function prototypes + enum",
+      "description": "Detect type_definition containing struct_specifier as L2 chunk with typedef name as symbol. Detect declaration nodes with function_declarator (no body) as L3 prototype chunks. Add enum_specifier to C class_nodes.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a C file with typedef struct { int x; } Point;, when chunking completes, then an L2 chunk is produced with symbol='Point'",
+        "Given a C header file with 5 function prototype declarations (no body, semicolon-terminated), when chunking completes, then 5 L3 chunks are produced with content equal to each declaration line",
+        "Given a C file with enum Color { RED, GREEN, BLUE };, when chunking completes, then an L2 chunk is produced with symbol='Color'",
+        "Given a C header with both typedef structs and function prototypes inside #ifndef guards, when chunking completes, then all are correctly detected (not blocked by preproc_ifdef)"
+      ],
+      "dependencies": [6]
+    },
+    {
+      "id": 39,
+      "category": "core",
+      "title": "C++: namespace + template unwrapping",
+      "description": "Recursively unwrap namespace_definition nodes (including nested and C++17 inline namespaces) to find class/function nodes within. Single-level unwrap template_declaration to detect inner class_specifier or function_definition.",
+      "priority": "high",
+      "status": "failing",
+      "wave": 2,
+      "verification_steps": [
+        "Given a C++ file with namespace foo { class Bar { void method() {} } }, when chunking completes, then Bar produces an L2 chunk and method produces an L3 chunk",
+        "Given a C++ file with nested namespaces (namespace a { namespace b { void func() {} } }), when chunking completes, then func produces an L3 chunk",
+        "Given a C++ file with template<typename T> class Container { void push(T val) {} }, when chunking completes, then Container produces an L2 chunk and push produces an L3 chunk",
+        "Given a C++ file with template<typename T> T max_val(T a, T b) {}, when chunking completes, then max_val produces an L3 chunk"
+      ],
+      "dependencies": [6]
     }
   ],
   "waves": [
@@ -598,6 +693,11 @@
       "id": 1,
       "date": "2026-03-21",
       "description": "Support branch selection for repository clone & indexing"
+    },
+    {
+      "id": 2,
+      "date": "2026-03-21",
+      "description": "Strengthen AST parsing accuracy for 6 supported languages — decorator/namespace/template/enum/prototype/require/typedef patterns"
     }
   ]
 }
