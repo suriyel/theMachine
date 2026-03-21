@@ -107,6 +107,14 @@
 - **New**: Graceful fallback to fusion-ranked order on model load failure, inference error, or NaN scores — logs degradation warning
 - **New**: Batch inference with batch_size=32 for cross-encoder efficiency
 - **New**: Pure computation module — no external I/O dependencies at runtime (model loaded at init)
+
+### Feature #12: Context Response Builder
+- **New**: ResponseBuilder — `build(chunks, query, query_type, repo?, rules?)` splits reranked ScoredChunks by `content_type` into dual-list response (codeResults + docResults)
+- **New**: Content truncation — content exceeding 2000 chars truncated with `...` marker and `truncated: true` flag
+- **New**: Rules section — optional categorized rules (agent_rules, contribution_guide, linter_config) from repository rule chunks
+- **New**: Pydantic response models — QueryResponse, CodeResult, DocResult, RulesSection
+- **New**: Pure computation — stateless transformer, no external dependencies
+- Example: 12-context-response-builder.py
 - Example: 15-neural-reranking.py
 
 ### Wave 1 Re-verification

@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 15/42 active features passing · Last: #11 Neural Reranking (2026-03-21) · Next: #12 Context Response Builder
+Progress: 16/42 active features passing · Last: #12 Context Response Builder (2026-03-21) · Next: #13 Natural Language Query Handler
 
 ---
 
@@ -269,3 +269,15 @@ Progress: 15/42 active features passing · Last: #11 Neural Reranking (2026-03-2
 - **Review**: PASS — S1-S5 pass, D1-D5 pass (3 minor: secondary fallback model deferred, naming deviation, top-K scope), P1-P6 pass, T1-T3 pass
 - **Result**: Feature #11 marked PASSING
 - **Next**: Feature #12 — Context Response Builder
+
+### Session 21 — 2026-03-21 (Feature #12)
+- **Feature**: #12 — Context Response Builder
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: ResponseBuilder with build(chunks, query, query_type, repo?, rules?) — splits reranked ScoredChunks by content_type into codeResults + docResults, truncates content >2000 chars with "...", optional categorized RulesSection; Pydantic models: QueryResponse, CodeResult, DocResult, RulesSection
+- **Tests**: 17 feature tests + 407 prior = 424/424 passing (3 skipped)
+- **Coverage**: 100% line, 100% branch on response_builder.py + response_models.py
+- **Mutation**: 10/10 representative mutations killed (100%); mutmut 3.2.0 trampoline bug (manual verification)
+- **ST**: 6/6 test cases PASS (3 FUNC, 3 BNDRY)
+- **Review**: PASS — S1-S5 pass, D1-D5 pass, P1-P6 pass, T1-T3 pass; minor: upstream ScoredChunk missing imports/code_examples/content_tokens fields (not ResponseBuilder defect)
+- **Result**: Feature #12 marked PASSING
+- **Next**: Feature #13 — Natural Language Query Handler
