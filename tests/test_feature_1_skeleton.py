@@ -39,7 +39,7 @@ def test_health_endpoint_returns_ok():
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "ok"
+    assert body["status"] in ("healthy", "degraded")
     assert body["service"] == "code-context-retrieval"
 
 
@@ -79,7 +79,7 @@ def test_health_endpoint_response_keys():
     client = TestClient(app)
     response = client.get("/api/v1/health")
     body = response.json()
-    assert set(body.keys()) == {"status", "service"}
+    assert set(body.keys()) == {"status", "service", "services"}
 
 
 # --- Error Handling ---
