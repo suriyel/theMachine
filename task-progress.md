@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 14/42 active features passing · Last: #10 Rank Fusion RRF (2026-03-21) · Next: #11 Neural Reranking
+Progress: 15/42 active features passing · Last: #11 Neural Reranking (2026-03-21) · Next: #12 Context Response Builder
 
 ---
 
@@ -257,3 +257,15 @@ Progress: 14/42 active features passing · Last: #10 Rank Fusion RRF (2026-03-21
 - **Review**: PASS — S1-S5 all pass, D1-D5 all pass, P1-P6 pass (example created in persist step), T1-T3 pass
 - **Result**: Feature #10 marked PASSING
 - **Next**: Feature #11 — Neural Reranking
+
+### Session 20 — 2026-03-21 (Feature #11)
+- **Feature**: #11 — Neural Reranking
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Reranker class with rerank(query, candidates, top_k=6) using bge-reranker-v2-m3 CrossEncoder; builds query-content pairs, predicts scores with batch_size=32, sorts descending, truncates to top_k; graceful fallback to fusion order on model load failure, inference error, or NaN scores
+- **Tests**: 11 feature tests + 388 prior = 399/399 passing
+- **Coverage**: 100% line, 100% branch on reranker.py; 95% overall
+- **Mutation**: 6/6 non-equivalent mutations killed (2 equivalent: empty-check, batch-size); mutmut 3.2.0 stats mapping bug (manual verification)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS — S1-S5 pass, D1-D5 pass (3 minor: secondary fallback model deferred, naming deviation, top-K scope), P1-P6 pass, T1-T3 pass
+- **Result**: Feature #11 marked PASSING
+- **Next**: Feature #12 — Context Response Builder

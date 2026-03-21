@@ -102,6 +102,13 @@
 - **New**: Pure computation — no external dependencies, ~2ms for 400 candidates
 - Example: 14-rank-fusion.py
 
+### Feature #11: Neural Reranking
+- **New**: Reranker — `rerank(query, candidates, top_k=6)` using bge-reranker-v2-m3 cross-encoder via sentence-transformers, scoring query-document pairs and selecting top-K results sorted by relevance
+- **New**: Graceful fallback to fusion-ranked order on model load failure, inference error, or NaN scores — logs degradation warning
+- **New**: Batch inference with batch_size=32 for cross-encoder efficiency
+- **New**: Pure computation module — no external I/O dependencies at runtime (model loaded at init)
+- Example: 15-neural-reranking.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
