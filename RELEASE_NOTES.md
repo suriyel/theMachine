@@ -27,6 +27,18 @@
 - **New**: Graceful skip for encoding errors and permission issues with logged warnings
 - Example: 05-content-extraction.py
 
+### Feature #6: Code Chunking
+- **New**: Chunker — tree-sitter AST parsing for 6 languages (Python, Java, JS, TS, C, C++), producing L1 (file), L2 (class), L3 (function) chunks with symbol, signature, doc_comment extraction
+- **New**: CodeChunk, LanguageNodeMap dataclasses; EXT_TO_LANGUAGE and LANGUAGE_NODE_MAPS constants
+- **New**: 500-line function splitting with 50-line overlap windows
+- **New**: DocChunker — markdown heading-based splitting (H2/H3), breadcrumb construction, code block extraction, paragraph fallback, H4 optional split, token-limit enforcement
+- **New**: DocChunk, CodeBlock dataclasses; Section namedtuple
+- **New**: RuleExtractor — rule_type detection (agent_rules, contribution_guide, editor_config, linter_config), CLAUDE.md/CONTRIBUTING.md/.cursor/rules pattern matching
+- **New**: RuleChunk dataclass
+- **New**: Lazy parser initialization (one per language, reused across files)
+- **New**: Arrow function detection for JavaScript/TypeScript (lexical_declaration/export_statement)
+- Example: 06-code-chunking.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

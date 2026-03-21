@@ -207,7 +207,9 @@
       "title": "Code Chunking",
       "description": "Implement Chunker with tree-sitter AST parsing for 6 languages, producing L1 (file), L2 (class), L3 (function) chunks with symbol, signature, doc_comment extraction. Includes DocChunker for markdown heading-based splitting and RuleExtractor for rule files.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
+      "st_case_path": "docs/test-cases/feature-6-code-chunking.md",
+      "st_case_count": 10,
       "verification_steps": [
         "Given a Python file with 1 class containing 3 methods, when chunk_file() runs, then it produces 1 L1 file chunk, 1 L2 class chunk, and 3 L3 function chunks with correct symbol names and signatures",
         "Given a Java file with 2 classes, when chunk_file() runs, then it produces L1, L2, and L3 chunks with parent_class set correctly for methods",

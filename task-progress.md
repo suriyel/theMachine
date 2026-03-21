@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 5/33 active features passing · Last: #5 Content Extraction (2026-03-21) · Next: #6 Code Chunking
+Progress: 6/33 active features passing · Last: #6 Code Chunking (2026-03-21) · Next: #7 Embedding Generation
 
 ---
 
@@ -117,3 +117,17 @@ Progress: 5/33 active features passing · Last: #5 Content Extraction (2026-03-2
 - **Review**: PASS — 2 minor findings (module-level constants vs instance attrs, .cursor dir filter not in pseudocode)
 - **Result**: Feature #5 marked PASSING
 - **Next**: Feature #6 — Code Chunking
+
+### Session 9 — 2026-03-21 (Feature #6)
+- **Feature**: #6 — Code Chunking
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Chunker (tree-sitter AST, 6 languages, L1/L2/L3), DocChunker (markdown heading-based split, breadcrumbs, code blocks), RuleExtractor (rule_type detection)
+- **Data models**: CodeChunk, LanguageNodeMap, DocChunk, CodeBlock, Section, RuleChunk
+- **Key features**: Lazy parser init, 500-line function splitting with overlap, H4 optional split, paragraph fallback, arrow function detection (JS/TS)
+- **Tests**: 76 feature tests + 146 prior = 222/222 passing
+- **Coverage**: 90% chunker.py, 91% doc_chunker.py, 100% rule_extractor.py
+- **Mutation**: known mutmut 3.2.0 __init__ mapping bug (consistent with prior sessions)
+- **ST**: 10/10 test cases PASS (6 FUNC, 4 BNDRY), all Real
+- **Review**: PASS — 3 minor findings (extra language param, Python signature enhancement, DocChunk branch asymmetry)
+- **Result**: Feature #6 marked PASSING
+- **Next**: Feature #7 — Embedding Generation
