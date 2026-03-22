@@ -202,6 +202,15 @@
 - **New**: Namespace + template combined patterns (e.g., `namespace ns { template<T> class Tmpl {} }`)
 - Example: 22-cpp-namespace-template-chunking.py
 
+### Feature #19: Web UI Search Page
+- **New**: `WebRouter` class (`src/query/web_router.py`) — 4 SSR routes: search page, search results (htmx partial), repository registration, branch listing
+- **New**: `CodeHighlighter` + `UCDDarkStyle` (`src/query/highlighter.py`) — Pygments syntax highlighting with UCD Developer Dark theme token colors
+- **New**: Jinja2 templates (`_base.html`, `search.html`, partials) with htmx integration for partial page updates
+- **New**: Static CSS (`style.css`) with full UCD color, typography, and spacing tokens as CSS custom properties
+- **New**: Developer Dark theme: bg `#0d1117`, search input 44px, repo dropdown 200px, language checkboxes, result cards with syntax highlighting, empty state, header 56px
+- **New**: Registration form with branch selector (fetches branches via Branch Listing API)
+- Example: 24-web-ui-search.sh
+
 ### Feature #20: Language Filter
 - **New**: `LanguageFilter` class (`src/query/language_filter.py`) — validates and normalizes language filter values against supported set (CON-001: java, python, typescript, javascript, c, c++)
 - **New**: Integrated into both `handle_nl_query` and `handle_symbol_query` paths in QueryHandler
