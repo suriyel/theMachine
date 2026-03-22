@@ -6,12 +6,17 @@
 
 | Service Name | Port | Start Command | Stop Command | Verify URL |
 |---|---|---|---|---|
-| query-api | 8000 | `uvicorn src.query.main:app --host 0.0.0.0 --port 8000` | kill PID | `http://localhost:8000/api/v1/health` |
+| query-api | 8000 | `uvicorn --factory src.query.app:create_app --host 0.0.0.0 --port 8000` | kill PID | `http://localhost:8000/api/v1/health` |
 | mcp-server | 3000 | `python -m src.query.mcp` | kill PID | `http://localhost:3000/health` |
 | index-worker | — | `celery -A src.indexing.celery_app worker --loglevel=info` | kill PID | N/A (check celery inspect active) |
 | celery-beat | — | `celery -A src.indexing.celery_app beat --loglevel=info` | kill PID | N/A |
 
 ## External Dependencies (must be running before services)
+
+All external dependencies run as Docker containers. Start them with:
+```bash
+docker start postgres redis qdrant elasticsearch rabbitmq
+```
 
 | Service | Port | Verify |
 |---|---|---|
@@ -19,7 +24,7 @@
 | Elasticsearch | 9200 | `curl -f http://localhost:9200/_cluster/health` |
 | Qdrant | 6333 | `curl -f http://localhost:6333/healthz` |
 | Redis | 6379 | `redis-cli ping` |
-| RabbitMQ | 5672 | `rabbitmqctl status` |
+| RabbitMQ | 5672 | `docker exec rabbitmq rabbitmqctl status` |
 
 ## Start All Services
 
@@ -29,7 +34,7 @@ source .venv/bin/activate
 set -a && source .env && set +a
 
 # Start query-api
-uvicorn src.query.main:app --host 0.0.0.0 --port 8000 > /tmp/svc-query-api-start.log 2>&1 &
+uvicorn --factory src.query.app:create_app --host 0.0.0.0 --port 8000 > /tmp/svc-query-api-start.log 2>&1 &
 sleep 3
 head -30 /tmp/svc-query-api-start.log
 # → Record PID in task-progress.md

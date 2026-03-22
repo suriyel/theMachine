@@ -875,3 +875,49 @@ def test_real_query_logging_stdout_feature_24():
     assert entry["rerank_ms"] == 3.8
     assert entry["total_ms"] == 20.1
     assert "timestamp" in entry
+
+
+# ===========================================================================
+# Feature #25 — Query Cache: real L1 + SHA-256 key generation
+# ===========================================================================
+
+
+@pytest.mark.real
+def test_real_query_cache_set_get_roundtrip_feature_25():
+    """feature #25: Cache set/get round-trip with real SHA-256 hashing and L1 store."""
+    import asyncio
+
+    from src.query.query_cache import QueryCache
+    from src.query.response_models import CodeResult, QueryResponse
+
+    cache = QueryCache(redis_client=None, default_ttl=300)
+
+    response = QueryResponse(
+        query="find authentication module",
+        query_type="nl",
+        repo="org/example",
+        code_results=[
+            CodeResult(
+                file_path="src/auth.py",
+                content="class Authenticator: ...",
+                relevance_score=0.92,
+            )
+        ],
+    )
+
+    async def _run():
+        await cache.set("find authentication module", "org/example", ["python"], response)
+        cached = await cache.get("find authentication module", "org/example", ["python"])
+        return cached
+
+    cached = asyncio.run(_run())
+    assert cached is not None
+    assert cached.query == "find authentication module"
+    assert cached.repo == "org/example"
+    assert len(cached.code_results) == 1
+    assert cached.code_results[0].file_path == "src/auth.py"
+
+    # Verify deterministic key generation uses SHA-256
+    key = cache._make_key("find authentication module", "org/example", ["python"])
+    assert key.startswith("qcache:")
+    assert len(key) == len("qcache:") + 64  # SHA-256 hex = 64 chars
