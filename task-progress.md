@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 32/42 active features passing · Last: #25 Query Cache (2026-03-22) · Next: #28 NFR-003 Repository Capacity
+Progress: 33/42 active features passing · Last: #40 Evaluation Corpus Management (2026-03-22) · Next: #26 NFR-001 Query Latency
 
 ---
 
@@ -472,3 +472,17 @@ Progress: 32/42 active features passing · Last: #25 Query Cache (2026-03-22) ·
 - **Infrastructure**: Updated env-guide.md with Docker start commands and corrected uvicorn factory invocation
 - **Result**: Feature #25 marked PASSING
 - **Next**: Feature #28 — NFR-003 Repository Capacity
+
+### Session 38 — 2026-03-22 (Feature #40)
+- **Feature**: #40 — Evaluation Corpus Management
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: YES — ES (eval_code_chunks), Qdrant (eval_code_embeddings); Docker containers started
+- **Implementation**: EvalCorpusBuilder (build, _load_repos, _is_already_indexed, _index_repo), EvalRepo/RepoResult/CorpusSummary dataclasses, eval_ prefix namespace isolation via IndexWriter kwargs
+- **Infrastructure**: IndexWriter.write_code_chunks extended with optional es_index/qdrant_collection params; eval/repos.json with 12 curated repos (2 per language)
+- **Tests**: 17 feature tests (15 unit + 1 boundary + 1 real ES integration) + 777 prior = 794/794 passing
+- **Coverage**: corpus_builder.py 100% line, 100% branch
+- **Mutation**: 100% (36/36 killed)
+- **ST**: 8/8 test cases PASS (4 FUNC, 3 BNDRY, 1 SEC)
+- **Review**: Initial FAIL (3 issues: eval_ prefix not applied, eval/repos.json missing, no prefix test). Fixed and re-reviewed → PASS
+- **Result**: Feature #40 marked PASSING
+- **Next**: Feature #26 — NFR-001 Query Latency

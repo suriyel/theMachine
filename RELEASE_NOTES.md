@@ -240,6 +240,15 @@
 - **New**: Non-fatal — all logging wrapped in try/except, I/O failures never block query responses
 - Example: 24-query-logging.py
 
+### Feature #40: Evaluation Corpus Management
+- **New**: `EvalCorpusBuilder` class (`src/eval/corpus_builder.py`) — orchestrates cloning 12 representative open-source repos (2 per supported language) and running the full indexing pipeline (ContentExtractor → Chunker → EmbeddingEncoder → IndexWriter) into `eval_`-prefixed ES/Qdrant namespaces
+- **New**: `EvalRepo`, `RepoResult`, `CorpusSummary` dataclasses for structured corpus build results
+- **New**: Idempotency via ES count query — skips already-indexed repos on re-run
+- **New**: Error isolation — clone/embedding/write failures for individual repos are logged and counted without halting the batch
+- **New**: `eval/repos.json` — 12 curated open-source repos (flask, httpx, spring-petclinic, guava, express, lodash, typescript-eslint, zod, redis, jq, nlohmann/json, fmtlib/fmt)
+- **Changed**: `IndexWriter.write_code_chunks` now accepts optional `es_index`/`qdrant_collection` kwargs for namespace isolation (backward-compatible defaults)
+- Example: 40-eval-corpus-build.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

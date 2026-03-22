@@ -1011,7 +1011,7 @@
       "title": "Evaluation Corpus Management",
       "description": "Build evaluation corpus by cloning representative open-source repos (2 per supported language, 12 total from eval/repos.json), running the full indexing pipeline (ContentExtractor \u2192 Chunker \u2192 EmbeddingEncoder \u2192 IndexWriter) into eval_ prefixed ES/Qdrant namespaces. Idempotent \u2014 skips already-indexed repos.",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "wave": 3,
       "verification_steps": [
         "Given eval/repos.json with 12 repos (2 per language), when EvalCorpusBuilder.build() runs, then all accessible repos are cloned and indexed with chunks in eval_code_chunks (ES) and eval_code_embeddings (Qdrant)",
@@ -1023,7 +1023,9 @@
         5,
         6,
         7
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-40-evaluation-corpus-management.md",
+      "st_case_count": 8
     },
     {
       "id": 41,
