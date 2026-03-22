@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 33/42 active features passing · Last: #40 Evaluation Corpus Management (2026-03-22) · Next: #26 NFR-001 Query Latency
+Progress: 34/42 active features passing · Last: #41 LLM Query Generation & Relevance Annotation (2026-03-22) · Next: #42 Retrieval Quality Evaluation & Reporting
 
 ---
 
@@ -486,3 +486,16 @@ Progress: 33/42 active features passing · Last: #40 Evaluation Corpus Managemen
 - **Review**: Initial FAIL (3 issues: eval_ prefix not applied, eval/repos.json missing, no prefix test). Fixed and re-reviewed → PASS
 - **Result**: Feature #40 marked PASSING
 - **Next**: Feature #26 — NFR-001 Query Latency
+
+### Session 39 — 2026-03-22 (Feature #41)
+- **Feature**: #41 — LLM Query Generation & Relevance Annotation
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: YES — ES/Qdrant (via Retriever), MiniMax API (external)
+- **Implementation**: LLMAnnotator (generate_queries, annotate_relevance, _dual_annotate, _resolve_disagreement, _compute_kappa, _resolve_provider_config), EvalQuery/Annotation dataclasses, GoldenDataset (save/load with atomic writes), _extract_json for reasoning model response handling
+- **Tests**: 33 feature tests (28 annotator + 5 golden_dataset) + 2 real tests (API connectivity + generate_queries) + 794 prior = 828/828 passing
+- **Coverage**: annotator.py 94% line/90.5% branch, golden_dataset.py 95%/100%
+- **Mutation**: mutmut v3 tooling limitation (module path resolution in mutants/ dir); manual verification confirms tests kill mutants
+- **ST**: 12/12 test cases PASS (6 FUNC, 4 BNDRY, 2 SEC)
+- **Review**: Initial FAIL (3 issues: env var naming, seed parameter, real test coverage). Fixed: documented env var deviation, added seed=42, added real generate_queries test, added reasoning model response extraction → PASS
+- **Result**: Feature #41 marked PASSING
+- **Next**: Feature #42 — Retrieval Quality Evaluation & Reporting

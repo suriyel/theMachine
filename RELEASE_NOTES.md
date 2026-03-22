@@ -249,6 +249,17 @@
 - **Changed**: `IndexWriter.write_code_chunks` now accepts optional `es_index`/`qdrant_collection` kwargs for namespace isolation (backward-compatible defaults)
 - Example: 40-eval-corpus-build.py
 
+### Feature #41: LLM Query Generation & Relevance Annotation
+- **New**: `LLMAnnotator` class (`src/eval/annotator.py`) — multi-provider LLM integration (MiniMax/Zhipu) via OpenAI SDK for query generation and relevance annotation
+- **New**: `generate_queries(repo, chunk_count, n_queries)` — generates 50-100 NL queries across 4 categories (api_usage, bug_diagnosis, configuration, architecture) with configurable distribution
+- **New**: `annotate_relevance(query, chunks)` — dual annotation at temperatures 0.1/0.3 with majority-vote tiebreaker for disagreements >1 point
+- **New**: `_compute_kappa()` — Cohen's Kappa inter-annotator agreement on 4x4 ordinal confusion matrix
+- **New**: `GoldenDataset` class (`src/eval/golden_dataset.py`) — atomic save/load of golden datasets to `eval/golden/{slug}.json` with queries, annotations, kappa, and metadata
+- **New**: `LLMAnnotatorError` exception for LLM API failures and parse errors
+- **New**: Reasoning model support — strips `<think>` blocks and markdown code fences from LLM responses
+- **New**: `seed=42` parameter on all LLM calls for reproducibility (where supported by provider)
+- Example: 41-llm-annotation.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

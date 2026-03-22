@@ -1033,7 +1033,7 @@
       "title": "LLM Query Generation & Relevance Annotation",
       "description": "Use OpenAI-compatible LLM API with multi-provider support (MiniMax, Zhipu) via EVAL_LLM_PROVIDER env var to generate 50-100 NL queries per evaluation repo across 4 categories, retrieve top-20 chunks per query, and annotate relevance (0-3 scale) using dual annotation with Cohen Kappa consistency checking. Store as golden dataset in eval/golden/{slug}.json.",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "wave": 3,
       "verification_steps": [
         "Given an indexed evaluation repo, when LLMAnnotator.generate_queries() runs, then 50-100 NL queries are produced covering API usage, bug diagnosis, configuration, and architecture understanding categories",
@@ -1044,7 +1044,9 @@
       ],
       "dependencies": [
         40
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-41-llm-query-generation-relevance-annotation.md",
+      "st_case_count": 12
     },
     {
       "id": 42,
