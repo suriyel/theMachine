@@ -41,6 +41,7 @@ dev = [
     "pytest-cov==6.0.0",
     "pytest-asyncio==0.25.0",
     "mutmut==3.2.0",
+    "locust>=2.29",
 ]
 
 [tool.setuptools.packages.find]
@@ -71,3 +72,4 @@ exclude_lines = [
 paths_to_mutate = "src/"
 tests_dir = "tests/"
 runner = "python -m pytest -x --tb=short -k 'not test_project_structure and not real and not test_web_ui'"
+
