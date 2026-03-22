@@ -790,13 +790,15 @@
       "title": "NFR-002: Query Throughput >= 1000 QPS",
       "description": "Verify sustained throughput of >= 1000 QPS with acceptable error rate",
       "priority": "low",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a Locust load test ramping to 1000+ QPS, when sustained for 5 minutes, then the system maintains >= 1000 QPS with < 1% error rate"
       ],
       "dependencies": [
         26
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-27-nfr-002-query-throughput.md",
+      "st_case_count": 10
     },
     {
       "id": 28,

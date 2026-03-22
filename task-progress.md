@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 36/42 active features passing · Last: #26 NFR-001: Query Latency p95 < 1s (2026-03-23) · Next: #27 NFR-002: Query Throughput >= 1000 QPS
+Progress: 37/42 active features passing · Last: #27 NFR-002: Query Throughput >= 1000 QPS (2026-03-23) · Next: #28 NFR-003: Repository Capacity
 
 ---
 
@@ -525,3 +525,16 @@ Progress: 36/42 active features passing · Last: #26 NFR-001: Query Latency p95 
 - **Review**: FAIL → fixed: added QueryLatencyLoadTest Locust class, locust dep, repo_id in payloads → re-verified PASS
 - **Result**: Feature #26 marked PASSING
 - **Next**: Feature #27 — NFR-002: Query Throughput >= 1000 QPS
+
+### Session 37 — 2026-03-23 (Feature #27)
+- **Feature**: #27 — NFR-002: Query Throughput >= 1000 QPS
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: NO — pure computation (CSV parsing)
+- **Implementation**: ThroughputReportAnalyzer (analyze, analyze_from_stats), ThroughputVerificationResult (summary) — dual-condition pass logic (QPS >= threshold AND error_rate < threshold)
+- **Tests**: 16 feature tests + 863 prior = 879/879 passing
+- **Coverage**: throughput_report_analyzer.py 100%, throughput_verification_result.py 100%
+- **Mutation**: 87.6% (78 killed + 11 suspicious / 89 total, 0 survived)
+- **ST**: 10/10 test cases PASS (5 FUNC, 4 BNDRY, 1 PERF)
+- **Review**: PASS — all S1-S5, D1-D5, R1-R3 checks passed
+- **Result**: Feature #27 marked PASSING
+- **Next**: Feature #28 — NFR-003: Repository Capacity

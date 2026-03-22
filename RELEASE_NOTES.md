@@ -282,6 +282,12 @@
 - **New**: `locust>=2.29` added as dev dependency for load testing
 - Example: 26-nfr-001-latency-check.py
 
+### Feature #27: NFR-002 Query Throughput >= 1000 QPS
+- **New**: `ThroughputReportAnalyzer` (`src/loadtest/throughput_report_analyzer.py`) — parses Locust stats CSV files, extracts aggregated Requests/s metric, compares against configurable QPS threshold (default 1000.0) with dual-condition pass logic (QPS >= threshold AND error_rate < threshold)
+- **New**: `ThroughputReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting list of stats dicts with summed QPS aggregation
+- **New**: `ThroughputVerificationResult` dataclass (`src/loadtest/throughput_verification_result.py`) — structured pass/fail verdict with QPS, error rate, total requests, and human-readable summary
+- Example: 27-nfr-002-throughput-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
