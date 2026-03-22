@@ -188,6 +188,20 @@
 - **New**: Non-existent repository returns empty result set (no exception) — ES/Qdrant return 0 hits gracefully
 - Example: 15-repo-scoped-query.py
 
+### Feature #38: C typedef struct + prototypes + enum
+- **New**: `type_definition` containing `struct_specifier` → L2 chunk with typedef name as symbol
+- **New**: `declaration` with `function_declarator` (no body) → L3 prototype chunk
+- **New**: `enum_specifier` added to C `class_nodes` → L2 chunk
+- **New**: `preproc_ifdef`/`preproc_if` recursion for class/function/import detection inside header guards
+- Example: 21-c-typedef-prototype-enum.py
+
+### Feature #39: C++ namespace + template unwrapping
+- **New**: Recursive `namespace_definition` unwrapping in `_walk_classes`, `_walk_functions`, and `extract_file_chunk` — supports nested namespaces, C++17 `a::b::c` syntax, inline namespaces
+- **New**: Single-level `template_declaration` unwrapping — template class → L2 chunk, template function → L3 chunk
+- **New**: `_collect_namespace_symbols()` helper for L1 top_level_symbols extraction from namespaces
+- **New**: Namespace + template combined patterns (e.g., `namespace ns { template<T> class Tmpl {} }`)
+- Example: 22-cpp-namespace-template-chunking.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

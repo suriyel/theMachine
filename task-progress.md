@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 26/42 active features passing · Last: #38 C: typedef struct + prototypes + enum (2026-03-22) · Next: #39 C++: namespace + template unwrapping
+Progress: 27/42 active features passing · Last: #39 C++: namespace + template unwrapping (2026-03-22) · Next: #20 Language Filter
 
 ---
 
@@ -398,3 +398,15 @@ Progress: 26/42 active features passing · Last: #38 C: typedef struct + prototy
 - **Review**: PASS — all verification steps covered, design-aligned
 - **Result**: Feature #38 marked PASSING
 - **Next**: Feature #39 — C++: namespace + template unwrapping
+
+### Session 32 — 2026-03-22 (Feature #39)
+- **Feature**: #39 — C++: namespace + template unwrapping
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: Recursive namespace_definition unwrapping in _walk_classes, _walk_functions, extract_file_chunk. Single-level template_declaration unwrapping for class/function. New _collect_namespace_symbols helper. Supports nested/C++17/inline namespaces and namespace+template combos.
+- **Tests**: 14 feature tests (12 unit + 1 real + 1 integration) + 650 prior = 664/664 passing
+- **Coverage**: 92% on chunker.py, 95% total
+- **Mutation**: 32/32 manual mutations killed (100%); mutmut 3.2.0 stats mapping bug
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: PASS — all verification steps covered, design-aligned
+- **Result**: Feature #39 marked PASSING
+- **Next**: Feature #20 — Language Filter

@@ -981,8 +981,10 @@
       "title": "C++: namespace + template unwrapping",
       "description": "Recursively unwrap namespace_definition nodes (including nested and C++17 inline namespaces) to find class/function nodes within. Single-level unwrap template_declaration to detect inner class_specifier or function_definition.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "wave": 2,
+      "st_case_path": "docs/test-cases/feature-39-cpp-namespace-template-unwrapping.md",
+      "st_case_count": 5,
       "verification_steps": [
         "Given a C++ file with namespace foo { class Bar { void method() {} } }, when chunking completes, then Bar produces an L2 chunk and method produces an L3 chunk",
         "Given a C++ file with nested namespaces (namespace a { namespace b { void func() {} } }), when chunking completes, then func produces an L3 chunk",
