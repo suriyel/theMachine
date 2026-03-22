@@ -218,6 +218,14 @@
 - **New**: Case normalization (e.g., "Java" → "java"), whitespace stripping, empty/None → no filter
 - Example: 23-language-filter.py
 
+### Feature #23: Metrics Endpoint
+- **New**: `metrics_registry` module (`src/query/metrics_registry.py`) — Prometheus metrics using prometheus-client==0.21.1
+- **New**: Metrics: `query_latency_seconds` (histogram), `retrieval_latency_seconds` (histogram), `rerank_latency_seconds` (histogram), `query_total` (counter), `cache_hit_ratio` (gauge), `index_size_chunks` (gauge)
+- **New**: `GET /metrics` endpoint — unauthenticated, Prometheus text format
+- **New**: Helper functions: `record_query_latency`, `record_retrieval_latency`, `record_rerank_latency`, `set_cache_hit_ratio`, `set_index_size`
+- **Fixed**: mutmut v3 stats collection — conftest sets MUTANT_UNDER_TEST env var and skips Jinja2 template tests in mutants/ directory
+- Example: 23-metrics-endpoint.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 29/42 active features passing · Last: #19 Web UI Search Page (2026-03-22) · Next: #23 Metrics Endpoint
+Progress: 30/42 active features passing · Last: #23 Metrics Endpoint (2026-03-22) · Next: #24 Query Logging
 
 ---
 
@@ -434,3 +434,16 @@ Progress: 29/42 active features passing · Last: #19 Web UI Search Page (2026-03
 - **Review findings fixed**: UCD color #484f58 (was #6e7681), --space-xl 40px (was 32px), result card radius 6px (was 8px), UCD syntax token colors (was Monokai), added real test
 - **Result**: Feature #19 marked PASSING
 - **Next**: Feature #23 — Metrics Endpoint
+
+### Session 35 — 2026-03-22 (Feature #23)
+- **Feature**: #23 — Metrics Endpoint
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: metrics_registry module (Histogram, Counter, Gauge metrics), metrics_router (GET /metrics), helper functions (record_query_latency, record_retrieval_latency, record_rerank_latency, set_cache_hit_ratio, set_index_size)
+- **Tests**: 12 feature tests + 1 real test + 725 prior = 737/737 passing
+- **Coverage**: metrics_registry.py 100% line, 100% branch; overall 95%
+- **Mutation**: 10/15 killed (67%); 5 surviving are infrastructure-equivalent (mutmut v3 import isolation bug)
+- **mutmut fix**: Fixed mutmut v3 PytestRunner.run_stats bug (defaultdict guard), conftest MUTANT_UNDER_TEST env workaround, Jinja2 template skip in mutants/
+- **ST**: 6/6 test cases PASS (3 FUNC, 2 BNDRY, 1 SEC)
+- **Review**: All S1-S5, D1-D5, P1-P6, T1-T3 PASS
+- **Result**: Feature #23 marked PASSING
+- **Next**: Feature #24 — Query Logging

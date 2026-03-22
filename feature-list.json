@@ -545,7 +545,7 @@
       "id": 14,
       "category": "core",
       "title": "Symbol Query Handler",
-      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match → fuzzy fallback → NL pipeline fallback",
+      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match \u2192 fuzzy fallback \u2192 NL pipeline fallback",
       "priority": "high",
       "status": "passing",
       "verification_steps": [
@@ -582,7 +582,7 @@
       "id": 16,
       "category": "core",
       "title": "API Key Authentication",
-      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute → 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
+      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute \u2192 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
       "priority": "high",
       "status": "passing",
       "verification_steps": [
@@ -649,10 +649,10 @@
       "ui": true,
       "ui_entry": "/",
       "verification_steps": [
-        "[devtools] Navigate / → EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' → click Search → EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
-        "[devtools] Navigate / → submit empty query → EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
+        "[devtools] Navigate / \u2192 EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' \u2192 click Search \u2192 EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
+        "[devtools] Navigate / \u2192 submit empty query \u2192 EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
         "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling",
-        "[devtools] Navigate to repository registration form → enter a repo URL → EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch → submit → EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
+        "[devtools] Navigate to repository registration form \u2192 enter a repo URL \u2192 EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch \u2192 submit \u2192 EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
       ],
       "dependencies": [
         17
@@ -722,14 +722,16 @@
       "title": "Metrics Endpoint",
       "description": "Implement /metrics endpoint using prometheus-client exposing query_latency_seconds, retrieval_latency_seconds, rerank_latency_seconds, index_size_chunks, queries_per_second, cache_hit_ratio",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a GET to /metrics without authentication, when processed, then the response contains Prometheus text format with all required metric names: query_latency_seconds, retrieval_latency_seconds, rerank_latency_seconds, index_size_chunks, cache_hit_ratio",
         "Given several queries have been processed, when /metrics is called, then the histogram buckets for query_latency_seconds contain observed values"
       ],
       "dependencies": [
         17
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-23-metrics-endpoint.md",
+      "st_case_count": 6
     },
     {
       "id": 24,
@@ -1003,7 +1005,7 @@
       "id": 40,
       "category": "evaluation",
       "title": "Evaluation Corpus Management",
-      "description": "Build evaluation corpus by cloning representative open-source repos (2 per supported language, 12 total from eval/repos.json), running the full indexing pipeline (ContentExtractor → Chunker → EmbeddingEncoder → IndexWriter) into eval_ prefixed ES/Qdrant namespaces. Idempotent — skips already-indexed repos.",
+      "description": "Build evaluation corpus by cloning representative open-source repos (2 per supported language, 12 total from eval/repos.json), running the full indexing pipeline (ContentExtractor \u2192 Chunker \u2192 EmbeddingEncoder \u2192 IndexWriter) into eval_ prefixed ES/Qdrant namespaces. Idempotent \u2014 skips already-indexed repos.",
       "priority": "medium",
       "status": "failing",
       "wave": 3,
@@ -1068,12 +1070,12 @@
     {
       "id": 2,
       "date": "2026-03-21",
-      "description": "Strengthen AST parsing accuracy for 6 supported languages — decorator/namespace/template/enum/prototype/require/typedef patterns"
+      "description": "Strengthen AST parsing accuracy for 6 supported languages \u2014 decorator/namespace/template/enum/prototype/require/typedef patterns"
     },
     {
       "id": 3,
       "date": "2026-03-21",
-      "description": "Retrieval Quality Evaluation Pipeline — corpus management, LLM annotation, IR metrics & reporting"
+      "description": "Retrieval Quality Evaluation Pipeline \u2014 corpus management, LLM annotation, IR metrics & reporting"
     }
   ]
 }
