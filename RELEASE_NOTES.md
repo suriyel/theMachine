@@ -273,6 +273,15 @@
 - **New**: Relevance threshold: score >= 2 (TREC-style graded→binary conversion)
 - Example: 42-retrieval-quality-evaluation.py
 
+### Feature #26: NFR-001 Query Latency p95 < 1s
+- **New**: `LatencyReportAnalyzer` (`src/loadtest/latency_report_analyzer.py`) — parses Locust stats CSV files, extracts aggregated p95/p99/median/avg metrics, compares against configurable threshold (default 1000ms)
+- **New**: `LatencyReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting list of stats dicts with weighted aggregation
+- **New**: `QueryGenerator` (`src/loadtest/query_generator.py`) — generates diverse NL/symbol query payloads with configurable mix ratio (default 70% NL / 30% symbol per ASM-006)
+- **New**: `VerificationResult` dataclass (`src/loadtest/verification_result.py`) — structured pass/fail verdict with p95, p99, median, avg, request count, failure rate, and human-readable summary
+- **New**: `QueryLatencyLoadTest` Locust HttpUser (`src/loadtest/locustfile.py`) — drives load against POST /api/v1/query with diverse payloads
+- **New**: `locust>=2.29` added as dev dependency for load testing
+- Example: 26-nfr-001-latency-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
