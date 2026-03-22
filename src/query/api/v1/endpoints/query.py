@@ -31,7 +31,7 @@ async def post_query(
 
     try:
         if query_type == "symbol":
-            response = await query_handler.handle_symbol_query(body.query, body.repo_id)
+            response = await query_handler.handle_symbol_query(body.query, body.repo_id, body.languages)
         else:
             response = await query_handler.handle_nl_query(
                 body.query, body.repo_id, body.languages

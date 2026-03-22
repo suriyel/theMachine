@@ -32,6 +32,7 @@ class QueryHandler:
         rank_fusion,
         reranker,
         response_builder,
+        language_filter=None,
         search_timeout: float = 0.2,
         pipeline_timeout: float = 1.0,
     ) -> None:
@@ -39,6 +40,7 @@ class QueryHandler:
         self._rank_fusion = rank_fusion
         self._reranker = reranker
         self._response_builder = response_builder
+        self._language_filter = language_filter
         self._search_timeout = search_timeout
         self._pipeline_timeout = pipeline_timeout
 
@@ -59,6 +61,10 @@ class QueryHandler:
             raise ValidationError("query must not be empty")
         if len(query) > 500:
             raise ValidationError("query exceeds 500 character limit")
+
+        # Step 1b: Validate and normalize language filter
+        if self._language_filter is not None:
+            languages = self._language_filter.validate(languages)
 
         # Step 2: Extract identifiers for symbol boost
         identifiers = self._extract_identifiers(query)
@@ -187,6 +193,7 @@ class QueryHandler:
         self,
         query: str,
         repo: str | None = None,
+        languages: list[str] | None = None,
     ) -> QueryResponse:
         """Execute the symbol query pipeline: ES term → fuzzy → NL fallback.
 
@@ -200,10 +207,19 @@ class QueryHandler:
         if len(query) > 200:
             raise ValidationError("query exceeds 200 character limit")
 
+        # Step 1b: Validate and normalize language filter
+        if self._language_filter is not None:
+            languages = self._language_filter.validate(languages)
+
         # Step 2: ES term query (exact match on symbol.raw)
         term_bool: dict = {"must": [{"term": {"symbol.raw": query}}]}
+        filter_clauses: list[dict] = []
         if repo is not None:
-            term_bool["filter"] = [{"term": {"repo_id": repo}}]
+            filter_clauses.append({"term": {"repo_id": repo}})
+        if languages:
+            filter_clauses.append({"terms": {"language": languages}})
+        if filter_clauses:
+            term_bool["filter"] = filter_clauses
         term_body = {"query": {"bool": term_bool}}
         term_hits = await self._retriever._execute_search(
             self._retriever._code_index, term_body, 200
@@ -220,8 +236,8 @@ class QueryHandler:
                 {"match": {"symbol": {"query": query, "fuzziness": "AUTO"}}}
             ],
         }
-        if repo is not None:
-            fuzzy_bool["filter"] = [{"term": {"repo_id": repo}}]
+        if filter_clauses:
+            fuzzy_bool["filter"] = filter_clauses
         fuzzy_body = {"query": {"bool": fuzzy_bool}}
         fuzzy_hits = await self._retriever._execute_search(
             self._retriever._code_index, fuzzy_body, 200
@@ -233,7 +249,7 @@ class QueryHandler:
             return self._response_builder.build(reranked, query, "symbol", repo)
 
         # Step 4: NL fallback
-        return await self.handle_nl_query(query, repo)
+        return await self.handle_nl_query(query, repo, languages)
 
     def _extract_identifiers(self, query: str) -> list[str]:
         """Extract code identifiers from an NL query."""
