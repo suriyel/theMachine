@@ -11,6 +11,7 @@ from src.query.api.v1.endpoints.keys import keys_router
 from src.query.api.v1.endpoints.query import query_router
 from src.query.api.v1.endpoints.repos import repos_router
 from src.query.health import health_router
+from src.query.metrics_registry import metrics_router
 from src.query.web_router import WebRouter
 
 
@@ -56,6 +57,9 @@ def create_app(
     app.include_router(query_router, prefix="/api/v1")
     app.include_router(repos_router, prefix="/api/v1")
     app.include_router(keys_router, prefix="/api/v1")
+
+    # Metrics (unauthenticated, Prometheus scrape)
+    app.include_router(metrics_router)
 
     # Web UI router (SSR)
     web_router = WebRouter()

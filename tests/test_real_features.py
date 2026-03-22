@@ -781,3 +781,44 @@ def test_real_typescript_enum_parsing_feature_37():
     func_chunks = [c for c in chunks if c.chunk_type == "function"]
     func_names = {c.symbol for c in func_chunks}
     assert "move" in func_names
+
+
+# ===========================================================================
+# Feature #23 — Metrics Endpoint: real Prometheus /metrics via TestClient
+# ===========================================================================
+
+
+@pytest.mark.real
+def test_real_metrics_endpoint_prometheus_text_feature_23():
+    """feature #23: Hit /metrics via real TestClient — verify Prometheus text output."""
+    from src.query.app import create_app
+    from src.query.metrics_registry import record_query_latency, reset_registry
+
+    reset_registry()
+    app = create_app()
+    client = TestClient(app)
+
+    # Record a real observation
+    record_query_latency(0.042, "nl", False)
+
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert "text/plain" in resp.headers["content-type"]
+
+    body = resp.text
+    # All five required metric families present
+    assert "query_latency_seconds" in body
+    assert "retrieval_latency_seconds" in body
+    assert "rerank_latency_seconds" in body
+    assert "index_size_chunks" in body
+    assert "cache_hit_ratio" in body
+
+    # Histogram observation was recorded
+    found_count = False
+    for line in body.splitlines():
+        if 'query_latency_seconds_count{cache_hit="false",query_type="nl"}' in line:
+            value = float(line.split()[-1])
+            assert value >= 1.0
+            found_count = True
+            break
+    assert found_count, "query_latency_seconds_count not found in /metrics output"
