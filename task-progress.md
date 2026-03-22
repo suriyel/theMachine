@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 34/42 active features passing · Last: #41 LLM Query Generation & Relevance Annotation (2026-03-22) · Next: #42 Retrieval Quality Evaluation & Reporting
+Progress: 35/42 active features passing · Last: #42 Retrieval Quality Evaluation & Reporting (2026-03-22) · Next: #26 NFR-001: Query Latency p95 < 1s
 
 ---
 
@@ -499,3 +499,16 @@ Progress: 34/42 active features passing · Last: #41 LLM Query Generation & Rele
 - **Review**: Initial FAIL (3 issues: env var naming, seed parameter, real test coverage). Fixed: documented env var deviation, added seed=42, added real generate_queries test, added reasoning model response extraction → PASS
 - **Result**: Feature #41 marked PASSING
 - **Next**: Feature #42 — Retrieval Quality Evaluation & Reporting
+
+### Session 40 — 2026-03-22 (Feature #42)
+- **Feature**: #42 — Retrieval Quality Evaluation & Reporting
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: NO — pure computation (IR metrics from in-memory data)
+- **Implementation**: EvalRunner (evaluate_stage, compute_mrr, compute_ndcg, compute_recall, compute_precision, _get_search_fn), StageMetrics dataclass, ReportGenerator (generate, _render_header/_overall_table/_stage_detail/_per_language/_weak_spots/_delta_section, _parse_previous_report, _compute_deltas)
+- **Tests**: 29 feature tests (23 runner + 6 report) + 1 real test + 809 prior = 838/838 passing
+- **Coverage**: runner.py 96.7% line/90.9% branch, report.py 95.0%/90.3%
+- **Mutation**: 99.7% (288/289 killed)
+- **ST**: 9/9 test cases PASS (5 FUNC, 4 BNDRY)
+- **Review**: PASS with 2 Important findings fixed (exports in __init__.py, example file)
+- **Result**: Feature #42 marked PASSING
+- **Next**: Feature #26 — NFR-001: Query Latency p95 < 1s

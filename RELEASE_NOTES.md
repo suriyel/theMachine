@@ -260,6 +260,19 @@
 - **New**: `seed=42` parameter on all LLM calls for reproducibility (where supported by provider)
 - Example: 41-llm-annotation.py
 
+### Feature #42: Retrieval Quality Evaluation & Reporting
+- **New**: `EvalRunner` class (`src/eval/runner.py`) — evaluates retrieval stages (vector, BM25, RRF, reranked) against golden datasets using standard IR metrics
+- **New**: `compute_mrr(results, relevant, k)` — Mean Reciprocal Rank (1/rank of first relevant in top-k)
+- **New**: `compute_ndcg(results, relevance_scores, k)` — Normalized DCG with log2 discounting and graded relevance (0-3)
+- **New**: `compute_recall(results, relevant, k)` — fraction of relevant items in top-k (1.0 for empty relevant set)
+- **New**: `compute_precision(results, relevant, k)` — fraction of relevant items in top-k (denominator is k, not len(results))
+- **New**: `evaluate_stage(stage)` — per-language and overall metric aggregation; N/A for unimplemented stages
+- **New**: `StageMetrics` dataclass — stage name, 4 metrics, per-language breakdown, query count, status
+- **New**: `ReportGenerator` class (`src/eval/report.py`) — Markdown report with overall scores table, per-stage detail, per-language breakdown, weak spots (metrics < 0.50)
+- **New**: Delta comparison — parses previous report's overall scores table and renders signed metric differences
+- **New**: Relevance threshold: score >= 2 (TREC-style graded→binary conversion)
+- Example: 42-retrieval-quality-evaluation.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
