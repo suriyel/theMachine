@@ -822,3 +822,56 @@ def test_real_metrics_endpoint_prometheus_text_feature_23():
             found_count = True
             break
     assert found_count, "query_latency_seconds_count not found in /metrics output"
+
+
+# ===========================================================================
+# Feature #24 — Query Logging: real structured JSON log to stdout
+# ===========================================================================
+
+
+@pytest.mark.real
+def test_real_query_logging_stdout_feature_24():
+    """feature #24: Verify structured JSON log written to stdout via real logging."""
+    import json
+    import io
+    import logging
+
+    from src.query.query_logger import QueryLogger
+
+    # Set up a QueryLogger with a custom handler capturing to a StringIO
+    buf = io.StringIO()
+    logger = QueryLogger(logger_name="query_logger_real_test_24")
+    handler = logging.StreamHandler(buf)
+    handler.setLevel(logging.INFO)
+    logger._logger.addHandler(handler)
+
+    logger.log_query(
+        query="find authentication module",
+        query_type="nl",
+        api_key_id="real-key-42",
+        result_count=7,
+        retrieval_ms=15.2,
+        rerank_ms=3.8,
+        total_ms=20.1,
+    )
+
+    output = buf.getvalue()
+    entry = None
+    for line in output.strip().splitlines():
+        try:
+            parsed = json.loads(line)
+            if "query" in parsed:
+                entry = parsed
+                break
+        except json.JSONDecodeError:
+            continue
+
+    assert entry is not None, f"No JSON entry found in log output: {output!r}"
+    assert entry["query"] == "find authentication module"
+    assert entry["query_type"] == "nl"
+    assert entry["api_key_id"] == "real-key-42"
+    assert entry["result_count"] == 7
+    assert entry["retrieval_ms"] == 15.2
+    assert entry["rerank_ms"] == 3.8
+    assert entry["total_ms"] == 20.1
+    assert "timestamp" in entry
