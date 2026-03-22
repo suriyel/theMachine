@@ -436,6 +436,8 @@ def test_no_query_handler_error(mock_session_factory, mock_git_cloner):
 def test_real_jinja2_template_renders_search_page(app, client):
     """Real test: verifies actual Jinja2 template renders without mocking the template engine.
 
+    feature #19 — Web UI Search Page
+
     Exercises the full SSR pipeline: FastAPI -> WebRouter -> Jinja2 -> HTML.
     The template files on disk are read and rendered by the real Jinja2 engine.
     """

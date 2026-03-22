@@ -408,7 +408,10 @@ import httpx  # noqa: E402 — needed for test_rerank_api_failure_fallback above
 
 @pytest.mark.real
 def test_reranker_real_api():
-    """[integration] — calls real DashScope reranker API, verifies scoring."""
+    """[integration] — calls real DashScope reranker API, verifies scoring.
+
+    feature #11 — Neural Reranking
+    """
     import os
     from src.query.reranker import Reranker
 
@@ -464,7 +467,10 @@ def test_reranker_real_api():
 
 @pytest.mark.real
 def test_reranker_real_api_few_candidates():
-    """[integration] — real API with fewer candidates than top_k."""
+    """[integration] — real API with fewer candidates than top_k.
+
+    feature #11 — Neural Reranking
+    """
     import os
     from src.query.reranker import Reranker
 

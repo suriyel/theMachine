@@ -246,7 +246,10 @@ async def test_register_duplicate_with_normalization(repo_manager):
 # [integration] Real test: verify RepoManager persists to actual test database
 @pytest.mark.real
 async def test_real_register_persists_to_database(async_session):
-    """Real test: RepoManager creates persistent records in the database."""
+    """Real test: RepoManager creates persistent records in the database.
+
+    feature #3 — Repository Registration
+    """
     from src.shared.models import IndexJob, Repository
     from src.shared.services.repo_manager import RepoManager
 
@@ -337,7 +340,10 @@ async def test_register_duplicate_different_branch_raises_conflict(repo_manager)
 # [integration] T16: Real test with branch parameter — verify full DB persistence
 @pytest.mark.real
 async def test_real_register_with_branch_persists(async_session):
-    """Real test: register with branch='release', verify all fields persisted in DB."""
+    """Real test: register with branch='release', verify all fields persisted in DB.
+
+    feature #3 — Repository Registration
+    """
     from src.shared.models import IndexJob, Repository
     from src.shared.services.repo_manager import RepoManager
 

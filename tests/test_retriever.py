@@ -545,7 +545,10 @@ async def test_bm25_doc_search_scored_chunk_fields(es_client):
 @pytest.mark.real
 @pytest.mark.asyncio
 async def test_real_es_bm25_code_search():
-    """[integration] Real Elasticsearch: index a code chunk and search for it."""
+    """[integration] Real Elasticsearch: index a code chunk and search for it.
+
+    feature #8 — Keyword Retrieval (BM25)
+    """
     import os
 
     from elastic_transport import ConnectionTimeout
@@ -628,7 +631,10 @@ async def test_real_es_bm25_code_search():
 @pytest.mark.real
 @pytest.mark.asyncio
 async def test_real_es_bm25_doc_search():
-    """[integration] Real Elasticsearch: index a doc chunk and search for it."""
+    """[integration] Real Elasticsearch: index a doc chunk and search for it.
+
+    feature #8 — Keyword Retrieval (BM25)
+    """
     import os
 
     from elastic_transport import ConnectionTimeout

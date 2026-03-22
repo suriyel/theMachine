@@ -310,7 +310,10 @@ def test_encode_batch_sorts_by_index(encoder):
 
 @pytest.mark.real
 def test_real_dashscope_embedding_api():
-    """Real test: verify DashScope text-embedding-v3 produces 1024-dim vectors."""
+    """Real test: verify DashScope text-embedding-v3 produces 1024-dim vectors.
+
+    feature #7 — Embedding Generation
+    """
     import os
 
     api_key = os.environ.get("EMBEDDING_API_KEY", "")

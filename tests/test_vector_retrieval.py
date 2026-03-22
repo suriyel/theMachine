@@ -498,6 +498,8 @@ async def test_vector_code_search_unexpected_response():
 async def test_qdrant_connectivity_real():
     """[integration] Verify Qdrant client can connect and list collections.
 
+    feature #9 — Semantic Retrieval (Vector)
+
     Requires QDRANT_URL in environment pointing to a running Qdrant instance.
     """
     import os
