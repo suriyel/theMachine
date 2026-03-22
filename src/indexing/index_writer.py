@@ -32,8 +32,15 @@ class IndexWriter:
         chunks: list[CodeChunk],
         embeddings: list[np.ndarray],
         repo_id: str,
+        *,
+        es_index: str = "code_chunks",
+        qdrant_collection: str = "code_embeddings",
     ) -> None:
-        """Write code chunks to ES code_chunks index and Qdrant code_embeddings collection.
+        """Write code chunks to ES index and Qdrant collection.
+
+        Args:
+            es_index: Elasticsearch index name (default: "code_chunks").
+            qdrant_collection: Qdrant collection name (default: "code_embeddings").
 
         Raises:
             ValueError: If chunks and embeddings have different lengths.
@@ -47,7 +54,7 @@ class IndexWriter:
         # Write to Elasticsearch
         operations: list[Any] = []
         for chunk in chunks:
-            operations.append({"index": {"_index": "code_chunks", "_id": chunk.chunk_id}})
+            operations.append({"index": {"_index": es_index, "_id": chunk.chunk_id}})
             operations.append({
                 "repo_id": repo_id,
                 "file_path": chunk.file_path,
@@ -64,7 +71,7 @@ class IndexWriter:
             })
         await self._retry_write(
             lambda: self._es._client.bulk(operations=operations),
-            "ES code_chunks",
+            f"ES {es_index}",
         )
 
         # Write to Qdrant
@@ -85,9 +92,9 @@ class IndexWriter:
         ]
         await self._retry_write(
             lambda: self._qdrant._client.upsert(
-                collection_name="code_embeddings", points=points
+                collection_name=qdrant_collection, points=points
             ),
-            "Qdrant code_embeddings",
+            f"Qdrant {qdrant_collection}",
         )
 
     async def write_doc_chunks(

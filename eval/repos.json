@@ -1,0 +1,14 @@
+[
+  {"name": "flask", "url": "https://github.com/pallets/flask.git", "language": "python", "branch": "main"},
+  {"name": "httpx", "url": "https://github.com/encode/httpx.git", "language": "python", "branch": "master"},
+  {"name": "spring-petclinic", "url": "https://github.com/spring-projects/spring-petclinic.git", "language": "java", "branch": "main"},
+  {"name": "guava", "url": "https://github.com/google/guava.git", "language": "java", "branch": "master"},
+  {"name": "express", "url": "https://github.com/expressjs/express.git", "language": "javascript", "branch": "master"},
+  {"name": "lodash", "url": "https://github.com/lodash/lodash.git", "language": "javascript", "branch": "main"},
+  {"name": "typescript-eslint", "url": "https://github.com/typescript-eslint/typescript-eslint.git", "language": "typescript", "branch": "main"},
+  {"name": "zod", "url": "https://github.com/colinhacks/zod.git", "language": "typescript", "branch": "main"},
+  {"name": "redis", "url": "https://github.com/redis/redis.git", "language": "c", "branch": "unstable"},
+  {"name": "jq", "url": "https://github.com/jqlang/jq.git", "language": "c", "branch": "master"},
+  {"name": "json", "url": "https://github.com/nlohmann/json.git", "language": "cpp", "branch": "develop"},
+  {"name": "fmt", "url": "https://github.com/fmtlib/fmt.git", "language": "cpp", "branch": "master"}
+]
