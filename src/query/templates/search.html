@@ -1,0 +1,57 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<section class="search-section">
+  <form class="search-form" hx-get="/search" hx-target="#results" hx-indicator="#loading">
+    <div class="search-form__row">
+      <input type="text" name="q" class="search-input" placeholder="Search code..." aria-label="search">
+      <button type="submit" class="search-btn">Search</button>
+    </div>
+    <div class="search-form__row">
+      <select name="repo" class="repo-dropdown" aria-label="Repository filter">
+        <option value="">All repositories</option>
+        {% for repo in repos %}
+        <option value="{{ repo.id }}">{{ repo.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="language-filters">
+      {% for lang in languages %}
+      <label>
+        <input type="checkbox" name="languages" value="{{ lang }}">
+        {{ lang }}
+      </label>
+      {% endfor %}
+    </div>
+  </form>
+
+  <div id="loading" class="htmx-indicator">
+    <div class="loading-skeleton"></div>
+    <div class="loading-skeleton"></div>
+  </div>
+
+  <div id="results" class="results-content">
+    {# Results loaded via htmx #}
+  </div>
+</section>
+
+<section class="register-section">
+  <h2 class="register-section__title">Register Repository</h2>
+  <form class="register-form" hx-post="/register" hx-target="#register-result">
+    <div class="register-form__row">
+      <input type="url" name="url" placeholder="https://github.com/org/repo" aria-label="Repository URL"
+             hx-get="/branches" hx-trigger="blur" hx-target="#branch-select" hx-include="[name='url']">
+      <select name="branch" id="branch-select" aria-label="Branch">
+        <option value="">Default branch</option>
+      </select>
+      <button type="submit" class="register-btn">Register</button>
+    </div>
+  </form>
+  <div id="register-result"></div>
+</section>
+
+<style>
+  /* Inline UCD dark theme bg for guaranteed presence */
+  body { background-color: #0d1117; }
+</style>
+{% endblock %}

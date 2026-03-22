@@ -1,0 +1,40 @@
+{% if error %}
+<div class="error-message">{{ error }}</div>
+{% elif empty %}
+<div class="empty-state">
+  <div class="empty-state__message">No results found for "{{ query }}"</div>
+</div>
+{% else %}
+
+{% if degraded %}
+<div class="degraded-warning">
+  Some search services are degraded. Results may be partial or incomplete.
+</div>
+{% endif %}
+
+{% for item in code_results %}
+<div class="result-card">
+  <div class="result-card__header">
+    <span class="result-card__file-path">{{ item.result.file_path }}</span>
+    {% if item.result.symbol %}
+    <span class="result-card__symbol">{{ item.result.symbol }}</span>
+    {% endif %}
+    <span class="result-card__score">{{ "%.2f"|format(item.result.relevance_score) }}</span>
+  </div>
+  <div class="result-card__code">
+    {{ item.highlighted | safe }}
+  </div>
+</div>
+{% endfor %}
+
+{% for doc in doc_results %}
+<div class="result-card result-card--doc">
+  <div class="result-card__header">
+    <span class="result-card__file-path">{{ doc.file_path }}</span>
+    <span class="result-card__score">{{ "%.2f"|format(doc.relevance_score) }}</span>
+  </div>
+  <div class="result-card__content">{{ doc.content }}</div>
+</div>
+{% endfor %}
+
+{% endif %}

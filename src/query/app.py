@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
+from starlette.staticfiles import StaticFiles
 
 from src.query.api.v1.endpoints.keys import keys_router
 from src.query.api.v1.endpoints.query import query_router
 from src.query.api.v1.endpoints.repos import repos_router
 from src.query.health import health_router
+from src.query.web_router import WebRouter
 
 
 def create_app(
@@ -19,6 +23,7 @@ def create_app(
     es_client=None,
     qdrant_client=None,
     redis_client=None,
+    git_cloner=None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -44,11 +49,21 @@ def create_app(
     app.state.es_client = es_client
     app.state.qdrant_client = qdrant_client
     app.state.redis_client = redis_client
+    app.state.git_cloner = git_cloner
 
     # Register routers
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(query_router, prefix="/api/v1")
     app.include_router(repos_router, prefix="/api/v1")
     app.include_router(keys_router, prefix="/api/v1")
+
+    # Web UI router (SSR)
+    web_router = WebRouter()
+    app.include_router(web_router.router)
+
+    # Mount static files
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.isdir(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     return app

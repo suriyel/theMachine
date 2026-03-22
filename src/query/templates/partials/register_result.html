@@ -1,0 +1,7 @@
+{% if success %}
+<div class="success-message">
+  Repository "{{ repo_name }}" registered successfully.
+</div>
+{% elif error %}
+<div class="error-message">{{ error }}</div>
+{% endif %}
