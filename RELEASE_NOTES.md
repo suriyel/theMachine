@@ -226,6 +226,12 @@
 - **Fixed**: mutmut v3 stats collection — conftest sets MUTANT_UNDER_TEST env var and skips Jinja2 template tests in mutants/ directory
 - Example: 23-metrics-endpoint.py
 
+### Feature #24: Query Logging
+- **New**: `QueryLogger` class (`src/query/query_logger.py`) — structured JSON logging to stdout via Python `logging` module
+- **New**: Fields: query, query_type, api_key_id, result_count, retrieval_ms, rerank_ms, total_ms, timestamp (ISO 8601 UTC)
+- **New**: Non-fatal — all logging wrapped in try/except, I/O failures never block query responses
+- Example: 24-query-logging.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

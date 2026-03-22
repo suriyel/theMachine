@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 30/42 active features passing · Last: #23 Metrics Endpoint (2026-03-22) · Next: #24 Query Logging
+Progress: 31/42 active features passing · Last: #24 Query Logging (2026-03-22) · Next: #25 Query Cache
 
 ---
 
@@ -447,3 +447,15 @@ Progress: 30/42 active features passing · Last: #23 Metrics Endpoint (2026-03-2
 - **Review**: All S1-S5, D1-D5, P1-P6, T1-T3 PASS
 - **Result**: Feature #23 marked PASSING
 - **Next**: Feature #24 — Query Logging
+
+### Session 36 — 2026-03-22 (Feature #24)
+- **Feature**: #24 — Query Logging
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: QueryLogger class (structured JSON to stdout via Python logging, non-fatal try/except)
+- **Tests**: 8 feature tests + 1 real test + 737 prior = 746/746 passing
+- **Coverage**: query_logger.py 100% line, 100% branch
+- **Mutation**: 11/14 killed (79%); 3 surviving are infrastructure-equivalent (mutmut v3 __init__ import isolation)
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review**: All S1-S5, D1-D5, P1-P6, T1-T3 PASS
+- **Result**: Feature #24 marked PASSING
+- **Next**: Feature #25 — Query Cache

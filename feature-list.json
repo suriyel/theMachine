@@ -739,14 +739,16 @@
       "title": "Query Logging",
       "description": "Implement structured JSON logging for query service: each query logs query, query_type, api_key_id, result_count, retrieval_ms, rerank_ms, total_ms, timestamp to stdout. Non-fatal.",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a completed query, when logging executes, then a structured JSON log entry is written to stdout containing: query, query_type, result_count, retrieval_ms, rerank_ms, total_ms, timestamp",
         "Given a logging I/O failure, when it occurs during query processing, then the query response is not blocked or delayed"
       ],
       "dependencies": [
         13
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-24-query-logging.md",
+      "st_case_count": 5
     },
     {
       "id": 25,
