@@ -226,6 +226,14 @@
 - **Fixed**: mutmut v3 stats collection — conftest sets MUTANT_UNDER_TEST env var and skips Jinja2 template tests in mutants/ directory
 - Example: 23-metrics-endpoint.py
 
+### Feature #25: Query Cache
+- **New**: `QueryCache` class (`src/query/query_cache.py`) — L1 in-memory OrderedDict (LRU, 1000 entries) + optional Redis L2 backend
+- **New**: SHA-256 cache key from `query:repo:sorted_languages`, TTL=300s default
+- **New**: `invalidate_repo(repo_id)` — clears both L1 and Redis entries for a repository
+- **New**: Graceful degradation — all Redis operations wrapped in try/except, falls back to L1-only
+- **Updated**: env-guide.md — Docker container start commands, corrected uvicorn factory invocation
+- Example: 25-query-cache.py
+
 ### Feature #24: Query Logging
 - **New**: `QueryLogger` class (`src/query/query_logger.py`) — structured JSON logging to stdout via Python `logging` module
 - **New**: Fields: query, query_type, api_key_id, result_count, retrieval_ms, rerank_ms, total_ms, timestamp (ISO 8601 UTC)

@@ -756,7 +756,7 @@
       "title": "Query Cache",
       "description": "Implement Cache with Redis backend and in-memory L1 cache. Cache key = hash(query + repo_filter + language_filter). TTL=300s. Cache invalidation on reindex.",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a query that has been cached, when the same query is submitted again within TTL, then the cached result is returned without executing the retrieval pipeline",
         "Given a cached query result, when a repository reindex completes, then the cache entries for that repository are invalidated",
@@ -764,7 +764,9 @@
       ],
       "dependencies": [
         13
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-25-query-cache.md",
+      "st_case_count": 6
     },
     {
       "id": 26,

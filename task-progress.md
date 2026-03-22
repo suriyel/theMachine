@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 31/42 active features passing · Last: #24 Query Logging (2026-03-22) · Next: #25 Query Cache
+Progress: 32/42 active features passing · Last: #25 Query Cache (2026-03-22) · Next: #28 NFR-003 Repository Capacity
 
 ---
 
@@ -459,3 +459,16 @@ Progress: 31/42 active features passing · Last: #24 Query Logging (2026-03-22) 
 - **Review**: All S1-S5, D1-D5, P1-P6, T1-T3 PASS
 - **Result**: Feature #24 marked PASSING
 - **Next**: Feature #25 — Query Cache
+
+### Session 37 — 2026-03-22 (Feature #25)
+- **Feature**: #25 — Query Cache
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: QueryCache class (L1 in-memory OrderedDict LRU 1000 entries + optional Redis L2, SHA-256 keys, TTL=300s, invalidate_repo, graceful degradation)
+- **Tests**: 13 feature tests + 1 real test + 746 prior = 760/760 passing
+- **Coverage**: query_cache.py 95% line/branch
+- **Mutation**: 9/12 killed (75%); survivors are infrastructure-equivalent (mutmut v3 import isolation)
+- **ST**: 6/6 test cases PASS (4 FUNC, 2 BNDRY)
+- **Review**: All S1-S5, D1-D5, P1-P6, T1-T3 PASS
+- **Infrastructure**: Updated env-guide.md with Docker start commands and corrected uvicorn factory invocation
+- **Result**: Feature #25 marked PASSING
+- **Next**: Feature #28 — NFR-003 Repository Capacity
