@@ -202,6 +202,13 @@
 - **New**: Namespace + template combined patterns (e.g., `namespace ns { template<T> class Tmpl {} }`)
 - Example: 22-cpp-namespace-template-chunking.py
 
+### Feature #20: Language Filter
+- **New**: `LanguageFilter` class (`src/query/language_filter.py`) — validates and normalizes language filter values against supported set (CON-001: java, python, typescript, javascript, c, c++)
+- **New**: Integrated into both `handle_nl_query` and `handle_symbol_query` paths in QueryHandler
+- **New**: Unsupported languages raise `ValidationError` → HTTP 400 with supported language list
+- **New**: Case normalization (e.g., "Java" → "java"), whitespace stripping, empty/None → no filter
+- Example: 23-language-filter.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

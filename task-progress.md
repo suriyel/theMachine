@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 27/42 active features passing · Last: #39 C++: namespace + template unwrapping (2026-03-22) · Next: #20 Language Filter
+Progress: 28/42 active features passing · Last: #20 Language Filter (2026-03-22) · Next: #19 Web UI Search Page
 
 ---
 
@@ -410,3 +410,15 @@ Progress: 27/42 active features passing · Last: #39 C++: namespace + template u
 - **Review**: PASS — all verification steps covered, design-aligned
 - **Result**: Feature #39 marked PASSING
 - **Next**: Feature #20 — Language Filter
+
+### Session 33 — 2026-03-22 (Feature #20)
+- **Feature**: #20 — Language Filter
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Implementation**: LanguageFilter class (validate, apply_filter) with SUPPORTED_LANGUAGES frozenset. Integrated into QueryHandler (both NL and symbol paths). Case normalization, whitespace stripping, ValidationError for unsupported languages.
+- **Tests**: 21 feature tests + 649 prior = 670/670 passing
+- **Coverage**: 100% line, 100% branch for language_filter.py
+- **Mutation**: 6/6 manual mutations killed (100%); mutmut 3.2.0 stats mapping bug
+- **ST**: 5/5 test cases PASS (3 FUNC, 2 BNDRY)
+- **Review findings fixed**: Added language filter to handle_symbol_query (Important), documented apply_filter signature deviation (Important), created example file (Minor)
+- **Result**: Feature #20 marked PASSING
+- **Next**: Feature #19 — Web UI Search Page
