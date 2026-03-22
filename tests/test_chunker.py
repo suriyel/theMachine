@@ -1308,3 +1308,267 @@ class TestFeature37TsDecorator:
         funcs = [c for c in chunks if c.chunk_type == "function"]
         assert any(c.symbol == "AppComponent" for c in classes)
         assert any(c.symbol == "render" for c in funcs)
+
+
+# ---------------------------------------------------------------------------
+# Feature #39 — C++: namespace + template unwrapping
+# ---------------------------------------------------------------------------
+
+CPP_NAMESPACE_CLASS = """\
+namespace foo {
+  class Bar {
+  public:
+    void method() {}
+  };
+}
+"""
+
+CPP_NESTED_NAMESPACE = """\
+namespace a {
+  namespace b {
+    void func() { return; }
+  }
+}
+"""
+
+CPP_TEMPLATE_CLASS = """\
+template<typename T>
+class Container {
+public:
+  void push(T val) {}
+};
+"""
+
+CPP_TEMPLATE_FUNCTION = """\
+template<typename T>
+T max_val(T a, T b) {
+  return a > b ? a : b;
+}
+"""
+
+CPP_EMPTY_NAMESPACE = """\
+namespace Empty {}
+"""
+
+CPP_NESTED_NAMESPACE_CPP17 = """\
+namespace a::b::c {
+  class D {
+  public:
+    int value() { return 42; }
+  };
+}
+"""
+
+CPP_INLINE_NAMESPACE = """\
+inline namespace v2 {
+  void helper() {}
+}
+"""
+
+CPP_TEMPLATE_ALIAS = """\
+#include <vector>
+template<typename T>
+using Vec = std::vector<T>;
+"""
+
+CPP_NAMESPACE_TEMPLATE_COMBINED = """\
+namespace ns {
+  template<typename T>
+  class Tmpl {
+  public:
+    void m() {}
+  };
+}
+"""
+
+CPP_NAMESPACE_FUNCTION = """\
+namespace math {
+  int add(int a, int b) { return a + b; }
+}
+"""
+
+
+class TestFeature39CppNamespaceUnwrap:
+    """Feature #39 — C++ namespace unwrapping."""
+
+    # [unit] T01: happy path — namespace with class → L2 + L3
+    def test_namespace_class_method(self, chunker):
+        """namespace foo { class Bar { void method() {} }; } → Bar=L2, method=L3."""
+        f = _make_file("src/foo.cpp", CPP_NAMESPACE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "Bar" for c in classes), "Bar L2 chunk not found"
+        assert any(
+            c.symbol == "method" and c.parent_class == "Bar" for c in funcs
+        ), "method L3 chunk with parent_class=Bar not found"
+
+    # [unit] T02: happy path — nested namespaces → function found
+    def test_nested_namespace_function(self, chunker):
+        """namespace a { namespace b { void func() {} } } → func=L3."""
+        f = _make_file("src/nested.cpp", CPP_NESTED_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "func" for c in funcs), "func L3 not found in nested namespace"
+
+    # [unit] T05: happy path — L1 top_level_symbols includes namespace contents
+    def test_namespace_top_level_symbols(self, chunker):
+        """L1 file chunk top_level_symbols includes Bar from namespace."""
+        f = _make_file("src/foo.cpp", CPP_NAMESPACE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        l1 = [c for c in chunks if c.chunk_type == "file"][0]
+        assert "Bar" in l1.top_level_symbols, f"Bar not in top_level_symbols: {l1.top_level_symbols}"
+
+    # [unit] T06: boundary — empty namespace produces no L2/L3
+    def test_empty_namespace(self, chunker):
+        """Empty namespace {} → only L1 file chunk."""
+        f = _make_file("src/empty.cpp", CPP_EMPTY_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        assert len(chunks) == 1, f"Expected 1 chunk (L1 only), got {len(chunks)}"
+        assert chunks[0].chunk_type == "file"
+
+    # [unit] T07: boundary — C++17 nested namespace specifier
+    def test_cpp17_nested_namespace(self, chunker):
+        """namespace a::b::c { class D {}; } → D=L2."""
+        f = _make_file("src/modern.cpp", CPP_NESTED_NAMESPACE_CPP17)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        assert any(c.symbol == "D" for c in classes), "D L2 not found in C++17 nested namespace"
+
+    # [unit] T08: boundary — inline namespace
+    def test_inline_namespace(self, chunker):
+        """inline namespace v2 { void helper() {} } → helper=L3."""
+        f = _make_file("src/versioned.cpp", CPP_INLINE_NAMESPACE)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "helper" for c in funcs), "helper L3 not found in inline namespace"
+
+    # [unit] T11: happy path — chunk count
+    def test_namespace_chunk_count(self, chunker):
+        """namespace foo { class Bar { void method() {} }; } → 3 chunks: 1 L1 + 1 L2 + 1 L3."""
+        f = _make_file("src/foo.cpp", CPP_NAMESPACE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        assert len(chunks) == 3, f"Expected 3 chunks (L1+L2+L3), got {len(chunks)}: {[(c.chunk_type, c.symbol) for c in chunks]}"
+
+    # [unit] T12: boundary — namespace with function (no class)
+    def test_namespace_function_only(self, chunker):
+        """namespace math { int add(...) {} } → add=L3."""
+        f = _make_file("src/math.cpp", CPP_NAMESPACE_FUNCTION)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "add" for c in funcs), "add L3 not found in namespace"
+
+
+class TestFeature39CppTemplateUnwrap:
+    """Feature #39 — C++ template unwrapping."""
+
+    # [unit] T03: happy path — template class → L2 + L3
+    def test_template_class_method(self, chunker):
+        """template<typename T> class Container { void push(T val) {} }; → Container=L2, push=L3."""
+        f = _make_file("src/container.cpp", CPP_TEMPLATE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "Container" for c in classes), "Container L2 not found"
+        assert any(
+            c.symbol == "push" and c.parent_class == "Container" for c in funcs
+        ), "push L3 with parent_class=Container not found"
+
+    # [unit] T04: happy path — template function → L3
+    def test_template_function(self, chunker):
+        """template<typename T> T max_val(T a, T b) {} → max_val=L3."""
+        f = _make_file("src/utils.cpp", CPP_TEMPLATE_FUNCTION)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "max_val" for c in funcs), "max_val L3 not found"
+
+    # [unit] T09: boundary — template alias (not class/function) → no L2/L3
+    def test_template_alias_no_chunks(self, chunker):
+        """template<typename T> using Vec = vector<T>; → no L2/L3."""
+        f = _make_file("src/alias.cpp", CPP_TEMPLATE_ALIAS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        non_file = [c for c in chunks if c.chunk_type != "file"]
+        assert len(non_file) == 0, f"Expected no L2/L3 chunks for template alias, got {[(c.chunk_type, c.symbol) for c in non_file]}"
+
+    # [unit] T13: happy path — template class method signatures in L2 content
+    def test_template_class_method_signatures(self, chunker):
+        """Container L2 chunk content includes push method signature."""
+        f = _make_file("src/container.cpp", CPP_TEMPLATE_CLASS)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        container = [c for c in chunks if c.chunk_type == "class" and c.symbol == "Container"]
+        assert len(container) == 1
+        assert "push" in container[0].content, f"push not in Container content: {container[0].content}"
+
+
+class TestFeature39CppCombined:
+    """Feature #39 — C++ namespace + template combined."""
+
+    # [unit] T10: boundary — namespace wrapping template class
+    def test_namespace_template_class(self, chunker):
+        """namespace ns { template<T> class Tmpl { void m() {} }; } → Tmpl=L2, m=L3."""
+        f = _make_file("src/combined.cpp", CPP_NAMESPACE_TEMPLATE_COMBINED)
+        chunks = chunker.chunk(f, repo_id="repo-39", branch="main")
+        classes = [c for c in chunks if c.chunk_type == "class"]
+        funcs = [c for c in chunks if c.chunk_type == "function"]
+        assert any(c.symbol == "Tmpl" for c in classes), "Tmpl L2 not found in namespace+template"
+        assert any(
+            c.symbol == "m" and c.parent_class == "Tmpl" for c in funcs
+        ), "m L3 with parent_class=Tmpl not found"
+
+
+# ===========================================================================
+# [real/integration] Real-world C++ file with namespaces and templates
+# feature #39 — real integration test
+# ===========================================================================
+CPP_REAL_WORLD_NAMESPACE_TEMPLATE = """\
+// Simplified real-world C++ pattern (STL-style container in namespace)
+namespace mylib {
+  namespace detail {
+    template<typename T>
+    class SmallVector {
+    public:
+      void push_back(const T& val) {}
+      T& operator[](int idx) { return data_[idx]; }
+    private:
+      T data_[64];
+    };
+  }
+
+  template<typename K, typename V>
+  V lookup(const K& key) { return V(); }
+}
+"""
+
+
+@pytest.mark.real
+def test_real_cpp_namespace_template_chunking(chunker):
+    """Real integration: chunk a realistic C++ file with nested namespaces and templates.
+
+    feature #39 — real integration test
+    """
+    f = _make_file("src/mylib.hpp", CPP_REAL_WORLD_NAMESPACE_TEMPLATE)
+    chunks = chunker.chunk(f, repo_id="repo-real-39", branch="main")
+
+    classes = [c for c in chunks if c.chunk_type == "class"]
+    funcs = [c for c in chunks if c.chunk_type == "function"]
+
+    # SmallVector should be L2 inside nested namespace + template
+    assert any(c.symbol == "SmallVector" for c in classes), (
+        f"SmallVector L2 not found; classes={[c.symbol for c in classes]}"
+    )
+
+    # push_back and operator[] should be L3 with parent_class=SmallVector
+    sv_methods = [c for c in funcs if c.parent_class == "SmallVector"]
+    method_names = {c.symbol for c in sv_methods}
+    assert "push_back" in method_names, (
+        f"push_back not found in SmallVector methods: {method_names}"
+    )
+
+    # lookup should be L3 (template function in outer namespace)
+    assert any(c.symbol == "lookup" for c in funcs), (
+        f"lookup L3 not found; funcs={[c.symbol for c in funcs]}"
+    )
+
+    # L1 should include symbols from namespaces
+    l1 = [c for c in chunks if c.chunk_type == "file"][0]
+    assert len(l1.top_level_symbols) >= 1, "No top_level_symbols from namespace contents"

@@ -265,6 +265,22 @@ class Chunker:
                                 name = _get_typedef_name(inner) or _get_node_name(sub)
                                 if name:
                                     top_level_symbols.append(name)
+                elif (
+                    child.type == "namespace_definition"
+                    and language == "cpp"
+                ):
+                    _collect_namespace_symbols(
+                        child, all_interesting, top_level_symbols
+                    )
+                elif (
+                    child.type == "template_declaration"
+                    and language == "cpp"
+                ):
+                    inner = _find_child_of_type(child, all_interesting)
+                    if inner is not None:
+                        name = _get_node_name(inner)
+                        if name:
+                            top_level_symbols.append(name)
 
         content_parts = imports + ([""] if imports else []) + top_level_symbols
         content = "\n".join(content_parts)
@@ -394,6 +410,58 @@ class Chunker:
                 self._walk_classes(
                     child, file, repo_id, branch, language, node_map, chunks
                 )
+                continue
+            # C++: recurse into namespace_definition body
+            if child.type == "namespace_definition" and language == "cpp":
+                body = _find_child_of_type(child, ["declaration_list"])
+                if body is not None:
+                    self._walk_classes(
+                        body, file, repo_id, branch, language, node_map, chunks
+                    )
+                continue
+            # C++: single-level unwrap template_declaration for inner class
+            if child.type == "template_declaration" and language == "cpp":
+                inner = _find_child_of_type(child, node_map.class_nodes)
+                if inner is not None:
+                    name = _get_node_name(inner)
+                    signature = self.extract_signature(inner, language)
+                    doc_comment = self.extract_doc_comment(child, language)
+                    method_sigs: list[str] = []
+                    body = _get_body_node(inner, language)
+                    if body:
+                        for member in body.children:
+                            if member.type in node_map.function_nodes:
+                                m_name = _get_node_name(member)
+                                m_sig = self.extract_signature(member, language)
+                                method_sigs.append(m_sig if m_sig else m_name)
+                    content = signature + "\n" + doc_comment
+                    if method_sigs:
+                        content += "\n" + "\n".join(method_sigs)
+                    chunk_id = (
+                        f"{repo_id}:{branch}:{file.path}:"
+                        f"{name}:class:{child.start_point[0]}"
+                    )
+                    chunks.append(
+                        CodeChunk(
+                            chunk_id=chunk_id,
+                            repo_id=repo_id,
+                            branch=branch,
+                            file_path=file.path,
+                            language=language,
+                            chunk_type="class",
+                            symbol=name,
+                            signature=signature,
+                            doc_comment=doc_comment,
+                            parent_class="",
+                            content=content,
+                            line_start=child.start_point[0],
+                            line_end=child.end_point[0],
+                        )
+                    )
+                    if body:
+                        self._walk_classes(
+                            body, file, repo_id, branch, language, node_map, chunks
+                        )
                 continue
             # Unwrap decorated_definition: find inner class node
             if child.type == "decorated_definition":
@@ -594,6 +662,53 @@ class Chunker:
                     chunks,
                     parent_class=parent_class,
                 )
+                continue
+            # C++: recurse into namespace_definition body
+            if child.type == "namespace_definition" and language == "cpp":
+                body = _find_child_of_type(child, ["declaration_list"])
+                if body is not None:
+                    self._walk_functions(
+                        body,
+                        file,
+                        repo_id,
+                        branch,
+                        language,
+                        node_map,
+                        chunks,
+                        parent_class=parent_class,
+                    )
+                continue
+            # C++: single-level unwrap template_declaration
+            if child.type == "template_declaration" and language == "cpp":
+                inner_class = _find_child_of_type(child, node_map.class_nodes)
+                if inner_class is not None:
+                    cls_name = _get_node_name(inner_class)
+                    body = _get_body_node(inner_class, language)
+                    if body:
+                        self._walk_functions(
+                            body,
+                            file,
+                            repo_id,
+                            branch,
+                            language,
+                            node_map,
+                            chunks,
+                            parent_class=cls_name,
+                        )
+                else:
+                    inner_func = _find_child_of_type(child, node_map.function_nodes)
+                    if inner_func is not None:
+                        name = _get_node_name(inner_func)
+                        self._add_function_chunk(
+                            inner_func,
+                            name,
+                            file,
+                            repo_id,
+                            branch,
+                            language,
+                            parent_class,
+                            chunks,
+                        )
                 continue
             if child.type == "decorated_definition":
                 # Unwrap decorated_definition to find inner class/function
@@ -1204,6 +1319,30 @@ def _find_child_of_type(
         if child.type in target_types:
             return child
     return None
+
+
+def _collect_namespace_symbols(
+    ns_node: ts.Node,
+    interesting_types: list[str],
+    symbols: list[str],
+) -> None:
+    """Recursively collect symbols from C++ namespace_definition nodes."""
+    body = _find_child_of_type(ns_node, ["declaration_list"])
+    if body is None:
+        return
+    for inner in body.children:
+        if inner.type in interesting_types:
+            name = _get_node_name(inner)
+            if name:
+                symbols.append(name)
+        elif inner.type == "namespace_definition":
+            _collect_namespace_symbols(inner, interesting_types, symbols)
+        elif inner.type == "template_declaration":
+            sub = _find_child_of_type(inner, interesting_types)
+            if sub is not None:
+                name = _get_node_name(sub)
+                if name:
+                    symbols.append(name)
 
 
 def _get_typedef_name(node: ts.Node) -> str:
