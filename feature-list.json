@@ -822,13 +822,15 @@
       "title": "NFR-004: Single Repository Size",
       "description": "Verify the system handles repositories up to 1GB in size",
       "priority": "low",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a repository approaching 1GB, when indexing runs, then all files are processed and chunks are indexed without OOM or timeout"
       ],
       "dependencies": [
         4
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-29-nfr-004-single-repository-size.md",
+      "st_case_count": 10
     },
     {
       "id": 30,

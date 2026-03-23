@@ -294,6 +294,12 @@
 - **New**: `CapacityVerificationResult` dataclass (`src/loadtest/capacity_verification_result.py`) — structured pass/fail verdict with repo counts, indexed ratio, and human-readable summary
 - Example: 28-nfr-003-capacity-check.py
 
+### Feature #29: NFR-004 Single Repository Size
+- **New**: `RepoSizeReportAnalyzer` (`src/loadtest/repo_size_report_analyzer.py`) — parses JSON size reports, checks each repo's size_bytes against configurable max (default 1 GiB), verifies all within-limit repos completed indexing, two-condition pass logic (all within limit AND completion ratio >= threshold)
+- **New**: `RepoSizeReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting stats dict with total_repos/repos_within_limit/repos_completed/max_observed_bytes
+- **New**: `RepoSizeVerificationResult` dataclass (`src/loadtest/repo_size_verification_result.py`) — structured pass/fail verdict with repo counts, completion ratio, max observed size, and human-readable summary
+- Example: 29-nfr-004-repo-size-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
