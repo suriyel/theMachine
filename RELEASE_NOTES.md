@@ -332,6 +332,15 @@
 - Added missing pydantic-settings dependency to pyproject.toml
 - Fixed get_engine docstring (ArgumentError → ValueError)
 
+### Increment Wave 4 — Docker Images (2026-03-23)
+
+- **New**: Feature #43 — query-api Docker Image (`docker/Dockerfile.api` + `src/query/main.py` production entrypoint)
+- **New**: Feature #44 — mcp-server Docker Image (`docker/Dockerfile.mcp`, stdio MCP protocol)
+- **New**: Feature #45 — index-worker Docker Image (`docker/Dockerfile.worker`, Celery worker)
+- **Modified**: NFR-012 promoted from "Should" to "Shall" — release blocker per ST verdict
+- **SRS**: Added FR-027, FR-028, FR-029; updated traceability matrix
+- **Design**: Section 10 expanded with Dockerfile structure, entrypoints, HEALTHCHECKs; new §4.8; dependency chain updated
+
 ### System Testing — 2026-03-23
 
 - **ST Completed**: All 42 features verified through cross-feature integration, E2E, NFR, compatibility, and exploratory testing

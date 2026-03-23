@@ -1,11 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 42/42 active features passing · System Testing: COMPLETE (Conditional Go) · 2026-03-23
-
-**ST Session 2026-03-23 — Services**
-- query-api PID: 285612 (port 8000) — started by prior session; cleanup: `kill 285612`
-- mcp-server: stdio protocol (started on-demand by MCP client)
+Progress: 42/45 active features passing · Last: Increment Wave 4 (2026-03-23) · Next: Feature #43 — query-api Docker Image
 
 ---
 
@@ -625,3 +621,11 @@ Progress: 42/42 active features passing · System Testing: COMPLETE (Conditional
 - **Real test cases**: 223/223 PASS (aggregated from all feature-*.md docs)
 - **Verdict**: Conditional Go — 0 open Critical/Major defects; NFR-012 Docker images deferred
 - **Cleanup**: query-api PID 285612 — kill with `kill 285612`
+
+### Session N+1 — Increment Wave 4 (2026-03-23)
+- **Date**: 2026-03-23
+- **Phase**: Increment
+- **Scope**: NFR-012 Modular Docker Images — release blocker per ST verdict
+- **Changes**: Added 3 features (#43 query-api image, #44 mcp-server image, #45 index-worker image); NFR-012 upgraded Should→Shall
+- **Documents updated**: SRS (FR-027/028/029 added, NFR-012 modified, traceability matrix updated), Design (Section 10 expanded, §4.8 added, §11.2/11.3 updated)
+- **Next**: Worker phase — implement features #43, #44, #45
