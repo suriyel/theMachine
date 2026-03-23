@@ -107,6 +107,12 @@ async def reindex_repo(
         session.add(job)
         await session.commit()
 
+        # Invalidate query cache for this repository
+        query_cache = getattr(request.app.state, "query_cache", None)
+        if query_cache is not None:
+            repo_name = repo.name
+            await query_cache.invalidate_repo(repo_name)
+
         return ReindexResponse(
             job_id=job.id,
             repo_id=repo.id,

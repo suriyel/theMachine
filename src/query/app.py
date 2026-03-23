@@ -25,6 +25,7 @@ def create_app(
     qdrant_client=None,
     redis_client=None,
     git_cloner=None,
+    query_cache=None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -51,6 +52,7 @@ def create_app(
     app.state.qdrant_client = qdrant_client
     app.state.redis_client = redis_client
     app.state.git_cloner = git_cloner
+    app.state.query_cache = query_cache
 
     # Register routers
     app.include_router(health_router, prefix="/api/v1")

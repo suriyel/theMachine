@@ -1,7 +1,11 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 42/42 active features passing · Last: #32 NFR-007: Single-Node Failure Tolerance (2026-03-23) · Next: All active features passing — System Testing
+Progress: 42/42 active features passing · System Testing: COMPLETE (Conditional Go) · 2026-03-23
+
+**ST Session 2026-03-23 — Services**
+- query-api PID: 285612 (port 8000) — started by prior session; cleanup: `kill 285612`
+- mcp-server: stdio protocol (started on-demand by MCP client)
 
 ---
 
@@ -605,3 +609,19 @@ Progress: 42/42 active features passing · Last: #32 NFR-007: Single-Node Failur
 - **Review**: PASS — all rubric checks YES, all potential findings were false positives
 - **Result**: Feature #32 marked PASSING
 - **Next**: All 42/42 active features passing — System Testing phase
+---
+
+### ST Session — 2026-03-23 (System Testing)
+- **Phase**: System Testing (Phase 3)
+- **ST Plan**: docs/plans/2026-03-23-st-plan.md
+- **ST Report**: docs/plans/2026-03-23-st-report.md
+- **Regression**: 1032/1051 pass (19 skipped = real-infra @pytest.mark.real)
+- **Integration**: 16/16 pass — tests/st/test_integration.py
+- **E2E**: 11/11 pass — tests/st/test_e2e.py (3 personas)
+- **NFR/Security**: 15/15 pass — tests/st/test_nfr.py
+- **Compatibility**: 5/5 pass — tests/st/test_compatibility.py
+- **Exploratory**: 10 charters — 9 clean, Charter 8 found D3 (reranker exception propagation)
+- **Defects**: D1 Major (QueryCache not wired — FIXED), D2 Minor (IndexJob.id mock — test fix), D3 Minor (reranker exception — FIXED)
+- **Real test cases**: 223/223 PASS (aggregated from all feature-*.md docs)
+- **Verdict**: Conditional Go — 0 open Critical/Major defects; NFR-012 Docker images deferred
+- **Cleanup**: query-api PID 285612 — kill with `kill 285612`

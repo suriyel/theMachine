@@ -26,8 +26,15 @@ async def post_query(
     require_permission(api_key, "query", auth_middleware)
 
     query_handler = request.app.state.query_handler
+    query_cache = getattr(request.app.state, "query_cache", None)
 
     query_type = query_handler.detect_query_type(body.query)
+
+    # Check cache before executing pipeline
+    if query_cache is not None:
+        cached = await query_cache.get(body.query, body.repo_id, body.languages)
+        if cached is not None:
+            return cached
 
     try:
         if query_type == "symbol":
@@ -40,5 +47,9 @@ async def post_query(
         raise HTTPException(status_code=400, detail=str(exc))
     except RetrievalError:
         raise HTTPException(status_code=500, detail="Retrieval failed")
+
+    # Store result in cache
+    if query_cache is not None:
+        await query_cache.set(body.query, body.repo_id, body.languages, response)
 
     return response

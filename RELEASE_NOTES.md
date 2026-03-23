@@ -332,6 +332,19 @@
 - Added missing pydantic-settings dependency to pyproject.toml
 - Fixed get_engine docstring (ArgumentError → ValueError)
 
+### System Testing — 2026-03-23
+
+- **ST Completed**: All 42 features verified through cross-feature integration, E2E, NFR, compatibility, and exploratory testing
+- **New**: `tests/st/test_integration.py` — 16 cross-feature integration tests (auth→query, cache wiring, language+repo filter propagation, cache invalidation on reindex, metrics registry, MCP→handler, query logger, RRF+reranker chain)
+- **New**: `tests/st/test_e2e.py` — 11 E2E scenario tests covering 3 user personas (AI Agent, Software Developer, Platform Engineer)
+- **New**: `tests/st/test_nfr.py` — 15 system-wide NFR tests (NFR-009 all endpoints auth-protected, NFR-010 SHA-256 hashing, input validation, reliability degradation)
+- **New**: `tests/st/test_compatibility.py` — 5 compatibility tests (Python 3.12, Linux x86_64, module import, forward annotations)
+- **New**: `docs/plans/2026-03-23-st-plan.md` — ST plan with full RTM (56 requirements, 100% coverage)
+- **New**: `docs/plans/2026-03-23-st-report.md` — ST report: Go (Conditional), 0 open defects
+- **Fixed (D1 Major)**: `QueryCache` was not wired into query endpoint or reindex endpoint — now fully integrated (`src/query/app.py`, `src/query/api/v1/endpoints/query.py`, `src/query/api/v1/endpoints/repos.py`)
+- **Fixed (D3 Minor)**: Reranker `RuntimeError` now caught in all 3 query pipeline call sites — falls back to fused results with `degraded=True` (`src/query/query_handler.py`)
+- **Verdict**: Conditional Go — 1032 automated tests pass, 223 real test cases pass (100%), 0 open Critical/Major defects; NFR-012 Docker images deferred
+
 ---
 
 _Format: [Keep a Changelog](https://keepachangelog.com/) — Updated after every git commit._

@@ -145,8 +145,13 @@ class QueryHandler:
         # Step 8: Fuse
         fused = self._rank_fusion.fuse(*successful_lists, top_k=50)
 
-        # Step 9: Rerank
-        reranked = self._reranker.rerank(query, fused, top_k=6)
+        # Step 9: Rerank (fall back to fused results if reranker fails)
+        try:
+            reranked = self._reranker.rerank(query, fused, top_k=6)
+        except Exception as exc:
+            log.warning("Reranker failed, using fused results: %s", exc)
+            reranked = fused[:6]
+            degraded = True
 
         # Step 10: Build response
         response = self._response_builder.build(reranked, query, "nl", repo)
@@ -227,7 +232,11 @@ class QueryHandler:
 
         if term_hits:
             chunks = self._retriever._parse_code_hits(term_hits)
-            reranked = self._reranker.rerank(query, chunks, top_k=6)
+            try:
+                reranked = self._reranker.rerank(query, chunks, top_k=6)
+            except Exception as exc:
+                log.warning("Reranker failed on symbol term query, using raw chunks: %s", exc)
+                reranked = chunks[:6]
             return self._response_builder.build(reranked, query, "symbol", repo)
 
         # Step 3: ES fuzzy query (fuzziness=AUTO)
@@ -245,7 +254,11 @@ class QueryHandler:
 
         if fuzzy_hits:
             chunks = self._retriever._parse_code_hits(fuzzy_hits)
-            reranked = self._reranker.rerank(query, chunks, top_k=6)
+            try:
+                reranked = self._reranker.rerank(query, chunks, top_k=6)
+            except Exception as exc:
+                log.warning("Reranker failed on symbol fuzzy query, using raw chunks: %s", exc)
+                reranked = chunks[:6]
             return self._response_builder.build(reranked, query, "symbol", repo)
 
         # Step 4: NL fallback
