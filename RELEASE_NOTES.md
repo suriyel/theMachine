@@ -312,6 +312,13 @@
 - **New**: `ScalabilityVerificationResult` dataclass (`src/loadtest/scalability_verification_result.py`) — structured pass/fail verdict with efficiency, QPS, node counts, and human-readable summary referencing NFR-006
 - Example: 31-nfr-006-scalability-check.py
 
+### Feature #32: NFR-008 Single-Node Failure Tolerance
+- **New**: `FailureToleranceReportAnalyzer` (`src/loadtest/failure_tolerance_report_analyzer.py`) — parses JSON node-failure test reports, evaluates four pass conditions: nodes_killed>=1, nodes_initial>nodes_killed, failed_requests<=max_allowed_failures (default 0), total_requests>0
+- **New**: `FailureToleranceReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting raw stats dict
+- **New**: `FailureToleranceVerificationResult` dataclass (`src/loadtest/failure_tolerance_verification_result.py`) — structured pass/fail verdict with node counts, request counts, and human-readable summary referencing NFR-008
+- **New**: `scripts/check_real_tests.py` — real test discovery and validation script for quality gates
+- Example: 32-nfr-007-failure-tolerance.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

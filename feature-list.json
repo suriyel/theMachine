@@ -870,13 +870,15 @@
       "title": "NFR-007: Single-Node Failure Tolerance",
       "description": "Verify query service continues operating when any single node fails",
       "priority": "low",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a multi-node query cluster under load, when one node is killed, then remaining nodes continue serving requests without failures"
       ],
       "dependencies": [
         30
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-32-nfr-007-single-node-failure-tolerance.md",
+      "st_case_count": 12
     },
     {
       "id": 33,

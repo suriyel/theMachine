@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 41/42 active features passing · Last: #31 NFR-006: Linear Scalability >= 70% (2026-03-23) · Next: #32 NFR-007: Single-Node Failure Tolerance
+Progress: 42/42 active features passing · Last: #32 NFR-007: Single-Node Failure Tolerance (2026-03-23) · Next: All active features passing — System Testing
 
 ---
 
@@ -590,3 +590,18 @@ Progress: 41/42 active features passing · Last: #31 NFR-006: Linear Scalability
 - **Review**: PASS — all rubric checks passed, 2 minor findings fixed (misleading comment, missing example)
 - **Result**: Feature #31 marked PASSING
 - **Next**: Feature #32 — NFR-007: Single-Node Failure Tolerance
+
+### Session N — 2026-03-23 (Feature #32)
+- **Feature**: #32 — NFR-007: Single-Node Failure Tolerance
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service deps**: None (pure report analyzer, no external I/O)
+- **Implementation**: FailureToleranceReportAnalyzer (analyze, analyze_from_stats, _compute), FailureToleranceVerificationResult dataclass with summary()
+- **Report format**: JSON with total_requests, failed_requests, nodes_killed, nodes_initial
+- **Pass conditions**: nodes_killed>=1, nodes_initial>nodes_killed, failed_requests<=max_allowed_failures(default=0), total_requests>0
+- **Tests**: 17 tests (16 unit + 1 real @pytest.mark.real)
+- **Coverage**: 96% line / 93% branch (failure_tolerance_report_analyzer.py), 100%/100% (verification_result.py)
+- **Mutation**: 100% (101/101 mutants killed)
+- **ST**: 12/12 test cases PASS (5 FUNC, 6 BNDRY, 1 PERF)
+- **Review**: PASS — all rubric checks YES, all potential findings were false positives
+- **Result**: Feature #32 marked PASSING
+- **Next**: All 42/42 active features passing — System Testing phase
