@@ -481,6 +481,43 @@ Admin --> UC22
 - Given all evaluable stages complete, when the report is generated, then it is saved to `eval/reports/YYYY-MM-DD-eval-report.md` with per-language breakdown, per-stage breakdown, overall scores, and identified weak spots.
 - Given a previous evaluation report exists, when a new evaluation runs, then the report includes a delta section showing metric changes per stage.
 
+### FR-027: query-api Docker Image [Wave 4]
+
+<!-- Wave 4: Added 2026-03-23 — NFR-012 implementation (release blocker per ST verdict) -->
+
+**Priority**: Shall
+**EARS**: When `docker build` is invoked with `docker/Dockerfile.api`, the system shall produce a `codecontext-api` image that starts a uvicorn server on port 8000 via `src/query/main.py`, exposes `GET /api/v1/health`, and has a Docker HEALTHCHECK that passes within 30 seconds.
+**Acceptance Criteria**:
+- Given `docker build -f docker/Dockerfile.api -t codecontext-api .` runs, then the build exits 0 with no errors.
+- Given the built image is run with all required environment variables, when the container starts, then `GET http://localhost:8000/api/v1/health` returns 200 within 30 seconds.
+- Given the image is built, then `docker inspect codecontext-api` shows a HEALTHCHECK instruction targeting port 8000.
+- Given the image is built, then it contains only production dependencies (no pytest, mutmut, dev extras).
+- Given the image is built, then it runs as a non-root user (UID != 0).
+
+### FR-028: mcp-server Docker Image [Wave 4]
+
+<!-- Wave 4: Added 2026-03-23 — NFR-012 implementation (release blocker per ST verdict) -->
+
+**Priority**: Shall
+**EARS**: When `docker build` is invoked with `docker/Dockerfile.mcp`, the system shall produce a `codecontext-mcp` image that launches the MCP stdio server via `python -m src.query.mcp_server` using production dependencies only.
+**Acceptance Criteria**:
+- Given `docker build -f docker/Dockerfile.mcp -t codecontext-mcp .` runs, then the build exits 0 with no errors.
+- Given the built image is run, when the container starts, then `python -m src.query.mcp_server` is the active process.
+- Given the image is built, then it contains a HEALTHCHECK that verifies the mcp_server process is alive.
+- Given the image is built, then it contains only production dependencies and runs as a non-root user.
+
+### FR-029: index-worker Docker Image [Wave 4]
+
+<!-- Wave 4: Added 2026-03-23 — NFR-012 implementation (release blocker per ST verdict) -->
+
+**Priority**: Shall
+**EARS**: When `docker build` is invoked with `docker/Dockerfile.worker`, the system shall produce a `codecontext-worker` image that starts a Celery worker via `celery -A src.indexing.celery_app worker` and has a HEALTHCHECK using `celery inspect ping`.
+**Acceptance Criteria**:
+- Given `docker build -f docker/Dockerfile.worker -t codecontext-worker .` runs, then the build exits 0 with no errors.
+- Given the built image is run with CELERY_BROKER_URL set, when the container starts, then `celery -A src.indexing.celery_app worker` is the active process.
+- Given the image is built, then it contains a HEALTHCHECK using `celery inspect ping`.
+- Given the image is built, then it contains only production dependencies and runs as a non-root user.
+
 ---
 
 ### 4.1 Process Flows
@@ -614,7 +651,7 @@ flowchart TD
 | NFR-009 | Security | Must | API authentication | All query endpoints require valid API key; unauthenticated requests rejected with 401 | Automated test: request without key returns 401 |
 | NFR-010 | Security | Should | Repository credential storage | SSH keys and access tokens stored encrypted at rest using AES-256 | Verify ciphertext in storage; decrypt with correct key succeeds |
 | NFR-011 | Maintainability | Should | Test coverage | ≥ 80% line coverage for all modules | pytest --cov report |
-| NFR-012 | Maintainability | Should | Modular architecture | Indexing, retrieval, reranking, and API layers packaged as separate Docker images | Verify each image builds and runs independently |
+| NFR-012 | Maintainability | **Shall** | Modular architecture | Indexing, retrieval, reranking, and API layers packaged as separate Docker images (see FR-027, FR-028, FR-029) | Each image builds and starts successfully; HEALTHCHECK passes within 30s |
 
 ---
 
@@ -735,6 +772,12 @@ flowchart TD
 | FR-021 | Platform Engineer: operational monitoring | Automated metrics scrape test |
 | FR-022 | Platform Engineer: query audit trail | Log format verification test |
 | FR-023 | Developer/UI: discover available branches for a repository | Automated API test |
+| FR-024 | Platform Engineer: measure retrieval quality via golden dataset | Automated eval pipeline test |
+| FR-025 | Platform Engineer: LLM-assisted relevance annotation | Automated annotation test |
+| FR-026 | Platform Engineer: retrieval quality report with IR metrics | Automated eval metrics test |
+| FR-027 | Platform Engineer: deploy query API as containerized image | Docker build + healthcheck test |
+| FR-028 | AI Agent: deploy MCP server as containerized image | Docker build + process test |
+| FR-029 | Platform Engineer: deploy index worker as containerized image | Docker build + celery ping test |
 | NFR-001 | Interactive latency for IDE/AI agent usage | Load test (Locust) |
 | NFR-002 | Enterprise concurrent AI agent usage | Load test (Locust) |
 | NFR-003 | Enterprise repository portfolio capacity | Scale test |
