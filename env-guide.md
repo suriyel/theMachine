@@ -255,14 +255,28 @@ This also causes `__init__` methods in project classes to report "no tests" (�
 ```bash
 source .venv/bin/activate
 
-# Full mutation run
-mutmut run
+# Per-feature mutation run (REQUIRED — always scope to changed files)
+mutmut run --paths-to-mutate=src/loadtest/capacity_report_analyzer.py,src/loadtest/capacity_verification_result.py
 
 # Check results
 mutmut results
 
 # Show specific mutant diff
 mutmut show <mutant-name>
+```
+
+### Scoping Rule (Critical)
+
+**NEVER run `mutmut run` without `--paths-to-mutate`** or with `--paths-to-mutate=src/`. The full codebase generates 4000+ mutants which takes 30+ minutes and will timeout in CI or background tasks (exit code 144 / SIGKILL).
+
+Always scope to the specific source files changed by the current feature:
+```bash
+# Correct — scoped to feature files (~25 mutants, ~60s)
+mutmut run --paths-to-mutate=src/loadtest/capacity_report_analyzer.py,src/loadtest/capacity_verification_result.py
+
+# WRONG — full codebase (~4100 mutants, >30min, will timeout)
+mutmut run --paths-to-mutate=src/
+mutmut run  # no scope = all of src/
 ```
 
 ### Equivalent Mutants (expected survivors)

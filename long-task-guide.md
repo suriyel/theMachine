@@ -15,11 +15,9 @@ pytest tests/test_<module>.py -v
 # Coverage report
 pytest --cov=src --cov-branch --cov-report=term-missing
 
-# Mutation testing (incremental — changed files only)
-mutmut run --paths-to-mutate=src/<changed_module>.py
-
-# Mutation testing (full)
-mutmut run
+# Mutation testing (ALWAYS scope to feature files — never run unscoped)
+mutmut run --paths-to-mutate=src/<changed_module1>.py,src/<changed_module2>.py
+# WARNING: `mutmut run` without --paths-to-mutate generates 4000+ mutants and will timeout
 
 # Mutation results
 mutmut results
