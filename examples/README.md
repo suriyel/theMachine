@@ -15,6 +15,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 20 | Branch Listing API (#33) | [20-branch-listing-api.py](20-branch-listing-api.py) | `python examples/20-branch-listing-api.py` |
 | 21 | C: typedef struct + prototypes + enum (#38) | [21-c-typedef-prototype-enum.py](21-c-typedef-prototype-enum.py) | `python examples/21-c-typedef-prototype-enum.py` |
 | 22 | C++: namespace + template unwrapping (#39) | [22-cpp-namespace-template-chunking.py](22-cpp-namespace-template-chunking.py) | `python examples/22-cpp-namespace-template-chunking.py` |
+| 28 | NFR-003: Repository Capacity (#28) | [28-nfr-003-capacity-check.py](28-nfr-003-capacity-check.py) | `python examples/28-nfr-003-capacity-check.py` |
 | 42 | Retrieval Quality Evaluation & Reporting (#42) | [42-retrieval-quality-evaluation.py](42-retrieval-quality-evaluation.py) | `python examples/42-retrieval-quality-evaluation.py` |
 
 ---
