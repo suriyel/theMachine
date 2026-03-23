@@ -1083,6 +1083,67 @@
       ],
       "st_case_path": "docs/test-cases/feature-42-retrieval-quality-evaluation-reporting.md",
       "st_case_count": 9
+    },
+    {
+      "id": 43,
+      "wave": 4,
+      "category": "infrastructure",
+      "title": "query-api Docker Image",
+      "description": "Dockerfile for the codecontext-api image. Builds a Python 3.11-slim image with production deps only, runs src/query/main.py (new production entrypoint), exposes port 8000, includes HEALTHCHECK targeting /api/v1/health. Also creates src/query/main.py which wires all production services from env vars and starts uvicorn.",
+      "priority": "high",
+      "status": "failing",
+      "dependencies": [
+        1,
+        17
+      ],
+      "ui": false,
+      "verification_steps": [
+        "Given docker/Dockerfile.api exists, when docker build -f docker/Dockerfile.api -t codecontext-api . runs, then the build exits 0",
+        "Given the built image is run with required env vars, when the container starts, then GET /api/v1/health returns 200 within 30s",
+        "Given the image is inspected with docker inspect, then a HEALTHCHECK instruction targeting port 8000 is present",
+        "Given the image is built, then it contains only production dependencies (no pytest or dev extras)",
+        "Given the image is built, then it runs as a non-root user (UID != 0)"
+      ]
+    },
+    {
+      "id": 44,
+      "wave": 4,
+      "category": "infrastructure",
+      "title": "mcp-server Docker Image",
+      "description": "Dockerfile for the codecontext-mcp image. Builds a Python 3.11-slim image with production deps only, runs python -m src.query.mcp_server (stdio MCP protocol), includes HEALTHCHECK verifying the process is alive.",
+      "priority": "high",
+      "status": "failing",
+      "dependencies": [
+        1,
+        18
+      ],
+      "ui": false,
+      "verification_steps": [
+        "Given docker/Dockerfile.mcp exists, when docker build -f docker/Dockerfile.mcp -t codecontext-mcp . runs, then the build exits 0",
+        "Given the built image is run, when the container starts, then python -m src.query.mcp_server is the active process",
+        "Given the image is inspected, then a HEALTHCHECK instruction verifying the mcp_server process is alive is present",
+        "Given the image is built, then it contains only production dependencies and runs as a non-root user"
+      ]
+    },
+    {
+      "id": 45,
+      "wave": 4,
+      "category": "infrastructure",
+      "title": "index-worker Docker Image",
+      "description": "Dockerfile for the codecontext-worker image. Builds a Python 3.11-slim image with production deps only, runs celery -A src.indexing.celery_app worker, includes HEALTHCHECK using celery inspect ping.",
+      "priority": "high",
+      "status": "failing",
+      "dependencies": [
+        1,
+        21
+      ],
+      "ui": false,
+      "verification_steps": [
+        "Given docker/Dockerfile.worker exists, when docker build -f docker/Dockerfile.worker -t codecontext-worker . runs, then the build exits 0",
+        "Given the built image is run with CELERY_BROKER_URL set, when the container starts, then celery -A src.indexing.celery_app worker is the active process",
+        "Given the image is inspected, then a HEALTHCHECK using celery inspect ping is present",
+        "Given the image is built, then it contains only production dependencies and runs as a non-root user"
+      ]
     }
   ],
   "waves": [
@@ -1100,6 +1161,11 @@
       "id": 3,
       "date": "2026-03-21",
       "description": "Retrieval Quality Evaluation Pipeline \u2014 corpus management, LLM annotation, IR metrics & reporting"
+    },
+    {
+      "id": 4,
+      "date": "2026-03-23",
+      "description": "Modular Docker Images \u2014 query-api, mcp-server, index-worker (NFR-012 implementation, release blocker)"
     }
   ]
 }
