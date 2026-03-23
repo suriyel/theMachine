@@ -300,6 +300,12 @@
 - **New**: `RepoSizeVerificationResult` dataclass (`src/loadtest/repo_size_verification_result.py`) — structured pass/fail verdict with repo counts, completion ratio, max observed size, and human-readable summary
 - Example: 29-nfr-004-repo-size-check.py
 
+### Feature #30: NFR-005 Service Availability 99.9%
+- **New**: `AvailabilityReportAnalyzer` (`src/loadtest/availability_report_analyzer.py`) — parses JSON uptime reports containing health check samples, computes uptime ratio (successful/total), two-condition pass logic (uptime_ratio >= threshold AND total_checks >= minimum)
+- **New**: `AvailabilityReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting stats dict with total_checks/successful_checks
+- **New**: `AvailabilityVerificationResult` dataclass (`src/loadtest/availability_verification_result.py`) — structured pass/fail verdict with check counts, uptime ratio, and human-readable summary referencing NFR-007
+- Example: 30-nfr-005-availability-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

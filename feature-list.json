@@ -838,13 +838,15 @@
       "title": "NFR-005: Service Availability 99.9%",
       "description": "Verify query service achieves 99.9% uptime with health monitoring",
       "priority": "low",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given the query service running with health check endpoint, when monitored over a test window, then uptime exceeds 99.9% with automatic recovery from transient failures"
       ],
       "dependencies": [
         17
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-30-nfr-005-service-availability.md",
+      "st_case_count": 10
     },
     {
       "id": 31,
