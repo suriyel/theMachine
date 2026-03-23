@@ -19,6 +19,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 31 | NFR-006: Linear Scalability >= 70% (#31) | [31-nfr-006-scalability-check.py](31-nfr-006-scalability-check.py) | `python examples/31-nfr-006-scalability-check.py` |
 | 32 | NFR-008: Single-Node Failure Tolerance (#32) | [32-nfr-007-failure-tolerance.py](32-nfr-007-failure-tolerance.py) | `python examples/32-nfr-007-failure-tolerance.py` |
 | 42 | Retrieval Quality Evaluation & Reporting (#42) | [42-retrieval-quality-evaluation.py](42-retrieval-quality-evaluation.py) | `python examples/42-retrieval-quality-evaluation.py` |
+| 43 | query-api Docker Image (#43) | [43-query-api-entrypoint.py](43-query-api-entrypoint.py) | `python examples/43-query-api-entrypoint.py` |
 
 ---
 
