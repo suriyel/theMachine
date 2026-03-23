@@ -12,7 +12,8 @@
 |------|--------|
 | functional | 11 |
 | boundary | 6 |
-| **合计** | **17** |
+| real-project | 7 |
+| **合计** | **24** |
 
 ---
 
@@ -826,6 +827,365 @@ FR-004 (Code Chunking) — .h扩展名映射为C语言
 
 ---
 
+### 用例编号
+
+ST-REAL-006-001
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目Python解析
+
+### 测试目标
+
+验证Chunker对pallets/flask sessions.py（含2个类SessionMixin和SecureCookieSession、@property装饰器、多重继承）的chunk结构、符号名称、import提取和docstring正确性
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter Python解析器可用
+- 代码片段来自GitHub pallets/flask src/flask/sessions.py
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用pallets/flask sessions.py真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查L1/L2/L3结构 | 1个L1 + 2个L2（SessionMixin, SecureCookieSession） + ≥1个L3 |
+| 4 | 检查class symbol_name | 包含"SessionMixin"和"SecureCookieSession" |
+| 5 | 检查imports | 包含collections.abc和hashlib |
+| 6 | 检查docstring提取 | SessionMixin的doc_comment包含"Expands a basic dictionary" |
+| 7 | 检查__init__的parent_class | parent_class == "SecureCookieSession" |
+
+### 验证点
+
+- 真实Flask代码的多重继承类被正确识别为L2
+- @property装饰的方法保留在L2类体内（decorated_definition包裹）
+- import from ... 语句被正确提取
+- triple-quoted docstring正确提取
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestFlaskSessionsPy
+- **Test Type**: Real
+- **代码来源**: github.com/pallets/flask src/flask/sessions.py
+
+---
+
+### 用例编号
+
+ST-REAL-006-002
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目Java解析
+
+### 测试目标
+
+验证Chunker对spring-projects/spring-framework StringUtils.java（abstract class、static方法、Javadoc注释、@Deprecated注解）的解析正确性
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter Java解析器可用
+- 代码片段来自GitHub spring-projects/spring-framework StringUtils.java
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用Spring StringUtils.java真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查chunk结构 | 1个L1 + 1个L2（StringUtils） + ≥3个L3（isEmpty, hasLength, trimLeadingWhitespace） |
+| 4 | 检查方法symbol集合 | 包含isEmpty、hasLength、trimLeadingWhitespace |
+| 5 | 检查Javadoc提取 | 类L2的doc_comment包含"Miscellaneous"或"String" |
+| 6 | 检查imports | 包含java.nio.charset.Charset和java.util.ArrayList |
+| 7 | 检查所有方法的parent_class | parent_class == "StringUtils" |
+
+### 验证点
+
+- abstract class被正确识别为L2 chunk
+- static方法被正确识别为L3 chunk
+- Javadoc block_comment被提取为doc_comment
+- import_declaration被正确提取
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestSpringStringUtilsJava
+- **Test Type**: Real
+- **代码来源**: github.com/spring-projects/spring-framework StringUtils.java
+
+---
+
+### 用例编号
+
+ST-REAL-006-003
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目JavaScript解析
+
+### 测试目标
+
+验证Chunker对expressjs/express response.js（CommonJS require()模式、prototype赋值函数、JSDoc注释）的解析行为——prototype赋值函数回退为L1-only
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter JavaScript解析器可用
+- 代码片段来自GitHub expressjs/express lib/response.js
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用Express response.js真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查L1 chunk | 1个L1 chunk，file_path == "lib/response.js" |
+| 4 | 检查language | 所有chunk的language == "javascript" |
+
+### 验证点
+
+- CommonJS prototype赋值模式（res.status = function...）不匹配function_declaration
+- 回退为L1-only chunk，覆盖整个文件
+- require()调用不被误识别为import_statement
+- language正确检测为"javascript"
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestExpressResponseJs
+- **Test Type**: Real
+- **代码来源**: github.com/expressjs/express lib/response.js
+
+---
+
+### 用例编号
+
+ST-REAL-006-004
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目TypeScript解析
+
+### 测试目标
+
+验证Chunker对microsoft/TypeScript compiler/core.ts（export function、泛型函数签名、ES module import）的解析——export_statement内的function_declaration被正确展开为L3 chunk
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter TypeScript解析器可用
+- 代码片段来自GitHub microsoft/TypeScript src/compiler/core.ts
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用TypeScript core.ts真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查L3函数数量 | ≥4个L3（length, forEach, forEachRight, firstDefined） |
+| 4 | 检查function symbol集合 | 包含"length"、"forEach"、"forEachRight"、"firstDefined" |
+| 5 | 检查language | 所有chunk为"typescript" |
+| 6 | 检查imports | 包含"_namespaces/ts"路径 |
+| 7 | 检查L2 class数量 | 0个（core.ts仅有导出函数） |
+
+### 验证点
+
+- export_statement包裹的function_declaration被正确展开为L3 chunk
+- 泛型类型参数（<T, U>）不干扰符号名称提取
+- ES module import语句被正确提取
+- 无class定义时不产生L2 chunk
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestTypeScriptCoreTs
+- **Test Type**: Real
+- **代码来源**: github.com/microsoft/TypeScript src/compiler/core.ts
+
+---
+
+### 用例编号
+
+ST-REAL-006-005
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目C语言解析
+
+### 测试目标
+
+验证Chunker对redis/redis adlist.h（C头文件：typedef struct、宏定义、函数声明）的解析——C语言无class_nodes，#ifndef header guard内的#include被正确提取
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter C解析器可用
+- 代码片段来自GitHub redis/redis src/adlist.h
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用Redis adlist.h真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查L1 chunk | 1个L1 chunk |
+| 4 | 检查language | 所有chunk为"c" |
+| 5 | 检查chunk_id格式 | 包含repo_id和branch |
+| 6 | 检查L2数量 | 0个（C语言无class_nodes） |
+
+### 验证点
+
+- typedef struct不被识别为class（C的class_nodes为空）
+- .h扩展名正确映射为"c"语言
+- chunk_id包含repo_id和branch信息
+- header guard不干扰解析
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestRedisAdlistH
+- **Test Type**: Real
+- **代码来源**: github.com/redis/redis src/adlist.h
+
+---
+
+### 用例编号
+
+ST-REAL-006-006
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目C++解析
+
+### 测试目标
+
+验证Chunker对nlohmann/json json_fwd.hpp（C++头文件：template class前向声明、template struct、#include在#ifndef内）的解析——preproc_ifdef内的#include被递归提取
+
+### 前置条件
+
+- Chunker类已实现且可导入
+- tree-sitter C++解析器可用
+- 代码片段来自GitHub nlohmann/json include/nlohmann/json_fwd.hpp
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用nlohmann/json json_fwd.hpp真实代码片段创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用Chunker.chunk()处理 | 返回chunk列表 |
+| 3 | 检查language | 所有chunk为"cpp" |
+| 4 | 检查chunk数量 | ≥1个（至少L1） |
+| 5 | 检查imports | 包含"cstdint"、"map"、"string" |
+| 6 | 检查chunk_id格式 | 包含repo_id和branch |
+
+### 验证点
+
+- .hpp扩展名正确映射为"cpp"
+- #ifndef包裹的#include通过递归_collect_imports正确提取
+- template前向声明不导致解析异常
+- chunk_id格式正确
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestNlohmannJsonFwdHpp
+- **Test Type**: Real
+- **代码来源**: github.com/nlohmann/json include/nlohmann/json_fwd.hpp
+
+---
+
+### 用例编号
+
+ST-REAL-006-007
+
+### 关联需求
+
+FR-004 (Code Chunking) — 真实项目Markdown解析
+
+### 测试目标
+
+验证DocChunker对pallets/flask README.md（H1标题、H2节、fenced code block with language tag、链接引用）的chunk拆分、breadcrumb路径和代码块提取
+
+### 前置条件
+
+- DocChunker类已实现且可导入
+- 代码片段来自GitHub pallets/flask README.md
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 使用Flask README.md真实内容创建ExtractedFile | 文件对象创建成功 |
+| 2 | 调用DocChunker.chunk_markdown()处理 | 返回doc chunk列表 |
+| 3 | 检查chunk数量 | ≥3个（A Simple Example, Donate, Contributing） |
+| 4 | 检查breadcrumb | 包含"A Simple Example"、"Donate"、"Contributing" |
+| 5 | 检查code_examples | 包含language=="python"的代码块，含"Flask(__name__)" |
+| 6 | 检查H1内容保留 | 全部内容中包含"WSGI"和"web application framework" |
+| 7 | 检查chunk_id | 包含repo_id和branch |
+
+### 验证点
+
+- H2标题正确作为拆分点
+- H1标题内容保留在首个chunk中
+- fenced code block的language标签和代码内容被正确提取
+- breadcrumb路径格式正确
+- 链接引用语法不干扰解析
+
+### 后置检查
+
+- 无需特殊清理
+
+### 元数据
+
+- **优先级**: High
+- **类别**: real-project
+- **已自动化**: Yes
+- **测试引用**: test_chunker_real_projects.py::TestFlaskReadmeMd
+- **Test Type**: Real
+- **代码来源**: github.com/pallets/flask README.md
+
+---
+
 ## 可追溯矩阵
 
 | 用例 ID | 关联需求 | verification_step | 自动化测试 | Test Type | 结果 |
@@ -847,13 +1207,20 @@ FR-004 (Code Chunking) — .h扩展名映射为C语言
 | ST-BNDRY-006-004 | FR-004 | Syntax errors → error-tolerant parsing | TestT24SyntaxError | Real | PASS |
 | ST-BNDRY-006-005 | FR-004 | .tsx → TypeScript语言映射 | TestT25TsxExtension | Real | PASS |
 | ST-BNDRY-006-006 | FR-004 | .h → C语言映射 | TestT39HeaderFile | Real | PASS |
+| ST-REAL-006-001 | FR-004 | Flask sessions.py: 多重继承类 + @property + docstring | TestFlaskSessionsPy | Real | PASS |
+| ST-REAL-006-002 | FR-004 | Spring StringUtils.java: abstract class + Javadoc + static方法 | TestSpringStringUtilsJava | Real | PASS |
+| ST-REAL-006-003 | FR-004 | Express response.js: CommonJS prototype赋值回退 | TestExpressResponseJs | Real | PASS |
+| ST-REAL-006-004 | FR-004 | TS compiler core.ts: export function展开 + 泛型 | TestTypeScriptCoreTs | Real | PASS |
+| ST-REAL-006-005 | FR-004 | Redis adlist.h: C头文件 typedef struct + header guard | TestRedisAdlistH | Real | PASS |
+| ST-REAL-006-006 | FR-004 | nlohmann json_fwd.hpp: C++ template + #ifndef内#include | TestNlohmannJsonFwdHpp | Real | PASS |
+| ST-REAL-006-007 | FR-004 | Flask README.md: H2拆分 + fenced code block提取 | TestFlaskReadmeMd | Real | PASS |
 
 ## Real Test Case Execution Summary
 
 | Metric | Count |
 |--------|-------|
-| Total Real Test Cases | 17 |
-| Passed | 17 |
+| Total Real Test Cases | 24 |
+| Passed | 24 |
 | Failed | 0 |
 | Pending | 0 |
 
