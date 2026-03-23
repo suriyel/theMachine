@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 37/42 active features passing · Last: #27 NFR-002: Query Throughput >= 1000 QPS (2026-03-23) · Next: #28 NFR-003: Repository Capacity
+Progress: 38/42 active features passing · Last: #28 NFR-003: Repository Capacity (2026-03-23) · Next: #29 NFR-004: Single Repository Size
 
 ---
 
@@ -538,3 +538,16 @@ Progress: 37/42 active features passing · Last: #27 NFR-002: Query Throughput >
 - **Review**: PASS — all S1-S5, D1-D5, R1-R3 checks passed
 - **Result**: Feature #27 marked PASSING
 - **Next**: Feature #28 — NFR-003: Repository Capacity
+
+### Session 28 — 2026-03-23 (Feature #28)
+- **Feature**: #28 — NFR-003: Repository Capacity
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: NO — pure computation (JSON parsing)
+- **Implementation**: CapacityReportAnalyzer (analyze, analyze_from_stats), CapacityVerificationResult (summary) — three-condition pass logic (total_repos in [min,max] AND indexed_ratio >= threshold)
+- **Tests**: 18 feature tests + 879 prior = 897/897 passing
+- **Coverage**: capacity_report_analyzer.py 100%, capacity_verification_result.py 100%
+- **Mutation**: 84% (21/25 killed)
+- **ST**: 10/10 test cases PASS (5 FUNC, 4 BNDRY, 1 PERF)
+- **Review**: PASS — all S1-S5, D1-D5, P1-P3, R1-R3 checks passed
+- **Result**: Feature #28 marked PASSING
+- **Next**: Feature #29 — NFR-004: Single Repository Size

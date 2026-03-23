@@ -288,6 +288,12 @@
 - **New**: `ThroughputVerificationResult` dataclass (`src/loadtest/throughput_verification_result.py`) — structured pass/fail verdict with QPS, error rate, total requests, and human-readable summary
 - Example: 27-nfr-002-throughput-check.py
 
+### Feature #28: NFR-003 Repository Capacity
+- **New**: `CapacityReportAnalyzer` (`src/loadtest/capacity_report_analyzer.py`) — parses JSON inventory reports, counts total/indexed repositories, compares against configurable thresholds (default range [100,1000], min indexed ratio 0.8) with three-condition pass logic
+- **New**: `CapacityReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting stats dict with total_repos/indexed_repos
+- **New**: `CapacityVerificationResult` dataclass (`src/loadtest/capacity_verification_result.py`) — structured pass/fail verdict with repo counts, indexed ratio, and human-readable summary
+- Example: 28-nfr-003-capacity-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods
