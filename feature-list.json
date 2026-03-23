@@ -1091,7 +1091,7 @@
       "title": "query-api Docker Image",
       "description": "Dockerfile for the codecontext-api image. Builds a Python 3.11-slim image with production deps only, runs src/query/main.py (new production entrypoint), exposes port 8000, includes HEALTHCHECK targeting /api/v1/health. Also creates src/query/main.py which wires all production services from env vars and starts uvicorn.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         1,
         17
@@ -1103,7 +1103,9 @@
         "Given the image is inspected with docker inspect, then a HEALTHCHECK instruction targeting port 8000 is present",
         "Given the image is built, then it contains only production dependencies (no pytest or dev extras)",
         "Given the image is built, then it runs as a non-root user (UID != 0)"
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-43-query-api-docker-image.md",
+      "st_case_count": 7
     },
     {
       "id": 44,

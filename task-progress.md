@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 42/45 active features passing · Last: Increment Wave 4 (2026-03-23) · Next: Feature #43 — query-api Docker Image
+Progress: 43/45 active features passing · Last: #43 query-api Docker Image (2026-03-23) · Next: Feature #44 — mcp-server Docker Image
 
 ---
 
@@ -629,3 +629,31 @@ Progress: 42/45 active features passing · Last: Increment Wave 4 (2026-03-23) �
 - **Changes**: Added 3 features (#43 query-api image, #44 mcp-server image, #45 index-worker image); NFR-012 upgraded Should→Shall
 - **Documents updated**: SRS (FR-027/028/029 added, NFR-012 modified, traceability matrix updated), Design (Section 10 expanded, §4.8 added, §11.2/11.3 updated)
 - **Next**: Worker phase — implement features #43, #44, #45
+
+### ST Feature #43 — query-api Docker Image (2026-03-23)
+- **Phase**: Feature-ST (black-box acceptance)
+- **Environment**: Docker daemon 28.2.2; external deps (postgres/ES/qdrant/redis) healthy
+- **Test cases**: 7 (4 FUNC, 3 BNDRY)
+- **Execution**:
+  - ST-FUNC-043-001: PASS — `docker build` exits 0; image `codecontext-api:latest` created (10 layers, all cached)
+  - ST-FUNC-043-002: PASS — container started with `--network host --env-file .env`; health endpoint returned HTTP 200 in 1s (< 30s threshold)
+  - ST-FUNC-043-003: PASS — `docker inspect` shows Healthcheck targeting port 8000; interval=30s, timeout=10s, retries=3
+  - ST-FUNC-043-004: PASS — `pip show pytest` exit 1; `pip show mutmut` exit 1; `pip show fastapi` exit 0; `pip show uvicorn` exit 0
+  - ST-BNDRY-043-001: PASS — `id -u` = 1000, `id -un` = appuser; UID ≠ 0
+  - ST-BNDRY-043-002: PASS — container with missing DATABASE_URL exits 1 with "ERROR: Required environment variable not set: 'DATABASE_URL'"
+  - ST-BNDRY-043-003: PASS — Python 3.11.15; OS linux/amd64; base layers match python:3.11-slim (Debian trixie)
+- **Cleanup**: test-api-43 container stopped and removed; image retained
+- **Verdict**: PASS — 7/7 test cases passed
+
+### Session — 2026-03-23 (Feature #43)
+- **Feature**: #43 — query-api Docker Image
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Files created**: `docker/Dockerfile.api`, `src/query/main.py`, `tests/test_query_main.py`, `examples/43-query-api-entrypoint.py`
+- **Design**: Feature Design PASS (14 test scenarios, 6 TDD tasks)
+- **Tests**: 17 unit tests + 5 Docker real tests = 22 total; all passing
+- **Coverage**: 100% line, 100% branch for src/query/main.py (global: 96.4% line, 91.1% branch)
+- **Mutation**: 97.5% (78/80 killed)
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY)
+- **Review**: PASS (3 minor findings: T07 test deviates from plan setup, missing return type annotation, HEALTHCHECK test coverage gap)
+- **Result**: Feature #43 marked PASSING
+- **Next**: Feature #44 — mcp-server Docker Image
