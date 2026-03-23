@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY pyproject.toml .
+COPY src/ src/
+RUN pip install --no-cache-dir .
+RUN useradd -u 1000 appuser && chown -R appuser /app
+USER appuser
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD pgrep -f "src.query.mcp_server" || exit 1
+CMD ["python", "-m", "src.query.mcp_server"]
