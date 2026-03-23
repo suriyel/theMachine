@@ -1114,7 +1114,7 @@
       "title": "mcp-server Docker Image",
       "description": "Dockerfile for the codecontext-mcp image. Builds a Python 3.11-slim image with production deps only, runs python -m src.query.mcp_server (stdio MCP protocol), includes HEALTHCHECK verifying the process is alive.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         1,
         18
@@ -1125,7 +1125,9 @@
         "Given the built image is run, when the container starts, then python -m src.query.mcp_server is the active process",
         "Given the image is inspected, then a HEALTHCHECK instruction verifying the mcp_server process is alive is present",
         "Given the image is built, then it contains only production dependencies and runs as a non-root user"
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-44-mcp-server-docker-image.md",
+      "st_case_count": 7
     },
     {
       "id": 45,

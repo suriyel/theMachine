@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 43/45 active features passing · Last: #43 query-api Docker Image (2026-03-23) · Next: Feature #44 — mcp-server Docker Image
+Progress: 44/45 active features passing · Last: #44 mcp-server Docker Image (2026-03-23) · Next: Feature #45 — index-worker Docker Image
 
 ---
 
@@ -657,3 +657,16 @@ Progress: 43/45 active features passing · Last: #43 query-api Docker Image (202
 - **Review**: PASS (3 minor findings: T07 test deviates from plan setup, missing return type annotation, HEALTHCHECK test coverage gap)
 - **Result**: Feature #43 marked PASSING
 - **Next**: Feature #44 — mcp-server Docker Image
+
+### Session N+1 — 2026-03-23 (Feature #44)
+- **Feature**: #44 — mcp-server Docker Image
+- **Phase**: Orient → Bootstrap → Config Gate → Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Artifact**: `docker/Dockerfile.mcp` — python:3.11-slim, production-only deps, appuser UID 1000, no EXPOSE, HEALTHCHECK via pgrep, exec-form CMD
+- **Tests**: 12 @pytest.mark.real Docker integration tests (T-01 through T-12)
+- **Coverage**: 100% line, 100% branch (test infrastructure)
+- **Mutation**: N/A exempt — Dockerfile-only feature, zero Python src/ added; documented in plan Deviations section
+- **ST**: 7/7 test cases PASS (4 FUNC, 3 BNDRY)
+- **Review**: PASS (P1/P2 gaps fixed: example script + README entry added, mutation exemption documented in plan)
+- **Real Test Check**: 13 items found for feature 44 (12 test functions + 1 helper false positive); 0 mock warnings in feature-44 file
+- **Result**: Feature #44 marked PASSING
+- **Next**: Feature #45 — index-worker Docker Image

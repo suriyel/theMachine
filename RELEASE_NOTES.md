@@ -335,7 +335,7 @@
 ### Increment Wave 4 — Docker Images (2026-03-23)
 
 - **Implemented**: Feature #43 — query-api Docker Image (`docker/Dockerfile.api`, `src/query/main.py`): `python:3.11-slim` image, production-only deps, `appuser` UID 1000, port 8000, HEALTHCHECK targeting `/api/v1/health`, `build_app()` wires all services from env vars
-- **New**: Feature #44 — mcp-server Docker Image (`docker/Dockerfile.mcp`, stdio MCP protocol)
+- **Implemented**: Feature #44 — mcp-server Docker Image (`docker/Dockerfile.mcp`): `python:3.11-slim` image, production-only deps, `appuser` UID 1000, no EXPOSE (stdio mode), HEALTHCHECK via `pgrep -f src.query.mcp_server`, exec-form CMD `python -m src.query.mcp_server`
 - **New**: Feature #45 — index-worker Docker Image (`docker/Dockerfile.worker`, Celery worker)
 - **Modified**: NFR-012 promoted from "Should" to "Shall" — release blocker per ST verdict
 - **SRS**: Added FR-027, FR-028, FR-029; updated traceability matrix
