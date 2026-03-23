@@ -10,28 +10,77 @@ import pytest
 # Also set MUTANT_UNDER_TEST if missing (mutmut v3 stats collection phase
 # doesn't set this env var, but the trampoline code requires it).
 if os.path.basename(os.getcwd()) == "mutants":
-    if "MUTANT_UNDER_TEST" not in os.environ:
-        os.environ["MUTANT_UNDER_TEST"] = ""
     _cwd = os.getcwd()
     if _cwd not in sys.path or sys.path.index(_cwd) > 0:
         sys.path.insert(0, _cwd)
+    if "MUTANT_UNDER_TEST" not in os.environ:
+        os.environ["MUTANT_UNDER_TEST"] = ""
+
+
+def _fix_mutmut_src_prefix():
+    """Fix mutmut 3.x src/ layout prefix mismatch on every pytest invocation.
+
+    mutmut 3.x strips "src." when generating mutant names
+    (src/query/app.py → query.app) but modules are imported as src.query.app.
+    This causes the trampoline's prefix check to fail on every mutation run:
+      prefix = "src.query.app.x_create_app__mutmut_"
+      MUTANT_UNDER_TEST = "query.app.x_create_app__mutmut_1"  ← no match
+
+    Fixes applied here (called from pytest_configure, which runs per invocation):
+    1. MUTANT_UNDER_TEST: add "src." prefix for non-special values
+    2. record_trampoline_hit: strip "src." so stats keys match mutant names
+    3. Force reimport of src.* modules from mutants/ dir
+    """
+    if os.path.basename(os.getcwd()) != "mutants":
+        return
+
+    # Fix MUTANT_UNDER_TEST
+    _mut = os.environ.get("MUTANT_UNDER_TEST", "")
+    _special = {"", "stats", "fail", "mutant_generation", "list_all_tests"}
+    if _mut not in _special and not _mut.startswith("src."):
+        os.environ["MUTANT_UNDER_TEST"] = "src." + _mut
+
+    # Patch record_trampoline_hit during stats collection
+    if _mut == "stats":
+        try:
+            import mutmut.__main__ as _mutmut_main
+            _orig_record = _mutmut_main.record_trampoline_hit
+
+            def _patched_record(name):
+                if name.startswith("src."):
+                    name = name[4:]
+                _orig_record(name)
+
+            _mutmut_main.record_trampoline_hit = _patched_record
+        except Exception:
+            pass
+
     # Force reimport of src package from CWD (mutants/) instead of editable install
     for mod_name in list(sys.modules):
         if mod_name == "src" or mod_name.startswith("src."):
             del sys.modules[mod_name]
 
 
-def pytest_collection_modifyitems(config, items):
-    """Skip Jinja2 template tests when running in mutmut mutants/ directory.
+def pytest_configure(config):
+    """Run src. prefix fix on every pytest invocation (not just module import)."""
+    _fix_mutmut_src_prefix()
 
-    mutmut copies source to mutants/ but not templates/static, causing
-    Jinja2 TemplateNotFound errors. These tests are unrelated to mutation
-    coverage and are safely skippable in that context.
+
+def pytest_collection_modifyitems(config, items):
+    """Skip tests incompatible with mutmut mutants/ directory.
+
+    mutmut copies source to mutants/ but not templates/static or docker/,
+    causing Jinja2 TemplateNotFound errors and Docker build failures.
+    These tests are unrelated to mutation coverage and are safely skippable.
     """
     if os.environ.get("MUTANT_UNDER_TEST") or os.path.basename(os.getcwd()) == "mutants":
-        skip_marker = pytest.mark.skip(reason="Jinja2 templates unavailable in mutants/ dir")
+        skip_marker = pytest.mark.skip(reason="Unavailable in mutants/ dir (no templates/docker)")
         for item in items:
             if "test_web_ui" in item.nodeid:
+                item.add_marker(skip_marker)
+            if "test_feature_44" in item.nodeid or "test_feature_45" in item.nodeid:
+                item.add_marker(skip_marker)
+            if "test_docker" in item.nodeid or "test_container" in item.nodeid:
                 item.add_marker(skip_marker)
 
 

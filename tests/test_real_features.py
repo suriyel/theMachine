@@ -278,12 +278,17 @@ def test_real_api_key_hash_and_verify_feature_16():
 
 @pytest.mark.real
 def test_real_health_endpoint_via_testclient_feature_17():
-    """feature #17: Hit /api/v1/health via real TestClient — direct integration."""
+    """feature_17: Hit /api/v1/health via real TestClient with lifespan context — direct integration.
+
+    Verifies DEF-001 fix: lifespan runs, clients are None (no env config in test),
+    health endpoint returns 200 with 'degraded' (all services "down" — expected
+    without real infra) and the correct service name.
+    """
     from src.query.app import create_app
 
     app = create_app()
-    client = TestClient(app)
-    resp = client.get("/api/v1/health")
+    with TestClient(app) as client:
+        resp = client.get("/api/v1/health")
 
     assert resp.status_code == 200
     body = resp.json()

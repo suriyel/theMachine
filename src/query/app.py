@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
@@ -41,7 +42,27 @@ def create_app(
     Returns:
         Configured FastAPI instance with all routes.
     """
-    app = FastAPI(title="Code Context Retrieval", version="0.1.0")
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI):
+        # Startup: connect all non-None infrastructure clients
+        if es_client is not None:
+            await es_client.connect()
+        if qdrant_client is not None:
+            await qdrant_client.connect()
+        if redis_client is not None:
+            await redis_client.connect()
+        yield
+        # Shutdown: close all non-None infrastructure clients.
+        # Each close() is attempted independently so a failure on one client
+        # does not prevent the remaining clients from being closed.
+        for client in (es_client, qdrant_client, redis_client):
+            if client is not None:
+                try:
+                    await client.close()
+                except Exception:
+                    pass
+
+    app = FastAPI(title="Code Context Retrieval", version="0.1.0", lifespan=_lifespan)
 
     # Store service instances in app state for dependency injection
     app.state.query_handler = query_handler
