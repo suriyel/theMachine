@@ -306,6 +306,12 @@
 - **New**: `AvailabilityVerificationResult` dataclass (`src/loadtest/availability_verification_result.py`) — structured pass/fail verdict with check counts, uptime ratio, and human-readable summary referencing NFR-007
 - Example: 30-nfr-005-availability-check.py
 
+### Feature #31: NFR-006 Linear Scalability >= 70%
+- **New**: `ScalabilityReportAnalyzer` (`src/loadtest/scalability_report_analyzer.py`) — compares baseline (N-node) and scaled (N+1-node) Locust CSV stats, delegates CSV parsing to `ThroughputReportAnalyzer`, computes scalability efficiency as `actual_increase / theoretical_increase`, passes iff efficiency >= 70%
+- **New**: `ScalabilityReportAnalyzer.analyze_from_stats()` — programmatic alternative accepting raw QPS values and node counts
+- **New**: `ScalabilityVerificationResult` dataclass (`src/loadtest/scalability_verification_result.py`) — structured pass/fail verdict with efficiency, QPS, node counts, and human-readable summary referencing NFR-006
+- Example: 31-nfr-006-scalability-check.py
+
 ### Wave 1 Re-verification
 - Feature #3: Repository Registration re-verified with branch parameter support — `register(url, branch?)` stores `indexed_branch`, IndexJob uses specified branch or "main" placeholder
 - Feature #4: Git Clone & Update re-verified with branch support — `clone_or_update(branch?)` uses `--branch` for clone, `origin/{branch}` for update reset; new `detect_default_branch()` and `list_remote_branches()` methods

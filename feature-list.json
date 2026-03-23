@@ -854,13 +854,15 @@
       "title": "NFR-006: Linear Scalability >= 70%",
       "description": "Verify adding query nodes yields >= 70% of theoretical throughput increase",
       "priority": "low",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given N query nodes achieving X QPS, when deploying N+1 nodes, then throughput increases by >= 0.7 * (X/N)"
       ],
       "dependencies": [
         27
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-31-nfr-006-linear-scalability.md",
+      "st_case_count": 10
     },
     {
       "id": 32,

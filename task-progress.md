@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 40/42 active features passing · Last: #30 NFR-005: Service Availability 99.9% (2026-03-23) · Next: #31 NFR-006: Linear Scalability >= 70%
+Progress: 41/42 active features passing · Last: #31 NFR-006: Linear Scalability >= 70% (2026-03-23) · Next: #32 NFR-007: Single-Node Failure Tolerance
 
 ---
 
@@ -577,3 +577,16 @@ Progress: 40/42 active features passing · Last: #30 NFR-005: Service Availabili
 - **Review**: PASS — all rubric checks passed
 - **Result**: Feature #30 marked PASSING
 - **Next**: Feature #31 — NFR-006: Linear Scalability >= 70%
+
+### Session 31 — 2026-03-23 (Feature #31)
+- **Feature**: #31 — NFR-006: Linear Scalability >= 70%
+- **Phase**: Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Service dependencies**: No (pure computation analyzer)
+- **Implementation**: ScalabilityReportAnalyzer (analyze, analyze_from_stats, _compute) comparing baseline/scaled Locust CSVs via ThroughputReportAnalyzer delegation, ScalabilityVerificationResult dataclass with summary()
+- **Tests**: 31 feature tests + 937 prior = 968/968 passing
+- **Coverage**: 100% line, 100% branch
+- **Mutation**: 92.5% (46/49 killed, 3 equivalent mutants)
+- **ST**: 10/10 test cases PASS (5 FUNC, 4 BNDRY, 1 PERF)
+- **Review**: PASS — all rubric checks passed, 2 minor findings fixed (misleading comment, missing example)
+- **Result**: Feature #31 marked PASSING
+- **Next**: Feature #32 — NFR-007: Single-Node Failure Tolerance
