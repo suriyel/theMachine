@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY pyproject.toml .
+COPY src/ src/
+RUN pip install --no-cache-dir .
+RUN useradd -u 1000 appuser && chown -R appuser /app
+USER appuser
+HEALTHCHECK --interval=60s --timeout=30s --retries=3 \
+    CMD celery -A src.indexing.celery_app inspect ping -d celery@$HOSTNAME
+CMD ["celery", "-A", "src.indexing.celery_app", "worker", "--loglevel=info"]

@@ -21,6 +21,7 @@ Runnable examples demonstrating completed features. Each example corresponds to 
 | 42 | Retrieval Quality Evaluation & Reporting (#42) | [42-retrieval-quality-evaluation.py](42-retrieval-quality-evaluation.py) | `python examples/42-retrieval-quality-evaluation.py` |
 | 43 | query-api Docker Image (#43) | [43-query-api-entrypoint.py](43-query-api-entrypoint.py) | `python examples/43-query-api-entrypoint.py` |
 | 44 | mcp-server Docker Image (#44) | [44-mcp-docker-build.sh](44-mcp-docker-build.sh) | `bash examples/44-mcp-docker-build.sh` |
+| 45 | index-worker Docker Image (#45) | [45-worker-docker-build.sh](45-worker-docker-build.sh) | `bash examples/45-worker-docker-build.sh` |
 
 ---
 
