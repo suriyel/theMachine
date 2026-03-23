@@ -1,7 +1,11 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 45/45 active features passing · Last: #45 index-worker Docker Image (2026-03-23) · Next: System Testing phase
+Progress: 43/45 active features passing (2 failing) · Last: #17 REST API Endpoints (2026-03-23) · Next: #21 Scheduled Index Refresh
+
+**Failing features**:
+- #21 Scheduled Index Refresh — DEF-002: `celery -A src.indexing.celery_app worker` fails, no module-level celery instance
+- #45 index-worker Docker Image — DEF-002: container celery worker command fails at runtime
 
 ---
 
@@ -682,3 +686,27 @@ Progress: 45/45 active features passing · Last: #45 index-worker Docker Image (
 - **Review**: PASS (P2 gap fixed: example script + README entry added before commit)
 - **Result**: Feature #45 marked PASSING — ALL 45/45 FEATURES NOW PASSING
 - **Next**: System Testing phase
+
+### Session N+3 — 2026-03-23 (Feature #17 ST — DEF-001 Fix Verification)
+- **Feature**: #17 — REST API Endpoints (DEF-001 bugfix verification)
+- **Phase**: Feature-ST (SubAgent execution)
+- **Service lifecycle**: query-api started on port 8000 (PID 362618) using `env -u ALL_PROXY -u all_proxy uvicorn --factory src.query.main:build_app`; confirmed healthy (all services up); stopped after testing
+- **ST document updated**: docs/test-cases/feature-17-rest-api-endpoints.md — added 5 regression cases (R01-R05) as ST-FUNC-017-006, ST-BNDRY-017-004, ST-BNDRY-017-005, ST-FUNC-017-007, ST-FUNC-017-008; fixed missing 验证点/后置检查 sections in existing 10 cases; total now 15 cases
+- **Validation**: `python scripts/validate_st_cases.py` exits 0 — VALID, 15 cases, 0 errors
+- **Test execution**: 61/61 tests PASS (pytest tests/test_rest_api.py), including all 5 regression tests (R01-R05)
+- **Coverage**: src/query/app.py 98% line/branch, src/query/health.py 98% line/branch, all endpoint files 100% — exceeds thresholds (line≥90%, branch≥80%)
+- **Live service verification**: GET /api/v1/health returns status="healthy" with lifespan fix; POST /query returns 401 without key; both confirm DEF-001 resolved
+- **Cleanup**: service stopped, port 8000 free
+- **Result**: DEF-001 RESOLVED — Feature #17 ST PASS (15/15 cases)
+
+### Session N+4 — 2026-03-23 (Feature #17 DEF-001 Worker Pipeline)
+- **Feature**: #17 — REST API Endpoints (DEF-001 fix validation via full Worker pipeline)
+- **Phase**: Orient → Bootstrap → Config Gate → Feature Design → TDD → Quality → ST → Review → Persist
+- **Service dependencies**: Yes (ES, Qdrant, Redis, PostgreSQL) — all healthy
+- **Feature Design**: PASS (38 test scenarios, 6 TDD tasks) — docs/features/2026-03-23-rest-api-endpoints.md
+- **TDD**: Existing 62 tests cover all 38 test inventory items (T01-T33, R01-R05); all pass
+- **Quality Gates**: PASS — Gate 0 (2 real tests), Gate 1 (line 100%, branch 97.7%), Gate 2 (mutation 100%, 56/56 killed), Gate 3 (fresh verify 87 tests pass)
+- **ST Acceptance**: PASS — 15/15 test cases (8 FUNC, 5 BNDRY, 2 SEC)
+- **Review**: PASS — all S1-S5, D1-D5, P1-P3, R1-R3 YES; minor findings only (ST doc name mismatches, st_case_count metadata)
+- **Result**: Feature #17 marked PASSING — 43/45 active features now passing
+- **Next**: Feature #21 — Scheduled Index Refresh

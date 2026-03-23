@@ -140,6 +140,9 @@
 - **New**: Pydantic schemas and FastAPI dependency injection (deps.py)
 - Example: 17-rest-api-endpoints.py
 
+### Fixed
+- [high] REST API Endpoints: production queries return 500 (DEF-001, fixes #17) — create_app() lifespan was missing; infrastructure clients (ES, Qdrant, Redis) were never connected at startup, causing health checks to report degraded and queries to fail with connection errors. Added asynccontextmanager lifespan to connect on startup and close on shutdown.
+
 ### Feature #18: MCP Server
 - **New**: `create_mcp_server(query_handler, session_factory, es_client)` factory — creates FastMCP instance with 3 tools
 - **New**: `search_code_context` tool — validates query, detects query type (NL/symbol), delegates to QueryHandler, returns JSON matching REST API response format. `top_k` and `max_tokens` params reserved for future use.
