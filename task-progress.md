@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 44/45 active features passing · Last: #44 mcp-server Docker Image (2026-03-23) · Next: Feature #45 — index-worker Docker Image
+Progress: 45/45 active features passing · Last: #45 index-worker Docker Image (2026-03-23) · Next: System Testing phase
 
 ---
 
@@ -670,3 +670,15 @@ Progress: 44/45 active features passing · Last: #44 mcp-server Docker Image (20
 - **Real Test Check**: 13 items found for feature 44 (12 test functions + 1 helper false positive); 0 mock warnings in feature-44 file
 - **Result**: Feature #44 marked PASSING
 - **Next**: Feature #45 — index-worker Docker Image
+
+### Session N+2 — 2026-03-23 (Feature #45)
+- **Feature**: #45 — index-worker Docker Image
+- **Phase**: Orient → Feature Design → TDD → Quality Gates → ST → Review → Persist
+- **Artifact**: `docker/Dockerfile.worker` — python:3.11-slim, production-only deps (includes celery), appuser UID 1000, no EXPOSE, HEALTHCHECK via celery inspect ping (interval=60s, timeout=30s), exec-form CMD with --loglevel=info
+- **Tests**: 14 @pytest.mark.real Docker integration tests (T-01 through T-14)
+- **Coverage**: N/A (Dockerfile-only, no Python src/ added)
+- **Mutation**: N/A exempt — Dockerfile-only feature, zero Python src/ added
+- **ST**: 9/9 test cases PASS (4 FUNC, 5 BNDRY)
+- **Review**: PASS (P2 gap fixed: example script + README entry added before commit)
+- **Result**: Feature #45 marked PASSING — ALL 45/45 FEATURES NOW PASSING
+- **Next**: System Testing phase

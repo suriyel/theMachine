@@ -1136,7 +1136,7 @@
       "title": "index-worker Docker Image",
       "description": "Dockerfile for the codecontext-worker image. Builds a Python 3.11-slim image with production deps only, runs celery -A src.indexing.celery_app worker, includes HEALTHCHECK using celery inspect ping.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         1,
         21
@@ -1147,7 +1147,9 @@
         "Given the built image is run with CELERY_BROKER_URL set, when the container starts, then celery -A src.indexing.celery_app worker is the active process",
         "Given the image is inspected, then a HEALTHCHECK using celery inspect ping is present",
         "Given the image is built, then it contains only production dependencies and runs as a non-root user"
-      ]
+      ],
+      "st_case_path": "docs/test-cases/feature-45-index-worker-docker-image.md",
+      "st_case_count": 9
     }
   ],
   "waves": [
