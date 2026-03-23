@@ -1781,13 +1781,84 @@ graph LR
 
 ## 10. Deployment / Infrastructure
 
+<!-- Wave 4: Modified 2026-03-23 — NFR-012 promoted to Shall; added detailed Docker image design for FR-027/028/029 -->
+
 **Docker images** (3):
 
-| Image | Entrypoint | Ports | Scaling |
-|-------|-----------|-------|---------|
-| `codecontext-api` | `uvicorn src.query.main:app` | 8000 | Horizontal (N replicas) |
-| `codecontext-mcp` | `python -m src.query.mcp` | 3000 | Horizontal (N replicas) |
-| `codecontext-worker` | `celery -A src.indexing.celery_app worker` | — | Horizontal (N workers) |
+| Image | Dockerfile | Entrypoint | Ports | Scaling |
+|-------|-----------|-----------|-------|---------|
+| `codecontext-api` | `docker/Dockerfile.api` | `python -m src.query.main` | 8000 | Horizontal (N replicas) |
+| `codecontext-mcp` | `docker/Dockerfile.mcp` | `python -m src.query.mcp_server` | stdio | 1 per client process |
+| `codecontext-worker` | `docker/Dockerfile.worker` | `celery -A src.indexing.celery_app worker` | — | Horizontal (N workers) |
+
+### 4.8 Feature Group: Docker Images (FR-027 to FR-029) [Wave 4]
+
+#### 4.8.1 Shared Base
+
+All three images share:
+- **Base image**: `python:3.11-slim`
+- **Working directory**: `/app`
+- **Source copy**: Full `src/` package + `pyproject.toml`
+- **Dependency install**: `pip install --no-cache-dir .` (production deps only — no `[dev]` extras)
+- **Non-root user**: `appuser` (UID 1000) for security
+
+#### 4.8.2 `codecontext-api` Image (FR-027)
+
+```
+docker/Dockerfile.api
+├── FROM python:3.11-slim
+├── WORKDIR /app
+├── COPY pyproject.toml .
+├── COPY src/ src/
+├── RUN pip install --no-cache-dir .
+├── RUN useradd -u 1000 appuser && chown -R appuser /app
+├── USER appuser
+├── EXPOSE 8000
+├── HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+│       CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"
+└── CMD ["python", "-m", "src.query.main"]
+```
+
+`src/query/main.py` (new file) — production entrypoint:
+1. Reads all config from environment variables (DATABASE_URL, ELASTICSEARCH_URL, QDRANT_URL, REDIS_URL, SECRET_KEY, etc.)
+2. Instantiates: `ElasticsearchClient`, `QdrantClientWrapper`, `RedisClient`, async `session_factory`
+3. Instantiates: `Retriever`, `RankFusion`, `Reranker`, `ResponseBuilder`, `QueryHandler`, `AuthMiddleware`, `APIKeyManager`, `QueryCache`
+4. Calls `create_app(...)` with all wired dependencies
+5. Starts `uvicorn` programmatically on `0.0.0.0:8000`
+
+#### 4.8.3 `codecontext-mcp` Image (FR-028)
+
+```
+docker/Dockerfile.mcp
+├── FROM python:3.11-slim
+├── WORKDIR /app
+├── COPY pyproject.toml .
+├── COPY src/ src/
+├── RUN pip install --no-cache-dir .
+├── RUN useradd -u 1000 appuser && chown -R appuser /app
+├── USER appuser
+├── HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+│       CMD pgrep -f "src.query.mcp_server" || exit 1
+└── CMD ["python", "-m", "src.query.mcp_server"]
+```
+
+MCP server runs in stdio mode. The container is attached to the AI agent's host process via stdin/stdout piping. No port is exposed.
+
+#### 4.8.4 `codecontext-worker` Image (FR-029)
+
+```
+docker/Dockerfile.worker
+├── FROM python:3.11-slim
+├── WORKDIR /app
+├── COPY pyproject.toml .
+├── COPY src/ src/
+├── RUN pip install --no-cache-dir .
+├── RUN useradd -u 1000 appuser && chown -R appuser /app
+├── USER appuser
+├── HEALTHCHECK --interval=60s --timeout=30s --retries=3 \
+│       CMD celery -A src.indexing.celery_app inspect ping -d celery@$HOSTNAME
+└── CMD ["celery", "-A", "src.indexing.celery_app", "worker", "--loglevel=info"]
+```
 
 **External services** (provisioned separately):
 - Elasticsearch 8.17.x cluster (≥ 3 nodes for HA)
@@ -1858,6 +1929,9 @@ graph LR
 | 40 | P2 | Evaluation Corpus Management | FR-024 (Wave 3) | #4, #5, #6, #7 | M7 |
 | 41 | P2 | LLM Query Generation & Relevance Annotation | FR-025 (Wave 3) | #40 | M7 |
 | 42 | P2 | Retrieval Quality Evaluation & Reporting | FR-026 (Wave 3) | #41, #8, #9 | M7 |
+| 43 | P0 | query-api Docker image (+ src/query/main.py) | FR-027 (Wave 4) | #1, #17 | M8 |
+| 44 | P0 | mcp-server Docker image | FR-028 (Wave 4) | #1, #18 | M8 |
+| 45 | P0 | index-worker Docker image | FR-029 (Wave 4) | #1, #21 | M8 |
 
 ### 11.3 Dependency Chain
 
@@ -1909,6 +1983,13 @@ graph LR
     F41 --> F42["#42 Eval Metrics<br/>W3"]
     F8 --> F42
     F9 --> F42
+
+    F1 --> F43["#43 query-api image<br/>W4"]
+    F17 --> F43
+    F1 --> F44["#44 mcp-server image<br/>W4"]
+    F18 --> F44
+    F1 --> F45["#45 index-worker image<br/>W4"]
+    F21 --> F45
 ```
 
 ### 11.4 Risk & Mitigation
