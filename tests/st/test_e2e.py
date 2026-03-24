@@ -152,7 +152,7 @@ def test_ai_agent_nl_query_via_mcp_returns_code_results():
     # MCP server exposes search_code_context tool — invoke it directly via the handler
     # (stdio protocol doesn't allow HTTP-style invocation in tests; test the tool function)
     result = asyncio.get_event_loop().run_until_complete(
-        handler.handle_nl_query("spring webclient timeout", repo=None, languages=None)
+        handler.handle_nl_query("spring webclient timeout", repo="owner/repo", languages=None)
     )
 
     assert result is not None
@@ -180,7 +180,7 @@ def test_ai_agent_symbol_query_auto_detected_and_routed():
     assert query_type == "symbol"
 
     result = asyncio.get_event_loop().run_until_complete(
-        handler.handle_symbol_query("ConfigurationProperties", repo=None, languages=None)
+        handler.handle_symbol_query("ConfigurationProperties", repo="owner/repo", languages=None)
     )
     assert result.query_type == "symbol"
     assert len(result.code_results) > 0
@@ -204,7 +204,7 @@ def test_ai_agent_mcp_and_rest_share_same_handler():
     with TestClient(app) as client:
         resp = client.post(
             "/api/v1/query",
-            json={"query": "configure timeout"},
+            json={"query": "configure timeout", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 
@@ -230,7 +230,7 @@ def test_developer_nl_query_full_pipeline_returns_results():
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/query",
-            json={"query": "how to configure connection timeout in spring"},
+            json={"query": "how to configure connection timeout in spring", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 
@@ -264,7 +264,7 @@ def test_developer_symbol_query_full_pipeline():
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/query",
-            json={"query": "WebClient"},
+            json={"query": "WebClient", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 
@@ -322,13 +322,13 @@ def test_developer_second_query_served_from_cache():
         # First request — cache miss, pipeline runs
         r1 = client.post(
             "/api/v1/query",
-            json={"query": "timeout config"},
+            json={"query": "timeout config", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
         # Second request — cache hit, pipeline skipped
         r2 = client.post(
             "/api/v1/query",
-            json={"query": "timeout config"},
+            json={"query": "timeout config", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 

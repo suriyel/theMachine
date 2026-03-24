@@ -6,6 +6,8 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 
 from src.query.api.v1.endpoints.keys import keys_router
@@ -63,6 +65,13 @@ def create_app(
                     pass
 
     app = FastAPI(title="Code Context Retrieval", version="0.1.0", lifespan=_lifespan)
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_handler(request, exc: RequestValidationError):
+        errors = exc.errors()
+        if any(e.get("type") == "json_invalid" for e in errors):
+            return JSONResponse(status_code=400, content={"detail": "Invalid JSON body"})
+        return JSONResponse(status_code=422, content={"detail": errors})
 
     # Store service instances in app state for dependency injection
     app.state.query_handler = query_handler

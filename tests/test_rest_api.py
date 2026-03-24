@@ -137,10 +137,11 @@ def _create_test_app(api_key: ApiKey | None = None):
 # T01: POST /api/v1/query — NL happy path
 # ===========================================================================
 def test_post_query_nl_success():
+    # ST-FUNC-017-001
     app, mocks = _create_test_app()
     client = TestClient(app)
 
-    resp = client.post("/api/v1/query", json={"query": "how to parse JSON"})
+    resp = client.post("/api/v1/query", json={"query": "how to parse JSON", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["query_type"] == "nl"
@@ -155,7 +156,7 @@ def test_post_query_symbol_success():
     mocks["query_handler"].detect_query_type.return_value = "symbol"
     client = TestClient(app)
 
-    resp = client.post("/api/v1/query", json={"query": "parseJSON"})
+    resp = client.post("/api/v1/query", json={"query": "parseJSON", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["query_type"] == "symbol"
@@ -165,6 +166,7 @@ def test_post_query_symbol_success():
 # T03: GET /api/v1/repos — happy path
 # ===========================================================================
 def test_get_repos_success():
+    # ST-FUNC-017-002
     app, mocks = _create_test_app()
 
     # Mock a repo in DB
@@ -194,6 +196,7 @@ def test_get_repos_success():
 # T04: GET /api/v1/health — no auth, returns 200
 # ===========================================================================
 def test_get_health_no_auth():
+    # ST-FUNC-017-003
     app, mocks = _create_test_app()
     client = TestClient(app)
 
@@ -208,6 +211,7 @@ def test_get_health_no_auth():
 # T05: POST /api/v1/keys — admin creates key
 # ===========================================================================
 def test_create_key_success():
+    # ST-FUNC-017-005
     app, mocks = _create_test_app()
     new_key = _make_api_key("read")
     mocks["api_key_manager"].create_key.return_value = ("ccr_plaintext123", new_key)
@@ -224,6 +228,7 @@ def test_create_key_success():
 # T06: GET /api/v1/keys — admin lists keys
 # ===========================================================================
 def test_list_keys_success():
+    # ST-FUNC-017-005
     app, mocks = _create_test_app()
     k = _make_api_key("read")
     mocks["api_key_manager"].list_keys.return_value = [k]
@@ -240,6 +245,7 @@ def test_list_keys_success():
 # T07: POST /api/v1/repos — admin registers repo
 # ===========================================================================
 def test_register_repo_success():
+    # ST-FUNC-017-004
     app, mocks = _create_test_app()
 
     # Build a mock repo to return from RepoManager.register
@@ -304,6 +310,7 @@ def test_reindex_repo_success():
 # T09: DELETE /api/v1/keys/{id} — admin revokes key
 # ===========================================================================
 def test_delete_key_success():
+    # ST-FUNC-017-005
     app, mocks = _create_test_app()
     key_id = uuid.uuid4()
 
@@ -317,6 +324,7 @@ def test_delete_key_success():
 # T10: POST /api/v1/keys/{id}/rotate — admin rotates key
 # ===========================================================================
 def test_rotate_key_success():
+    # ST-FUNC-017-005
     app, mocks = _create_test_app()
     key_id = uuid.uuid4()
     new_key = _make_api_key("admin")
@@ -350,11 +358,11 @@ def test_post_query_with_languages():
 
     resp = client.post(
         "/api/v1/query",
-        json={"query": "test query", "languages": ["python", "java"]},
+        json={"query": "test query", "repo_id": "owner/repo", "languages": ["python", "java"]},
     )
     assert resp.status_code == 200
     mocks["query_handler"].handle_nl_query.assert_called_once_with(
-        "test query", None, ["python", "java"]
+        "test query", "owner/repo", ["python", "java"]
     )
 
 
@@ -362,6 +370,7 @@ def test_post_query_with_languages():
 # T13: POST /api/v1/query — missing API key → 401
 # ===========================================================================
 def test_query_missing_api_key():
+    # ST-SEC-017-002
     from src.query.app import create_app
     from src.query.api.v1.deps import get_authenticated_key
 
@@ -409,6 +418,7 @@ def test_query_invalid_api_key():
 # T15: POST /api/v1/keys — read-only key → 403
 # ===========================================================================
 def test_create_key_read_only_forbidden():
+    # ST-SEC-017-001
     read_key = _make_api_key("read")
     app, mocks = _create_test_app(api_key=read_key)
     # Use real check_permission from AuthMiddleware
@@ -425,6 +435,7 @@ def test_create_key_read_only_forbidden():
 # T16: POST /api/v1/repos — read-only key → 403
 # ===========================================================================
 def test_register_repo_read_only_forbidden():
+    # ST-SEC-017-001
     read_key = _make_api_key("read")
     app, mocks = _create_test_app(api_key=read_key)
     from src.shared.services.auth_middleware import AuthMiddleware
@@ -440,11 +451,12 @@ def test_register_repo_read_only_forbidden():
 # T17: POST /api/v1/query — empty query → 400
 # ===========================================================================
 def test_query_empty_body():
+    # ST-BNDRY-017-001
     app, mocks = _create_test_app()
     mocks["query_handler"].handle_nl_query.side_effect = ValidationError("query must not be empty")
 
     client = TestClient(app, raise_server_exceptions=False)
-    resp = client.post("/api/v1/query", json={"query": ""})
+    resp = client.post("/api/v1/query", json={"query": "", "repo_id": "owner/repo"})
     assert resp.status_code == 400
     assert "query must not be empty" in resp.json()["detail"]
 
@@ -453,6 +465,7 @@ def test_query_empty_body():
 # T18: POST /api/v1/query — missing field → 422
 # ===========================================================================
 def test_query_missing_field():
+    # ST-BNDRY-017-001
     app, mocks = _create_test_app()
     client = TestClient(app, raise_server_exceptions=False)
 
@@ -468,7 +481,7 @@ def test_query_retrieval_error():
     mocks["query_handler"].handle_nl_query.side_effect = RetrievalError("all retrieval paths failed")
 
     client = TestClient(app, raise_server_exceptions=False)
-    resp = client.post("/api/v1/query", json={"query": "test"})
+    resp = client.post("/api/v1/query", json={"query": "test", "repo_id": "owner/repo"})
     assert resp.status_code == 500
     assert resp.json()["detail"] == "Retrieval failed"
 
@@ -477,6 +490,7 @@ def test_query_retrieval_error():
 # T20: POST /api/v1/repos — conflict → 409
 # ===========================================================================
 def test_register_repo_conflict():
+    # ST-BNDRY-017-003
     app, mocks = _create_test_app()
 
     with patch("src.query.api.v1.endpoints.repos.RepoManager") as MockRM:
@@ -497,6 +511,7 @@ def test_register_repo_conflict():
 # T21: POST /api/v1/repos/{bad-uuid}/reindex — not found → 404
 # ===========================================================================
 def test_reindex_repo_not_found():
+    # ST-BNDRY-017-002
     app, mocks = _create_test_app()
     bad_id = uuid.uuid4()
 
@@ -515,6 +530,7 @@ def test_reindex_repo_not_found():
 # T22: DELETE /api/v1/keys/{bad-uuid} — not found → 404
 # ===========================================================================
 def test_delete_key_not_found():
+    # ST-BNDRY-017-002
     app, mocks = _create_test_app()
     bad_id = uuid.uuid4()
     mocks["api_key_manager"].revoke_key.side_effect = KeyError("not found")
@@ -545,6 +561,7 @@ def test_rotate_inactive_key():
 # T24: POST /api/v1/repos/{id}/reindex — read-only → 403
 # ===========================================================================
 def test_reindex_read_only_forbidden():
+    # ST-SEC-017-001
     read_key = _make_api_key("read")
     app, mocks = _create_test_app(api_key=read_key)
     from src.shared.services.auth_middleware import AuthMiddleware
@@ -597,7 +614,7 @@ def test_query_exceeds_500_chars():
     )
 
     client = TestClient(app, raise_server_exceptions=False)
-    resp = client.post("/api/v1/query", json={"query": long_query})
+    resp = client.post("/api/v1/query", json={"query": long_query, "repo_id": "owner/repo"})
     assert resp.status_code == 400
     assert "query exceeds 500 character limit" in resp.json()["detail"]
 
@@ -610,7 +627,7 @@ def test_query_exactly_500_chars():
     query = "a" * 500
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": query})
+    resp = client.post("/api/v1/query", json={"query": query, "repo_id": "owner/repo"})
     assert resp.status_code == 200
 
 
@@ -636,7 +653,7 @@ def test_query_empty_languages_list():
     app, mocks = _create_test_app()
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": "test", "languages": []})
+    resp = client.post("/api/v1/query", json={"query": "test", "repo_id": "owner/repo", "languages": []})
     assert resp.status_code == 200
 
 
@@ -723,6 +740,7 @@ def _make_lifespan_client_mocks():
 
 
 def test_lifespan_connects_clients_health_reports_healthy():
+    # ST-FUNC-017-006
     """R01: lifespan calls connect() on each client; health returns 'healthy'.
 
     Kills DEF-001: clients never connected so health_check always returned False.
@@ -760,6 +778,7 @@ def test_lifespan_connects_clients_health_reports_healthy():
 
 
 def test_lifespan_none_client_skipped():
+    # ST-BNDRY-017-004
     """R02: None client passed to create_app() skips connect(); no AttributeError.
 
     Kills bug: AttributeError if lifespan tries to call connect() on None.
@@ -801,6 +820,7 @@ def test_lifespan_none_client_skipped():
 
 
 def test_lifespan_connect_error_propagates():
+    # ST-BNDRY-017-005
     """R03: connect() raising an exception propagates out of lifespan (startup fails).
 
     Kills bug: connect() error silently swallowed, leaving stale None _client.
@@ -824,6 +844,7 @@ def test_lifespan_connect_error_propagates():
 
 
 def test_lifespan_close_called_on_shutdown():
+    # ST-FUNC-017-007
     """R04: close() called on each non-None client when app shuts down.
 
     Kills bug: lifespan exit path missing — resource leak on shutdown.
@@ -850,6 +871,7 @@ def test_lifespan_close_called_on_shutdown():
 
 
 def test_lifespan_degraded_when_service_health_check_fails():
+    # ST-FUNC-017-008
     """R05: health returns 'degraded' when a service health_check returns False.
 
     Kills DEF-001 variant: before fix, _client was None so health_check always
@@ -930,7 +952,7 @@ def test_post_query_cache_hit():
     app.state.query_cache = mock_cache
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": "cached query"})
+    resp = client.post("/api/v1/query", json={"query": "cached query", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     # Handler was not called because we hit the cache
     mocks["query_handler"].handle_nl_query.assert_not_called()
@@ -946,7 +968,7 @@ def test_post_query_cache_miss_stores_result():
     app.state.query_cache = mock_cache
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": "new query"})
+    resp = client.post("/api/v1/query", json={"query": "new query", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     mock_cache.set.assert_called_once()
 
@@ -1233,7 +1255,7 @@ def test_require_permission_forbidden_message():
     with pytest.raises(HTTPException) as exc_info:
         require_permission(key, "admin_action", auth)
     assert exc_info.value.status_code == 403
-    assert "Insufficient permissions" in exc_info.value.detail
+    assert exc_info.value.detail == "Insufficient permissions"
 
 
 def test_create_app_stores_query_cache_in_state():
@@ -1291,7 +1313,7 @@ def test_post_query_uses_cache_from_app_state():
     app.dependency_overrides[get_authenticated_key] = lambda: api_key
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": "test"})
+    resp = client.post("/api/v1/query", json={"query": "test", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     mock_cache.get.assert_called_once()
     mock_cache.set.assert_called_once()
@@ -1330,6 +1352,62 @@ def test_get_authenticated_key_calls_middleware():
     app.dependency_overrides[get_auth_middleware] = lambda: mock_auth_middleware
 
     client = TestClient(app)
-    resp = client.post("/api/v1/query", json={"query": "test"})
+    resp = client.post("/api/v1/query", json={"query": "test", "repo_id": "owner/repo"})
     assert resp.status_code == 200
     mock_auth_middleware.assert_called_once()
+
+
+def test_create_app_mounts_static_files_when_dir_exists(tmp_path, monkeypatch):
+    """app.py: create_app mounts /static with StaticFiles when static dir exists."""
+    import os
+    from src.query.app import create_app
+
+    # Create a real temp static dir so os.path.isdir returns True
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+
+    # Patch os.path.dirname to return tmp_path so app.py builds path to our static dir
+    original_dirname = os.path.dirname
+
+    def fake_dirname(path):
+        if "app.py" in path:
+            return str(tmp_path)
+        return original_dirname(path)
+
+    monkeypatch.setattr("src.query.app.os.path.dirname", fake_dirname)
+
+    app = create_app()
+    # If static files mounted correctly, the route "/static" should be in the routes
+    route_paths = [getattr(r, "path", None) for r in app.routes]
+    assert "/static" in route_paths
+
+
+def test_create_app_static_mount_uses_correct_directory(tmp_path, monkeypatch):
+    """app.py: create_app mounts StaticFiles with the correct directory path."""
+    import os
+    from starlette.staticfiles import StaticFiles
+    from src.query.app import create_app
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+
+    original_dirname = os.path.dirname
+
+    def fake_dirname(path):
+        if "app.py" in path:
+            return str(tmp_path)
+        return original_dirname(path)
+
+    monkeypatch.setattr("src.query.app.os.path.dirname", fake_dirname)
+
+    app = create_app()
+
+    # Find the mounted static route and verify its directory and name
+    for route in app.routes:
+        if getattr(route, "path", None) == "/static":
+            assert isinstance(route.app, StaticFiles)
+            assert route.name == "static"
+            break
+    else:
+        pytest.fail("No /static route found")
+

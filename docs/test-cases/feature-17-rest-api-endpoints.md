@@ -143,7 +143,7 @@ FR-015 AC-3
 - **优先级**: High
 - **类别**: functional
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_health_no_auth
+- **测试引用**: test_rest_api.py::test_get_health_no_auth
 - **Test Type**: Real
 
 ---
@@ -232,7 +232,7 @@ FR-015
 - **优先级**: High
 - **类别**: functional
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_create_key, test_rest_api.py::test_list_keys, test_rest_api.py::test_revoke_key, test_rest_api.py::test_rotate_key
+- **测试引用**: test_rest_api.py::test_create_key_success, test_rest_api.py::test_list_keys_success, test_rest_api.py::test_delete_key_success, test_rest_api.py::test_rotate_key_success
 - **Test Type**: Real
 
 ---
@@ -247,7 +247,7 @@ FR-015 AC-4
 
 ### 测试目标
 
-验证格式错误的JSON body返回400
+验证格式错误的JSON body返回400；空query/缺少字段分别返回400/422
 
 ### 前置条件
 
@@ -257,11 +257,13 @@ FR-015 AC-4
 
 | Step | 操作 | 预期结果 |
 | ---- | ---- | -------- |
-| 1 | POST /api/v1/query，body={"query":""}（空query） | 返回400 |
-| 2 | POST /api/v1/query，body缺少query字段 | 返回422 |
+| 1 | POST /api/v1/query，Content-Type: application/json，body="{invalid json}" | 返回400（malformed JSON） |
+| 2 | POST /api/v1/query，body={"query":"","repo_id":"owner/repo"}（空query） | 返回400（ValidationError from handler） |
+| 3 | POST /api/v1/query，body缺少query字段 | 返回422（schema error） |
 
 ### 验证点
 
+- 格式错误的JSON body时状态码为400
 - 空query时状态码为400，包含验证错误信息
 - 缺少必填字段时状态码为422，包含字段错误详情
 
@@ -274,7 +276,7 @@ FR-015 AC-4
 - **优先级**: High
 - **类别**: boundary
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_post_query_empty_string, test_rest_api.py::test_post_query_missing_field
+- **测试引用**: test_rest_api_wave5.py::test_query_malformed_json_returns_400, test_rest_api.py::test_query_empty_body, test_rest_api.py::test_query_missing_field
 - **Test Type**: Real
 
 ---
@@ -316,7 +318,7 @@ FR-015
 - **优先级**: Medium
 - **类别**: boundary
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_reindex_repo_not_found, test_rest_api.py::test_revoke_key_not_found
+- **测试引用**: test_rest_api.py::test_reindex_repo_not_found, test_rest_api.py::test_delete_key_not_found
 - **Test Type**: Real
 
 ---
@@ -400,7 +402,7 @@ FR-015
 - **优先级**: Critical
 - **类别**: security
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_register_repo_read_denied, test_rest_api.py::test_reindex_read_denied, test_rest_api.py::test_create_key_read_denied
+- **测试引用**: test_rest_api.py::test_register_repo_read_only_forbidden, test_rest_api.py::test_reindex_read_only_forbidden, test_rest_api.py::test_create_key_read_only_forbidden
 - **Test Type**: Real
 
 ---
@@ -443,7 +445,7 @@ FR-015
 - **优先级**: Critical
 - **类别**: security
 - **已自动化**: Yes
-- **测试引用**: test_rest_api.py::test_query_no_auth, test_rest_api.py::test_health_no_auth
+- **测试引用**: test_rest_api.py::test_query_missing_api_key, test_rest_api.py::test_get_health_no_auth
 - **Test Type**: Real
 
 ---
@@ -679,32 +681,118 @@ FR-015 AC-3（DEF-001回归：health正确反映降级状态）
 
 ---
 
+### 用例编号
+
+ST-BNDRY-017-006
+
+### 关联需求
+
+FR-015 AC-4 (Wave 5 VS-7)
+
+### 测试目标
+
+验证POST /api/v1/query缺少repo_id字段时返回422（Wave 5：repo_id为必填字段）
+
+### 前置条件
+
+- 有效API key
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | POST /api/v1/query，body={"query":"find auth handler"}（无repo_id字段） | 返回422 |
+| 2 | 检查响应detail中的错误字段 | error loc包含"repo_id" |
+
+### 验证点
+
+- 状态码422（schema validation error）
+- 响应detail中错误位置包含repo_id字段
+
+### 后置检查
+
+- 无需清理（schema validation，未到达handler）
+
+### 元数据
+
+- **优先级**: High
+- **类别**: boundary
+- **已自动化**: Yes
+- **测试引用**: test_rest_api_wave5.py::test_query_without_repo_id_returns_422, test_rest_api_wave5.py::test_query_request_schema_requires_repo_id
+- **Test Type**: Real
+
+---
+
+### 用例编号
+
+ST-BNDRY-017-007
+
+### 关联需求
+
+FR-015 AC-4 (Wave 5 VS-8)
+
+### 测试目标
+
+验证POST /api/v1/query中repo_id=null时返回422（Wave 5：repo_id为str类型，非Optional）
+
+### 前置条件
+
+- 有效API key
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | POST /api/v1/query，body={"query":"find auth handler","repo_id":null} | 返回422 |
+| 2 | 检查响应detail中的错误字段 | error loc包含"repo_id" |
+
+### 验证点
+
+- 状态码422（null不被接受，repo_id为str类型）
+- 响应detail中错误位置包含repo_id字段
+
+### 后置检查
+
+- 无需清理（schema validation，未到达handler）
+
+### 元数据
+
+- **优先级**: High
+- **类别**: boundary
+- **已自动化**: Yes
+- **测试引用**: test_rest_api_wave5.py::test_query_null_repo_id_returns_422, test_rest_api_wave5.py::test_query_request_schema_rejects_none_repo_id
+- **Test Type**: Real
+
+---
+
 ## 可追溯矩阵
 
 | 用例编号 | 关联需求 | verification_step | 自动化测试 | Test Type | 结果 |
 |----------|----------|-------------------|------------|-----------|------|
 | ST-FUNC-017-001 | FR-015 AC-1 | Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results | test_post_query_nl_success | Real | PASS |
 | ST-FUNC-017-002 | FR-015 AC-2 | Given a GET to /api/v1/repos with valid API key, when processed, then it returns the list of registered repositories with their indexing status | test_get_repos_success | Real | PASS |
-| ST-FUNC-017-003 | FR-015 AC-3 | Given a GET to /api/v1/health without authentication, when processed, then it returns service health status with ES/Qdrant/Redis connectivity | test_health_no_auth | Real | PASS |
-| ST-FUNC-017-004 | FR-015 | Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (POST /repos) | test_register_repo | Real | PASS |
-| ST-FUNC-017-005 | FR-015 | Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (API Key CRUD) | test_create_key, test_list_keys, test_revoke_key, test_rotate_key | Real | PASS |
-| ST-BNDRY-017-001 | FR-015 AC-4 | Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message | test_post_query_empty_string, test_post_query_missing_field | Real | PASS |
-| ST-BNDRY-017-002 | FR-015 | Non-existent resource returns 404 | test_reindex_repo_not_found, test_revoke_key_not_found | Real | PASS |
+| ST-FUNC-017-003 | FR-015 AC-3 | Given a GET to /api/v1/health without authentication, when processed, then it returns service health status with ES/Qdrant/Redis connectivity | test_get_health_no_auth | Real | PASS |
+| ST-FUNC-017-004 | FR-015 | Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (POST /repos) | test_register_repo_success | Real | PASS |
+| ST-FUNC-017-005 | FR-015 | Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (API Key CRUD) | test_create_key_success, test_list_keys_success, test_delete_key_success, test_rotate_key_success | Real | PASS |
+| ST-BNDRY-017-001 | FR-015 AC-4 | Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message | test_query_malformed_json_returns_400, test_query_empty_body, test_query_missing_field | Real | PASS |
+| ST-BNDRY-017-002 | FR-015 | Non-existent resource returns 404 | test_reindex_repo_not_found, test_delete_key_not_found | Real | PASS |
 | ST-BNDRY-017-003 | FR-015 | Duplicate repo registration returns 409 | test_register_repo_conflict | Real | PASS |
-| ST-SEC-017-001 | FR-015 | read role denied admin operations | test_register_repo_read_denied, test_reindex_read_denied, test_create_key_read_denied | Real | PASS |
-| ST-SEC-017-002 | FR-015 | Unauthenticated requests rejected (health excepted) | test_query_no_auth, test_health_no_auth | Real | PASS |
+| ST-SEC-017-001 | FR-015 | read role denied admin operations | test_register_repo_read_only_forbidden, test_reindex_read_only_forbidden, test_create_key_read_only_forbidden | Real | PASS |
+| ST-SEC-017-002 | FR-015 | Unauthenticated requests rejected (health excepted) | test_query_missing_api_key, test_get_health_no_auth | Real | PASS |
 | ST-FUNC-017-006 | FR-015 AC-3 | VS-3: R01 — lifespan calls connect(); health returns "healthy" when all services up | test_lifespan_connects_clients_health_reports_healthy | Real | PASS |
 | ST-BNDRY-017-004 | FR-015 AC-3 | VS-3: R02 — None client skipped silently; health returns elasticsearch="down" | test_lifespan_none_client_skipped | Real | PASS |
 | ST-BNDRY-017-005 | FR-015 | R03 — connect() error propagates; app startup fails | test_lifespan_connect_error_propagates | Real | PASS |
 | ST-FUNC-017-007 | FR-015 | R04 — close() called on each non-None client during shutdown | test_lifespan_close_called_on_shutdown | Real | PASS |
 | ST-FUNC-017-008 | FR-015 AC-3 | VS-3: R05 — health returns "degraded" when service health_check() returns False | test_lifespan_degraded_when_service_health_check_fails | Real | PASS |
+| ST-BNDRY-017-006 | FR-015 AC-4 | VS-7: POST /api/v1/query without repo_id returns 422 (Wave 5 required field) | test_query_without_repo_id_returns_422, test_query_request_schema_requires_repo_id | Real | PASS |
+| ST-BNDRY-017-007 | FR-015 AC-4 | VS-8: POST /api/v1/query with repo_id=null returns 422 (Wave 5: str not Optional) | test_query_null_repo_id_returns_422, test_query_request_schema_rejects_none_repo_id | Real | PASS |
 
 ## Real Test Case Execution Summary
 
 | Metric | Count |
 |--------|-------|
-| Total Real Test Cases | 15 |
-| Passed | 15 |
+| Total Real Test Cases | 17 |
+| Passed | 17 |
 | Failed | 0 |
 | Pending | 0 |
 

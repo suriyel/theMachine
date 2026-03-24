@@ -247,7 +247,7 @@ def test_security_query_body_accepts_arbitrary_text():
         for payload in injection_payloads:
             resp = client.post(
                 "/api/v1/query",
-                json={"query": payload},
+                json={"query": payload, "repo_id": "owner/repo"},
                 headers={"X-API-Key": "test-key"},
             )
             # Must not return 500 — application must handle all input gracefully
@@ -298,7 +298,7 @@ def test_reliability_retrieval_error_returns_500_not_crash():
     with TestClient(app) as client:
         resp = client.post(
             "/api/v1/query",
-            json={"query": "timeout"},
+            json={"query": "timeout", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 
@@ -330,7 +330,7 @@ def test_reliability_validation_error_returns_400():
     with TestClient(app) as client:
         resp = client.post(
             "/api/v1/query",
-            json={"query": ""},
+            json={"query": "", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 
@@ -365,7 +365,7 @@ def test_reliability_missing_query_cache_does_not_crash_endpoint():
     with TestClient(app) as client:
         resp = client.post(
             "/api/v1/query",
-            json={"query": "timeout"},
+            json={"query": "timeout", "repo_id": "owner/repo"},
             headers={"X-API-Key": "test-key"},
         )
 

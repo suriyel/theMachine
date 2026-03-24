@@ -188,7 +188,7 @@ def test_valid_api_key_reaches_query_handler():
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/query",
-            json={"query": "how to configure timeout"},
+            json={"query": "how to configure timeout", "repo_id": "owner/repo"},
             headers={"X-API-Key": "valid-key"},
         )
 
@@ -209,7 +209,7 @@ def test_query_handler_receives_correct_query_text():
     with TestClient(app) as client:
         client.post(
             "/api/v1/query",
-            json={"query": "spring webclient timeout"},
+            json={"query": "spring webclient timeout", "repo_id": "owner/repo"},
             headers={"X-API-Key": "valid-key"},
         )
 
@@ -242,7 +242,7 @@ def test_cache_hit_bypasses_query_handler():
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/query",
-            json={"query": "cached query"},
+            json={"query": "cached query", "repo_id": "owner/repo"},
             headers={"X-API-Key": "valid-key"},
         )
 
@@ -271,7 +271,7 @@ def test_cache_miss_calls_pipeline_and_stores_result():
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/query",
-            json={"query": "cache miss query"},
+            json={"query": "cache miss query", "repo_id": "owner/repo"},
             headers={"X-API-Key": "valid-key"},
         )
 
@@ -571,7 +571,7 @@ def test_rrf_receives_results_from_both_bm25_and_vector():
         fused_results=fused,
     )
 
-    asyncio.run(handler.handle_nl_query("timeout configuration"))
+    asyncio.run(handler.handle_nl_query("timeout configuration", "owner/repo"))
 
     handler._rank_fusion.fuse.assert_called_once()
     fuse_args = handler._rank_fusion.fuse.call_args
@@ -601,7 +601,7 @@ def test_reranker_receives_rrf_output():
 
     handler = _build_handler(fused_results=fused, reranked_results=reranked)
 
-    asyncio.run(handler.handle_nl_query("how to use grpc interceptor"))
+    asyncio.run(handler.handle_nl_query("how to use grpc interceptor", "owner/repo"))
 
     handler._reranker.rerank.assert_called_once()
     rerank_args = handler._reranker.rerank.call_args

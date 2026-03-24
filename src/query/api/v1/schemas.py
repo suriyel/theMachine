@@ -12,7 +12,7 @@ class QueryRequest(BaseModel):
     """Request body for POST /api/v1/query."""
 
     query: str
-    repo_id: str | None = None
+    repo_id: str
     languages: list[str] | None = None
 
 
