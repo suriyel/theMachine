@@ -1,10 +1,9 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 43/45 active features passing (2 failing) · Last: #17 REST API Endpoints (2026-03-23) · Next: #21 Scheduled Index Refresh
+Progress: 44/45 active features passing (1 failing) · Last: #21 Scheduled Index Refresh (2026-03-24) · Next: #45 index-worker Docker Image
 
 **Failing features**:
-- #21 Scheduled Index Refresh — DEF-002: `celery -A src.indexing.celery_app worker` fails, no module-level celery instance
 - #45 index-worker Docker Image — DEF-002: container celery worker command fails at runtime
 
 ---
@@ -710,3 +709,17 @@ Progress: 43/45 active features passing (2 failing) · Last: #17 REST API Endpoi
 - **Review**: PASS — all S1-S5, D1-D5, P1-P3, R1-R3 YES; minor findings only (ST doc name mismatches, st_case_count metadata)
 - **Result**: Feature #17 marked PASSING — 43/45 active features now passing
 - **Next**: Feature #21 — Scheduled Index Refresh
+
+### Session — 2026-03-24 (Feature #21 — DEF-002 Fix)
+- **Feature**: #21 — Scheduled Index Refresh
+- **Phase**: TDD → Quality Gates → ST → Review → Persist
+- **DEF-002 fix**: Added module-level `app = create_celery_app(...)` to `src/indexing/celery_app.py` so `celery -A src.indexing.celery_app worker` works
+- **Additional fixes**: Added `include=["src.indexing.scheduler"]` for task discovery; added `REINDEX_CRON` env var support per plan
+- **Tests**: 26/26 passing (23 existing + 3 new for module-level app verification)
+- **Coverage**: celery_app.py 100%, scheduler.py 95%
+- **Mutation**: 37/41 killed (90.2%), 9 no-tests (mutmut mapping bug), 2 equivalent
+- **ST**: 6/6 test cases PASS (3 FUNC, 3 BNDRY)
+- **Review**: PASS (D5 fix applied for REINDEX_CRON env var)
+- **Service deps for TDD**: None (tests use mocks)
+- **Result**: Feature #21 marked PASSING — 44/45 active features now passing
+- **Next**: Feature #45 — index-worker Docker Image

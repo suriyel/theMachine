@@ -686,7 +686,7 @@
       "title": "Scheduled Index Refresh",
       "description": "Implement Celery Beat periodic task that triggers re-indexing for all registered repositories on a configurable cron schedule (default: weekly Sunday 02:00 UTC)",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given the default cron configuration, when the scheduler fires, then it queues re-indexing jobs for all registered repositories with status='active'",
         "Given a scheduled job that fails, when the failure is detected, then the system retries once after 1 hour; if retry also fails, it logs an error and skips until next window",

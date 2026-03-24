@@ -344,6 +344,14 @@
 - **SRS**: Added FR-027, FR-028, FR-029; updated traceability matrix
 - **Design**: Section 10 expanded with Dockerfile structure, entrypoints, HEALTHCHECKs; new §4.8; dependency chain updated
 
+### DEF-002 Fix — Celery CLI Discovery (2026-03-24)
+
+- **Fixed**: Feature #21 — Scheduled Index Refresh: added module-level `app = create_celery_app(...)` to `src/indexing/celery_app.py` so `celery -A src.indexing.celery_app worker/beat` discovers the Celery instance
+- **Fixed**: Added `include=["src.indexing.scheduler"]` to `create_celery_app()` for automatic task registration
+- **Fixed**: Module-level `app` now reads `REINDEX_CRON` env var for configurable cron schedule (per plan design rationale)
+- **Tests**: 3 new tests for module-level app verification (E1-E3); 26/26 total passing
+- **ST**: 6/6 acceptance test cases re-executed and passing
+
 ### System Testing — 2026-03-23
 
 - **ST Completed**: All 42 features verified through cross-feature integration, E2E, NFR, compatibility, and exploratory testing
