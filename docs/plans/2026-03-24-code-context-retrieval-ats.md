@@ -44,18 +44,18 @@
 | FR-003 | 内容提取 | 文件分类/未知类型跳过/二进制跳过/大文件跳过/编码错误 | FUNC,BNDRY | 8 | High | 4条标准; 边界条件多 |
 | FR-004 | 代码分块 (6语言) | Java/Python/TS/JS/C/C++ 各语言AST分块/装饰器/enum/record/namespace/template/fallback | FUNC,BNDRY | 15 | Critical | 16条标准, 6语言覆盖; CON-001 |
 | FR-005 | Embedding 生成 | 批量生成/1024维向量/失败回滚/Qdrant不可达重试 | FUNC,BNDRY | 5 | High | 4条标准 |
-| FR-006 | 关键词检索 (BM25) | 正常查询/空结果/ES不可达降级 | FUNC,BNDRY | 5 | Critical | ES降级→向量检索兜底 |
-| FR-007 | 语义检索 (Vector) | 语义匹配/空结果/Qdrant不可达降级 | FUNC,BNDRY | 5 | Critical | Qdrant降级→BM25兜底 |
+| FR-006 | 关键词检索 (BM25+branch过滤) | 正常查询/空结果/ES不可达降级/branch过滤命中/branch过滤空 | FUNC,BNDRY | 6 | Critical | Wave5: +branch filter; ES降级→向量兜底 |
+| FR-007 | 语义检索 (Vector+branch过滤) | 语义匹配/空结果/Qdrant不可达降级/branch过滤命中/branch过滤空 | FUNC,BNDRY | 6 | Critical | Wave5: +branch filter; Qdrant降级→BM25兜底 |
 | FR-008 | RRF 融合 | 双路合并/重叠Boost/单路兜底/10ms时限 | FUNC,BNDRY,PERF | 5 | High | 含性能约束→+PERF |
 | FR-009 | 神经重排序 | Top-100→Top-3/不足3条/模型失败降级 | FUNC,BNDRY | 5 | High | 3条标准; 降级路径 |
 | FR-010 | 上下文响应构建 | 3结果JSON/symbol=null/content截断2000字符 | FUNC,BNDRY | 5 | High | 3条标准 |
-| FR-011 | 自然语言查询 | NL查询→管线→结果/空查询400/超长400/超时降级 | FUNC,BNDRY,SEC | 8 | Critical | 处理用户输入→+SEC |
-| FR-012 | 符号查询 | 精确符号匹配/不存在符号200/超长400 | FUNC,BNDRY,SEC | 5 | High | 处理用户输入→+SEC |
+| FR-011 | 自然语言查询 (repo必填+@branch) | NL查询+repo必填/空查询400/超长400/超时降级/@branch解析+过滤 | FUNC,BNDRY,SEC | 8 | Critical | Wave5: repo必填+branch透传; 处理用户输入→+SEC |
+| FR-012 | 符号查询 (repo必填+@branch) | 符号匹配+repo必填/不存在符号200/超长400/@branch过滤 | FUNC,BNDRY,SEC | 5 | High | Wave5: repo必填+branch透传; 处理用户输入→+SEC |
 | FR-013 | 仓库作用域过滤 | 限定仓库/不存在仓库200 | FUNC,BNDRY | 3 | High | 2条标准, 简单 |
 | FR-014 | API Key 认证 | 有效Key/无效Key 401/过期Key 401/暴力破解429 | FUNC,BNDRY,SEC | 8 | Critical | 认证核心→SEC必选; 4条标准 |
-| FR-015 | REST API 端点 | POST query/GET repos/GET health/Malformed 400 | FUNC,BNDRY,SEC | 8 | Critical | 5条标准; 外部输入→+SEC |
-| FR-016 | MCP Server | search_code_context/无repo参数/无效参数/内部错误 | FUNC,BNDRY | 5 | Critical | 4条标准; CON-004 |
-| FR-017 | Web UI 搜索页 | 搜索表单/结果展示/空结果/分支选择器 | FUNC,BNDRY,UI,A11Y | 12 | Medium | ui:true→+UI+A11Y; 4条标准 |
+| FR-015 | REST API (repo_id必填+@branch) | POST query+repo_id必填/缺repo_id→422/@branch解析/GET repos/GET health/Malformed 400 | FUNC,BNDRY,SEC | 10 | Critical | Wave5: repo_id必填+@branch; 6条标准 |
+| FR-016 | MCP Server (两步式流程) | resolve_repository(query+libraryName必填)/search_code_context(repo必填+@branch)/无repo→TypeError/空匹配→空列表/内部错误 | FUNC,BNDRY | 8 | Critical | Wave5: Context7对齐; 7条标准 |
+| FR-017 | Web UI (repo必选) | repo下拉必选(仅indexed)/未选repo→验证提示/结果展示/空结果/分支选择器 | FUNC,BNDRY,UI,A11Y | 12 | Medium | Wave5: repo必选; ui:true→+UI+A11Y |
 | FR-018 | 语言过滤 | 单语言/多语言/无效语言400/空过滤 | FUNC,BNDRY,SEC | 5 | Medium | 用户输入→+SEC; 4条标准 |
 | FR-019 | 定时索引刷新 | 默认周期触发/自定义cron/失败重试/去重 | FUNC,BNDRY | 5 | High | 4条标准 |
 | FR-020 | 手动重建索引 | POST reindex/不存在repo 404 | FUNC,BNDRY | 3 | High | 2条标准, 简单 |
@@ -68,6 +68,7 @@
 | FR-027 | query-api Docker 镜像 | 构建成功/Health 30s内200/HEALTHCHECK/无dev依赖/非root | FUNC,BNDRY,SEC | 8 | Critical | 5条标准; 容器安全→+SEC |
 | FR-028 | mcp-server Docker 镜像 | 构建成功/mcp进程存活/HEALTHCHECK/无dev依赖/非root | FUNC,BNDRY,SEC | 5 | High | 4条标准 |
 | FR-029 | index-worker Docker 镜像 | 构建成功/celery worker/HEALTHCHECK/无dev依赖/非root | FUNC,BNDRY,SEC | 5 | High | 4条标准 |
+| FR-030 | 仓库解析MCP工具 [Wave5] | resolve_repository(query+libraryName必填)/名称匹配/无匹配→空列表/缺参数→TypeError/排序相关性/返回branches | FUNC,BNDRY | 8 | Critical | Wave5新增; 5条标准; Context7对齐 |
 
 ### 2.2 非功能需求 (NFR)
 
@@ -103,13 +104,13 @@
 
 | 类别 | 涉及需求数 | 总最低用例数 |
 |------|-----------|------------|
-| FUNC | 49 (29FR+12NFR+8IFR) | 213 |
-| BNDRY | 42 (28FR+6NFR+8IFR) | 180 |
+| FUNC | 50 (30FR+12NFR+8IFR) | 225 |
+| BNDRY | 43 (29FR+6NFR+8IFR) | 192 |
 | SEC | 12 (8FR+2NFR+2Docker) | 56 |
 | PERF | 8 (1FR+7NFR) | 30 |
 | UI | 2 (FR-017+IFR-002) | 17 |
 | A11Y | 2 (FR-017+IFR-002) | 17 |
-| **合计** | **62 需求** | **~300** |
+| **合计** | **63 需求 (含FR-030)** | **~320** |
 
 ---
 
@@ -191,6 +192,7 @@
 | INT-008 | 认证中间件→所有端点 | #16,#17 | X-API-Key header → AuthMiddleware → 各端点 | 5个受保护端点; 2个公开端点; 401一致性 | System ST |
 | INT-009 | 评估管线 (语料→标注→评估→报告) | #40,#41,#42,#8,#9 | eval/repos.json → index → LLM queries → annotate → IR metrics → report | 端到端评估管线执行; golden dataset 格式正确 | System ST |
 | INT-010 | 分支选择流 | #33,#4,#3,#19 | Web UI → Branch Listing API → GitCloner.list_remote_branches → 选择分支 → 注册 | 分支列表返回正确; 注册时indexed_branch设置正确 | System ST |
+| INT-011 | MCP两步式流程 [Wave5] | #46,#18,#13,#14 | resolve_repository(query,name) → 选择repo → search_code_context(query,repo@branch) → 结果 | resolve返回indexed仓库+branches; search用@branch过滤; 两步连贯执行 | System ST |
 
 ---
 
