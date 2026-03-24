@@ -1,13 +1,23 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 38/46 active features passing (8 failing) · Last: Increment Wave 5 (2026-03-24) · Next: Feature #8 — Keyword Retrieval (+branch filter)
+Progress: 39/46 active features passing (7 failing) · Last: #8 Keyword Retrieval (BM25) (2026-03-24) · Next: #9 Semantic Retrieval (Vector)
 
-**Failing features**: #8, #9, #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #9, #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #8: Keyword Retrieval (BM25) — PASS
+- Completed: 2026-03-24
+- TDD: green ✓
+- Quality Gates: 100% line (feature scope), 100% branch, 4/4 manual mutations killed (mutmut 3.2.0 stats mapping bug)
+- Feature-ST: 6 cases, all PASS
+- Review: PASS (synonym real test added per reviewer feedback)
+- Git: c6e7653 feat: keyword retrieval (BM25) — Wave 5 branch filter support
+#### Risks
+- ⚠ [Mutant] src/query/retriever.py — mutmut 3.2.0 automated mutation blocked; 4/4 manual mutations verified killed
 
 ### Increment Wave 5 — 2026-03-24
 - **Date**: 2026-03-24

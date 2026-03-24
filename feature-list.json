@@ -436,7 +436,7 @@
       "title": "Keyword Retrieval (BM25)",
       "description": "Implement Retriever.bm25_search() using Elasticsearch with the code_analyzer for code_chunks index and doc_analyzer for doc_chunks index, returning top-200 scored candidates",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given indexed code chunks containing 'getUserName', when bm25_search('getUserName') runs against code_chunks, then results include chunks containing that symbol, ranked by BM25 score",
         "Given the code_analyzer with synonym filter, when searching 'auth', then results also include chunks containing 'authentication' and 'authorization'",
@@ -448,7 +448,7 @@
         7
       ],
       "st_case_path": "docs/test-cases/feature-8-keyword-retrieval.md",
-      "st_case_count": 5,
+      "st_case_count": 6,
       "wave": 5
     },
     {
