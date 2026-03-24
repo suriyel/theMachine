@@ -457,9 +457,9 @@
       "title": "Semantic Retrieval (Vector)",
       "description": "Implement Retriever.vector_search() using Qdrant HNSW search with cosine similarity, encoding the query via EmbeddingEncoder.encode_query() and returning top-200 candidates",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "st_case_path": "docs/test-cases/feature-9-semantic-retrieval.md",
-      "st_case_count": 5,
+      "st_case_count": 7,
       "verification_steps": [
         "Given indexed embeddings for code about HTTP timeouts, when vector_search('how to configure spring http client timeout') runs, then results include semantically related chunks even without exact term matches",
         "Given a query vector, when vector_search() runs, then it returns up to 200 candidates with cosine similarity scores from the Qdrant collection",

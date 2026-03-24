@@ -1,13 +1,23 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 39/46 active features passing (7 failing) · Last: #8 Keyword Retrieval (BM25) (2026-03-24) · Next: #9 Semantic Retrieval (Vector)
+Progress: 40/46 active features passing (6 failing) · Last: #9 Semantic Retrieval (Vector) (2026-03-24) · Next: #13 Natural Language Query Handler
 
-**Failing features**: #9, #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #9: Semantic Retrieval (Vector) — PASS
+- Completed: 2026-03-24
+- TDD: green ✓
+- Quality Gates: 100% line, 100% branch, 100% mutation (194/194 killed)
+- Feature-ST: 7 cases, all PASS
+- Review: PASS
+- Git: feat: semantic retrieval (vector) — Wave 5 branch filter support
+#### Risks
+- ⚠ [Dependency] qdrant-client==1.13.3 vs server 1.17.0 — version mismatch warning, functional today
 
 ### Feature #8: Keyword Retrieval (BM25) — PASS
 - Completed: 2026-03-24

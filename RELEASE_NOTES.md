@@ -13,6 +13,7 @@
 - **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
 ### Updated
+- Feature #9: Semantic Retrieval (Vector) — branch filter support (`branch` parameter on `vector_code_search`/`vector_doc_search`); `_build_qdrant_filter` branch condition; `branch` field in parsed ScoredChunks
 - Feature #8: Keyword Retrieval (BM25) — branch filter support (`branch` parameter on `bm25_code_search`/`bm25_doc_search`); `ScoredChunk.branch` field; real integration test for synonym expansion
 
 ### Increment Wave 5 — Context7-Aligned MCP Interface (2026-03-24)
