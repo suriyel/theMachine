@@ -1,13 +1,24 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 40/46 active features passing (6 failing) · Last: #9 Semantic Retrieval (Vector) (2026-03-24) · Next: #13 Natural Language Query Handler
+Progress: 41/46 active features passing (5 failing) · Last: #13 Natural Language Query Handler (2026-03-24) · Next: #14 Symbol Query Handler
 
-**Failing features**: #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #13: Natural Language Query Handler — PASS
+- Completed: 2026-03-24
+- TDD: green ✓
+- Quality Gates: 97% line, 91% branch, 100% mutation (56/56 killed)
+- Feature-ST: 8 cases, all PASS
+- Review: PASS (branch forwarding fix + security test added per reviewer feedback)
+- Git: 1c38cbb feat: natural language query handler — Wave 5 branch filter support
+#### Risks
+- ⚠ [Coverage] src/query/query_handler.py:257-259,279-281 — 6 uncovered lines in handle_symbol_query reranker-failure fallback paths (Feature #14 scope)
+- ⚠ [Dependency] mutmut v3.2.0 — patched hardcoded test paths in PytestRunner; re-patch needed after pip reinstall
 
 ### Feature #9: Semantic Retrieval (Vector) — PASS
 - Completed: 2026-03-24
