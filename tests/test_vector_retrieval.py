@@ -525,3 +525,169 @@ async def test_qdrant_connectivity_real():
             await client.close()
     finally:
         os.environ.update(saved)
+
+
+# ---------------------------------------------------------------------------
+# T18: Happy path — branch filter applied to Qdrant (VS-4)
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_code_search_branch_filter():
+    """T18 (Inventory C): branch='main' → Qdrant filter includes MatchValue on branch."""
+    retriever, _, qd = _make_retriever([])
+
+    await retriever.vector_code_search("timeout", repo_id="repo-1", branch="main")
+
+    call_kwargs = qd._client.query_points.call_args.kwargs
+    qfilter = call_kwargs["query_filter"]
+    branch_conditions = [
+        c for c in qfilter.must
+        if hasattr(c, "key") and c.key == "branch"
+    ]
+    assert len(branch_conditions) == 1
+    assert branch_conditions[0].match.value == "main"
+
+
+# ---------------------------------------------------------------------------
+# T19: Boundary — branch-only filter (no repo_id) (VS-4)
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_code_search_branch_only_filter():
+    """T19 (Inventory L): branch='develop' without repo_id → single branch condition."""
+    retriever, _, qd = _make_retriever([])
+
+    await retriever.vector_code_search("timeout", repo_id=None, branch="develop")
+
+    call_kwargs = qd._client.query_points.call_args.kwargs
+    qfilter = call_kwargs["query_filter"]
+    # Should have exactly 1 condition: branch only
+    assert len(qfilter.must) == 1
+    assert qfilter.must[0].key == "branch"
+    assert qfilter.must[0].match.value == "develop"
+
+
+# ---------------------------------------------------------------------------
+# T20: Boundary — no filters at all (repo_id=None, languages=None, branch=None)
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_code_search_no_filters():
+    """T20 (Inventory K): all filter params None → query_filter=None."""
+    retriever, _, qd = _make_retriever([])
+
+    await retriever.vector_code_search("timeout", repo_id=None, languages=None)
+
+    call_kwargs = qd._client.query_points.call_args.kwargs
+    assert call_kwargs["query_filter"] is None
+
+
+# ---------------------------------------------------------------------------
+# T21: Error — OSError raises RetrievalError (Inventory N)
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_code_search_os_error():
+    """T21 (Inventory N): OSError('network down') → RetrievalError."""
+    qdrant = _make_qdrant_client()
+    qdrant._client.query_points = AsyncMock(
+        side_effect=OSError("network down")
+    )
+    retriever, _, _ = _make_retriever(qdrant=qdrant)
+
+    with pytest.raises(RetrievalError, match="Qdrant search failed"):
+        await retriever.vector_code_search("timeout", "repo-1")
+
+
+# ---------------------------------------------------------------------------
+# T22: Happy path — vector_doc_search with branch filter (Inventory O)
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_doc_search_with_branch():
+    """T22 (Inventory O): vector_doc_search with branch → branch filter applied, content_type='doc'."""
+    points = [
+        _make_doc_point("d1", 0.90, repo_id="repo-1"),
+    ]
+    retriever, _, qd = _make_retriever(points)
+
+    results = await retriever.vector_doc_search("getting started", repo_id="repo-1", branch="feature-x")
+
+    assert len(results) == 1
+    assert results[0].content_type == "doc"
+    # Verify branch filter in Qdrant call
+    call_kwargs = qd._client.query_points.call_args.kwargs
+    qfilter = call_kwargs["query_filter"]
+    branch_conditions = [
+        c for c in qfilter.must
+        if hasattr(c, "key") and c.key == "branch"
+    ]
+    assert len(branch_conditions) == 1
+    assert branch_conditions[0].match.value == "feature-x"
+
+
+# ---------------------------------------------------------------------------
+# T23: Happy path — branch field populated in parsed ScoredChunk
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_code_search_branch_in_scored_chunk():
+    """T23: When Qdrant payload includes 'branch', ScoredChunk.branch is set."""
+    point = ScoredPoint(
+        id="c1",
+        version=1,
+        score=0.95,
+        payload={
+            "repo_id": "repo-1",
+            "file_path": "src/main.py",
+            "content": "def hello(): pass",
+            "language": "python",
+            "chunk_type": "function",
+            "symbol": "hello",
+            "signature": "def hello()",
+            "doc_comment": "",
+            "line_start": 1,
+            "line_end": 2,
+            "parent_class": None,
+            "branch": "main",
+        },
+    )
+    retriever, _, _ = _make_retriever([point])
+
+    results = await retriever.vector_code_search("hello", "repo-1", branch="main")
+
+    assert results[0].branch == "main"
+
+
+# ---------------------------------------------------------------------------
+# T24: Happy path — branch field populated in parsed doc ScoredChunk
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_vector_doc_search_branch_in_scored_chunk():
+    """T24: When Qdrant doc payload includes 'branch', ScoredChunk.branch is set."""
+    point = ScoredPoint(
+        id="d1",
+        version=1,
+        score=0.88,
+        payload={
+            "repo_id": "repo-1",
+            "file_path": "docs/README.md",
+            "content": "# Guide",
+            "breadcrumb": "README > Guide",
+            "heading_level": 1,
+            "branch": "develop",
+        },
+    )
+    retriever, _, _ = _make_retriever([point])
+
+    results = await retriever.vector_doc_search("guide", "repo-1", branch="develop")
+
+    assert results[0].branch == "develop"

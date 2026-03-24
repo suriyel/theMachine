@@ -139,6 +139,53 @@ async def main():
         print(f"  Content: {chunk.content[:80]}...")
     print()
 
+    # Demonstrate branch-filtered vector search (Wave 5)
+    branch_points = [
+        ScoredPoint(
+            id="chunk-003", version=1, score=0.90,
+            payload={
+                "repo_id": "repo-flask",
+                "file_path": "src/http_client.py",
+                "content": "def configure_timeout(self, timeout_ms: int, retry: bool = True):\n    ...",
+                "language": "python",
+                "chunk_type": "method",
+                "symbol": "HttpClient.configure_timeout",
+                "signature": "def configure_timeout(self, timeout_ms: int, retry: bool = True)",
+                "doc_comment": "Set timeout with optional retry (feature branch).",
+                "line_start": 15,
+                "line_end": 18,
+                "parent_class": "HttpClient",
+                "branch": "feature/retry-support",
+            },
+        ),
+    ]
+    qdrant_branch = make_mock_qdrant(branch_points)
+    retriever_branch = Retriever(
+        es_client=es_client,
+        embedding_encoder=encoder,
+        qdrant_client=qdrant_branch,
+    )
+
+    print("=== Branch-Filtered Vector Search (Wave 5) ===")
+    print("Query: 'configure timeout', Branch: 'feature/retry-support'")
+    print()
+
+    branch_results = await retriever_branch.vector_code_search(
+        query="configure timeout",
+        repo_id="repo-flask",
+        branch="feature/retry-support",
+    )
+
+    for chunk in branch_results:
+        print(f"  Score:  {chunk.score:.4f}")
+        print(f"  Symbol: {chunk.symbol}")
+        print(f"  Branch: {chunk.branch}")
+        print(f"  File:   {chunk.file_path}:{chunk.line_start}-{chunk.line_end}")
+        print(f"  Content: {chunk.content[:80]}...")
+    print()
+
+    print(f"Branch filter narrows results to branch 'feature/retry-support' only.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

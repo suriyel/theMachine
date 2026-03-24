@@ -109,11 +109,12 @@ class Retriever:
         repo_id: str | None = None,
         languages: list[str] | None = None,
         top_k: int = 200,
+        branch: str | None = None,
     ) -> list[ScoredChunk]:
         """Execute vector similarity search on code_embeddings Qdrant collection.
 
         Encodes the query via EmbeddingEncoder, then searches Qdrant for top_k
-        nearest neighbors filtered by repo_id (and optionally languages).
+        nearest neighbors filtered by repo_id, languages, and/or branch.
 
         Raises:
             ValueError: If query is empty or whitespace-only.
@@ -123,7 +124,7 @@ class Retriever:
             raise ValueError("query must not be empty")
 
         query_vector = self._encode_query(query)
-        qfilter = self._build_qdrant_filter(repo_id, languages)
+        qfilter = self._build_qdrant_filter(repo_id, languages, branch)
         points = await self._execute_qdrant_search(
             self._code_collection, query_vector, qfilter, top_k
         )
@@ -134,6 +135,7 @@ class Retriever:
         query: str,
         repo_id: str | None = None,
         top_k: int = 200,
+        branch: str | None = None,
     ) -> list[ScoredChunk]:
         """Execute vector similarity search on doc_embeddings Qdrant collection.
 
@@ -145,7 +147,7 @@ class Retriever:
             raise ValueError("query must not be empty")
 
         query_vector = self._encode_query(query)
-        qfilter = self._build_qdrant_filter(repo_id, None)
+        qfilter = self._build_qdrant_filter(repo_id, None, branch)
         points = await self._execute_qdrant_search(
             self._doc_collection, query_vector, qfilter, top_k
         )
@@ -271,9 +273,12 @@ class Retriever:
             raise RetrievalError(f"Embedding failed: {exc}") from exc
 
     def _build_qdrant_filter(
-        self, repo_id: str | None, languages: list[str] | None
+        self,
+        repo_id: str | None,
+        languages: list[str] | None,
+        branch: str | None = None,
     ) -> Filter | None:
-        """Build a Qdrant filter for optional repo_id and language restriction."""
+        """Build a Qdrant filter for optional repo_id, language, and branch restriction."""
         conditions: list[FieldCondition] = []
         if repo_id is not None:
             conditions.append(
@@ -282,6 +287,10 @@ class Retriever:
         if languages and len(languages) > 0:
             conditions.append(
                 FieldCondition(key="language", match=MatchAny(any=languages))
+            )
+        if branch is not None:
+            conditions.append(
+                FieldCondition(key="branch", match=MatchValue(value=branch))
             )
         if not conditions:
             return None
@@ -329,6 +338,7 @@ class Retriever:
                     line_start=p.get("line_start"),
                     line_end=p.get("line_end"),
                     parent_class=p.get("parent_class"),
+                    branch=p.get("branch"),
                 )
             )
         return result
@@ -348,6 +358,7 @@ class Retriever:
                     score=pt.score,
                     breadcrumb=p.get("breadcrumb"),
                     heading_level=p.get("heading_level"),
+                    branch=p.get("branch"),
                 )
             )
         return result
