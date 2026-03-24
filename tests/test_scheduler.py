@@ -538,6 +538,61 @@ class TestCeleryAppConfig:
 # ===========================================================================
 
 
+# ===========================================================================
+# E — Module-Level App (DEF-002 fix)
+# ===========================================================================
+
+
+class TestModuleLevelCeleryApp:
+    """E1-E3: Module-level Celery instance for CLI discovery (DEF-002)."""
+
+    def test_module_has_app_attribute(self):
+        """E1: celery_app module exposes 'app' attribute (Celery instance).
+
+        celery -A src.indexing.celery_app worker requires a module-level
+        Celery instance named 'app' or 'celery'. Without it, the CLI fails
+        with 'has no attribute celery'.
+        """
+        import src.indexing.celery_app as mod
+
+        assert hasattr(mod, "app"), (
+            "celery_app module must export a module-level 'app' for "
+            "'celery -A src.indexing.celery_app' CLI discovery"
+        )
+        from celery import Celery
+
+        assert isinstance(mod.app, Celery), (
+            f"celery_app.app must be a Celery instance, got {type(mod.app)}"
+        )
+
+    def test_module_app_has_beat_schedule(self):
+        """E2: Module-level app has beat_schedule with scheduled-reindex-all."""
+        import src.indexing.celery_app as mod
+
+        schedule = mod.app.conf.beat_schedule
+        assert "scheduled-reindex-all" in schedule, (
+            "Module-level app must have 'scheduled-reindex-all' in beat_schedule"
+        )
+        entry = schedule["scheduled-reindex-all"]
+        assert entry["task"] == "src.indexing.scheduler.scheduled_reindex_all"
+        assert isinstance(entry["schedule"], crontab)
+
+    def test_module_app_uses_env_broker_url(self):
+        """E3: Module-level app reads CELERY_BROKER_URL from environment."""
+        import os
+        import src.indexing.celery_app as mod
+
+        # The broker URL should come from CELERY_BROKER_URL or RABBITMQ_URL env
+        expected_url = os.environ.get(
+            "CELERY_BROKER_URL",
+            os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672//"),
+        )
+        assert mod.app.conf.broker_url == expected_url, (
+            f"Module-level app broker_url should be '{expected_url}', "
+            f"got '{mod.app.conf.broker_url}'"
+        )
+
+
 @pytest.mark.real
 class TestSchedulerReal:
     """[integration] — real RabbitMQ connectivity for Celery app (feature #21).

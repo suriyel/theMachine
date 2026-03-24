@@ -66,3 +66,6 @@ if __name__ == "__main__":
     print()
     print("To run the worker:")
     print("  celery -A src.indexing.celery_app worker --loglevel=info")
+    print()
+    print("To customize the schedule (via REINDEX_CRON env var):")
+    print("  REINDEX_CRON='0 4 * * *' celery -A src.indexing.celery_app beat --loglevel=info")

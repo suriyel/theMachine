@@ -1,6 +1,7 @@
 """Celery application factory with Beat schedule for periodic indexing."""
 
 import logging
+import os
 
 from celery import Celery
 from celery.schedules import crontab
@@ -56,7 +57,11 @@ def create_celery_app(
     if not broker_url:
         raise ValueError("broker_url must not be empty")
 
-    app = Celery("indexing", broker=broker_url)
+    app = Celery(
+        "indexing",
+        broker=broker_url,
+        include=["src.indexing.scheduler"],
+    )
 
     if schedule_cron is not None:
         cron_kwargs = _parse_cron_string(schedule_cron)
@@ -72,3 +77,14 @@ def create_celery_app(
     app.conf.timezone = "UTC"
 
     return app
+
+
+# Module-level Celery instance for CLI discovery.
+# Required by: celery -A src.indexing.celery_app worker/beat
+app = create_celery_app(
+    broker_url=os.environ.get(
+        "CELERY_BROKER_URL",
+        os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672//"),
+    ),
+    schedule_cron=os.environ.get("REINDEX_CRON"),
+)

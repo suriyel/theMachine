@@ -2,7 +2,7 @@
 
 **Feature ID**: 21
 **关联需求**: FR-019 (Scheduled Index Refresh)
-**日期**: 2026-03-22
+**日期**: 2026-03-24 (re-executed)
 **测试标准**: ISO/IEC/IEEE 29119-3
 **模板版本**: 1.0
 
