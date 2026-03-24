@@ -1136,7 +1136,7 @@
       "title": "index-worker Docker Image",
       "description": "Dockerfile for the codecontext-worker image. Builds a Python 3.11-slim image with production deps only, runs celery -A src.indexing.celery_app worker, includes HEALTHCHECK using celery inspect ping.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         1,
         21

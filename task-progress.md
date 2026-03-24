@@ -1,10 +1,9 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 44/45 active features passing (1 failing) · Last: #21 Scheduled Index Refresh (2026-03-24) · Next: #45 index-worker Docker Image
+Progress: 45/45 active features passing (0 failing) · Last: #45 index-worker Docker Image (2026-03-24) · Next: System Testing
 
-**Failing features**:
-- #45 index-worker Docker Image — DEF-002: container celery worker command fails at runtime
+**Failing features**: None — all active features passing
 
 ---
 
@@ -723,3 +722,16 @@ Progress: 44/45 active features passing (1 failing) · Last: #21 Scheduled Index
 - **Service deps for TDD**: None (tests use mocks)
 - **Result**: Feature #21 marked PASSING — 44/45 active features now passing
 - **Next**: Feature #45 — index-worker Docker Image
+
+### Session — 2026-03-24 (Feature #45 — Re-verification)
+- **Feature**: #45 — index-worker Docker Image
+- **Phase**: Orient → Bootstrap → Config Gate → Feature Design (reuse) → TDD (verify) → Quality → ST → Review → Persist
+- **Context**: Feature previously passing, regressed after DEF-002 fix session. DEF-002 fix (module-level Celery instance in cc9221f) resolved the underlying issue.
+- **Service dependencies**: None (Docker infrastructure feature)
+- **Feature Design**: Reused existing docs/features/2026-03-23-index-worker-docker-image.md (14 test scenarios, 6 tasks)
+- **TDD**: All 14 existing tests pass (Docker build, inspect, run subprocess tests)
+- **Quality Gates**: PASS — Gate 0 (14 real tests, 0 mocks), Gates 1-2 N/A (mutation-exempt, no Python src/ code), Gate 3 (14/14 fresh pass)
+- **ST Acceptance**: PASS — 9/9 test cases (4 FUNC, 5 BNDRY)
+- **Review**: PASS — all S1-S5, D1-D5, P1-P3, R1-R3 YES; 3 minor findings (shared helper, script count, ST bundling)
+- **Result**: Feature #45 marked PASSING — 45/45 active features now passing
+- **Next**: System Testing
