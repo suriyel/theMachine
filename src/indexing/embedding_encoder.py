@@ -64,9 +64,11 @@ class EmbeddingEncoder:
         if len(texts) == 0:
             raise ValueError("texts must be non-empty")
 
-        prepared = texts
+        # Truncate texts exceeding API input limit (8192 tokens ≈ 6000 chars for code)
+        _MAX_CHARS = 6000
+        prepared = [t[:_MAX_CHARS] if len(t) > _MAX_CHARS else t for t in texts]
         if is_query:
-            prepared = [self._query_prefix + t for t in texts]
+            prepared = [self._query_prefix + t for t in prepared]
 
         # Split into batches to respect API input limits
         all_vectors: list[np.ndarray] = []
