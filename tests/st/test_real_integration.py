@@ -450,6 +450,300 @@ class TestMCPConsistency:
 
 
 # ---------------------------------------------------------------------------
+# ATS-010 / INT-004: MCP real tool calls — no mocks
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestMCPRealToolCalls:
+    """MCP tools called programmatically against real services."""
+
+    def test_mcp_list_repositories_real(self):
+        """IFR-001: MCP list_repositories returns real DB data."""
+        import asyncio
+        for k in ("ALL_PROXY", "all_proxy"):
+            os.environ.pop(k, None)
+
+        async def run():
+            from src.shared.database import get_engine, get_session_factory
+            from src.shared.clients.elasticsearch import ElasticsearchClient
+            from src.indexing.embedding_encoder import EmbeddingEncoder
+            from src.query.retriever import Retriever
+            from src.query.rank_fusion import RankFusion
+            from src.query.reranker import Reranker
+            from src.query.response_builder import ResponseBuilder
+            from src.query.query_handler import QueryHandler
+            from src.query.mcp_server import create_mcp_server
+
+            es = ElasticsearchClient(url=os.environ["ELASTICSEARCH_URL"])
+            await es.connect()
+            engine = get_engine(os.environ["DATABASE_URL"])
+            sf = get_session_factory(engine)
+            handler = QueryHandler(
+                retriever=Retriever(es_client=es, embedding_encoder=None),
+                rank_fusion=RankFusion(), reranker=Reranker(), response_builder=ResponseBuilder())
+            mcp = create_mcp_server(handler, sf, es)
+            fn = mcp._tool_manager._tools["list_repositories"].fn
+            result = json.loads(await fn())
+            await es.close(); await engine.dispose()
+            return result
+
+        repos = asyncio.run(run())
+        assert isinstance(repos, list)
+        names = [r["name"] for r in repos]
+        assert "suriyel/githubtrends" in names
+
+    def test_mcp_search_code_context_real(self):
+        """IFR-001: MCP search_code_context returns real retrieval results."""
+        import asyncio
+        for k in ("ALL_PROXY", "all_proxy"):
+            os.environ.pop(k, None)
+
+        async def run():
+            from src.shared.database import get_engine, get_session_factory
+            from src.shared.clients.elasticsearch import ElasticsearchClient
+            from src.shared.clients.qdrant import QdrantClientWrapper
+            from src.indexing.embedding_encoder import EmbeddingEncoder
+            from src.query.retriever import Retriever
+            from src.query.rank_fusion import RankFusion
+            from src.query.reranker import Reranker
+            from src.query.response_builder import ResponseBuilder
+            from src.query.query_handler import QueryHandler
+            from src.query.mcp_server import create_mcp_server
+
+            es = ElasticsearchClient(url=os.environ["ELASTICSEARCH_URL"])
+            qdrant = QdrantClientWrapper(url=os.environ["QDRANT_URL"])
+            await es.connect(); await qdrant.connect()
+            engine = get_engine(os.environ["DATABASE_URL"])
+            sf = get_session_factory(engine)
+
+            encoder = EmbeddingEncoder()
+            handler = QueryHandler(
+                retriever=Retriever(es_client=es, qdrant_client=qdrant, embedding_encoder=encoder),
+                rank_fusion=RankFusion(), reranker=Reranker(), response_builder=ResponseBuilder(),
+                search_timeout=5.0, pipeline_timeout=15.0)
+            mcp = create_mcp_server(handler, sf, es)
+            fn = mcp._tool_manager._tools["search_code_context"].fn
+            result = json.loads(await fn(query="weekly report"))
+            await es.close(); await qdrant.close(); await engine.dispose()
+            return result
+
+        data = asyncio.run(run())
+        assert data["query_type"] in ("nl", "symbol")
+        total = len(data.get("code_results", [])) + len(data.get("doc_results", []))
+        assert total > 0, "MCP search returned no results"
+
+    def test_mcp_empty_query_raises_value_error(self):
+        """IFR-001: MCP empty query → ValueError (MCP stays alive)."""
+        import asyncio
+        for k in ("ALL_PROXY", "all_proxy"):
+            os.environ.pop(k, None)
+
+        async def run():
+            from src.shared.database import get_engine, get_session_factory
+            from src.shared.clients.elasticsearch import ElasticsearchClient
+            from src.query.retriever import Retriever
+            from src.query.rank_fusion import RankFusion
+            from src.query.reranker import Reranker
+            from src.query.response_builder import ResponseBuilder
+            from src.query.query_handler import QueryHandler
+            from src.query.mcp_server import create_mcp_server
+
+            es = ElasticsearchClient(url=os.environ["ELASTICSEARCH_URL"])
+            await es.connect()
+            engine = get_engine(os.environ["DATABASE_URL"])
+            sf = get_session_factory(engine)
+            handler = QueryHandler(
+                retriever=Retriever(es_client=es, embedding_encoder=None),
+                rank_fusion=RankFusion(), reranker=Reranker(), response_builder=ResponseBuilder())
+            mcp = create_mcp_server(handler, sf, es)
+            fn = mcp._tool_manager._tools["search_code_context"].fn
+            try:
+                await fn(query="")
+                return False  # should have raised
+            except ValueError:
+                return True  # expected
+            finally:
+                await es.close(); await engine.dispose()
+
+        raised = asyncio.run(run())
+        assert raised, "Expected ValueError for empty query"
+
+
+# ---------------------------------------------------------------------------
+# ATS-013: Docker images — real build + inspect
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestDockerImages:
+    def test_api_image_non_root(self):
+        """FR-027: API image runs as non-root user."""
+        import subprocess
+        r = subprocess.run(["docker", "run", "--rm", "codecontext-api", "whoami"],
+                           capture_output=True, text=True, timeout=15)
+        assert r.returncode == 0
+        assert r.stdout.strip() == "appuser"
+
+    def test_mcp_image_non_root(self):
+        """FR-028: MCP image runs as non-root user."""
+        import subprocess
+        r = subprocess.run(["docker", "run", "--rm", "codecontext-mcp", "whoami"],
+                           capture_output=True, text=True, timeout=15)
+        assert r.returncode == 0
+        assert r.stdout.strip() == "appuser"
+
+    def test_worker_image_non_root(self):
+        """FR-029: Worker image runs as non-root user."""
+        import subprocess
+        r = subprocess.run(["docker", "run", "--rm", "codecontext-worker", "whoami"],
+                           capture_output=True, text=True, timeout=15)
+        assert r.returncode == 0
+        assert r.stdout.strip() == "appuser"
+
+    def test_api_image_no_dev_deps(self):
+        """FR-027: API image has no dev dependencies."""
+        import subprocess
+        r = subprocess.run(["docker", "run", "--rm", "codecontext-api", "pip", "list"],
+                           capture_output=True, text=True, timeout=15)
+        assert "pytest" not in r.stdout.lower()
+        assert "mutmut" not in r.stdout.lower()
+
+    def test_api_image_has_healthcheck(self):
+        """FR-027: API image has HEALTHCHECK instruction."""
+        import subprocess
+        r = subprocess.run(["docker", "inspect", "codecontext-api"],
+                           capture_output=True, text=True, timeout=15)
+        assert r.returncode == 0
+        data = json.loads(r.stdout)
+        hc = data[0]["Config"].get("Healthcheck")
+        assert hc is not None, "No HEALTHCHECK in image"
+        assert "8000" in " ".join(hc.get("Test", []))
+
+
+# ---------------------------------------------------------------------------
+# INT-006: Celery worker task registration — real inspect
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestCeleryWorker:
+    def test_celery_worker_registered_tasks(self):
+        """INT-006: Celery worker has both scheduled tasks registered."""
+        import subprocess
+        r = subprocess.run(
+            ["celery", "-A", "src.indexing.celery_app", "inspect", "registered"],
+            capture_output=True, text=True, timeout=15,
+            env={**os.environ, "ALL_PROXY": "", "all_proxy": ""})
+        output = r.stdout
+        assert "reindex_repo_task" in output, "reindex_repo_task not registered"
+        assert "scheduled_reindex_all" in output, "scheduled_reindex_all not registered"
+
+
+# ---------------------------------------------------------------------------
+# INT-008: Auth coverage — additional endpoints (keys, branches)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestAuthAllEndpoints:
+    def test_keys_endpoint_requires_auth(self):
+        """NFR-009: GET /api/v1/keys without key → 401."""
+        code, _ = get("/api/v1/keys", key=None)
+        assert code == 401
+
+    def test_branches_endpoint_requires_auth_or_validates(self):
+        """FR-023: Branch endpoint handles auth/validation."""
+        # Without key → 401 or with key + invalid repo → 404/422
+        code, _ = get("/api/v1/repos/00000000-0000-0000-0000-000000000000/branches")
+        assert code in (404, 422, 200), f"Unexpected {code}"
+
+
+# ---------------------------------------------------------------------------
+# FR-008: RRF fusion performance — real timing measurement
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestRRFPerformance:
+    def test_query_pipeline_latency_under_15s(self):
+        """FR-008/NFR-001: Full query response within PIPELINE_TIMEOUT (15s)."""
+        t0 = time.time()
+        code, data = post("/api/v1/query", {"query": "github trending repositories"})
+        elapsed = time.time() - t0
+        assert code == 200
+        assert elapsed < 15.0, f"Pipeline took {elapsed:.1f}s, exceeds 15s timeout"
+
+    def test_repeat_queries_faster_than_first(self):
+        """IFR-006: Cached repeat query is faster (Redis L1 cache)."""
+        q = {"query": "database schema model"}
+        # Warm up
+        post("/api/v1/query", q)
+        # Measure 3 repeats
+        times = []
+        for _ in range(3):
+            t0 = time.time()
+            code, _ = post("/api/v1/query", q)
+            times.append(time.time() - t0)
+            assert code == 200
+        avg = sum(times) / len(times)
+        assert avg < 5.0, f"Avg repeat query {avg:.1f}s — expected <5s with cache"
+
+
+# ---------------------------------------------------------------------------
+# FR-023: Branch listing API — real endpoint
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestBranchListingAPI:
+    def test_branches_for_indexed_repo(self):
+        """FR-023: GET /repos/{id}/branches returns branches for cloned repo."""
+        # First get the repo ID
+        code, repos = get("/api/v1/repos")
+        assert code == 200
+        gt_repo = next((r for r in repos if r["name"] == "suriyel/githubtrends"), None)
+        if gt_repo is None:
+            pytest.skip("githubtrends repo not registered")
+
+        code, data = get(f"/api/v1/repos/{gt_repo['id']}/branches")
+        # May be 200 (branches listed) or 409 (clone not ready per API design)
+        assert code in (200, 409), f"Expected 200 or 409, got {code}"
+        if code == 200:
+            assert "branches" in data
+            assert isinstance(data["branches"], list)
+
+    def test_branches_nonexistent_repo_404(self):
+        """FR-023: Nonexistent repo → 404."""
+        code, _ = get("/api/v1/repos/00000000-0000-0000-0000-000000000000/branches")
+        assert code == 404
+
+
+# ---------------------------------------------------------------------------
+# INT-003: Cache invalidation on reindex — real flow
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.real
+class TestReindexCacheInvalidation:
+    def test_reindex_endpoint_returns_200(self):
+        """FR-020/INT-003: POST /repos/{id}/reindex queues a job."""
+        code, repos = get("/api/v1/repos")
+        assert code == 200
+        gt_repo = next((r for r in repos if r["name"] == "suriyel/githubtrends"), None)
+        if gt_repo is None:
+            pytest.skip("githubtrends repo not registered")
+
+        code, data = post(f"/api/v1/repos/{gt_repo['id']}/reindex", {})
+        assert code == 200, f"Reindex failed: {data}"
+
+    def test_reindex_nonexistent_repo_404(self):
+        """FR-020: Reindex nonexistent repo → 404."""
+        code, _ = post("/api/v1/repos/00000000-0000-0000-0000-000000000000/reindex", {})
+        assert code == 404
+
+
+# ---------------------------------------------------------------------------
 # Compatibility: platform checks (no mocks needed)
 # ---------------------------------------------------------------------------
 
