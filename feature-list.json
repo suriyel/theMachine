@@ -436,18 +436,20 @@
       "title": "Keyword Retrieval (BM25)",
       "description": "Implement Retriever.bm25_search() using Elasticsearch with the code_analyzer for code_chunks index and doc_analyzer for doc_chunks index, returning top-200 scored candidates",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
         "Given indexed code chunks containing 'getUserName', when bm25_search('getUserName') runs against code_chunks, then results include chunks containing that symbol, ranked by BM25 score",
         "Given the code_analyzer with synonym filter, when searching 'auth', then results also include chunks containing 'authentication' and 'authorization'",
         "Given a query with no matching terms, when bm25_search() runs, then it returns an empty list without error",
-        "Given Elasticsearch is unreachable, when bm25_search() runs, then it raises a retrieval error (caller handles degradation)"
+        "Given Elasticsearch is unreachable, when bm25_search() runs, then it raises a retrieval error (caller handles degradation)",
+        "Given a branch parameter, BM25 search adds term filter on branch field"
       ],
       "dependencies": [
         7
       ],
       "st_case_path": "docs/test-cases/feature-8-keyword-retrieval.md",
-      "st_case_count": 5
+      "st_case_count": 5,
+      "wave": 5
     },
     {
       "id": 9,
@@ -455,17 +457,19 @@
       "title": "Semantic Retrieval (Vector)",
       "description": "Implement Retriever.vector_search() using Qdrant HNSW search with cosine similarity, encoding the query via EmbeddingEncoder.encode_query() and returning top-200 candidates",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "st_case_path": "docs/test-cases/feature-9-semantic-retrieval.md",
       "st_case_count": 5,
       "verification_steps": [
         "Given indexed embeddings for code about HTTP timeouts, when vector_search('how to configure spring http client timeout') runs, then results include semantically related chunks even without exact term matches",
         "Given a query vector, when vector_search() runs, then it returns up to 200 candidates with cosine similarity scores from the Qdrant collection",
-        "Given Qdrant is unreachable, when vector_search() runs, then it raises a retrieval error (caller handles degradation)"
+        "Given Qdrant is unreachable, when vector_search() runs, then it raises a retrieval error (caller handles degradation)",
+        "Given a branch parameter, vector search adds payload filter on branch field"
       ],
       "dependencies": [
         7
-      ]
+      ],
+      "wave": 5
     },
     {
       "id": 10,
@@ -528,37 +532,41 @@
       "title": "Natural Language Query Handler",
       "description": "Implement QueryHandler.handle_nl_query() that runs the full hybrid pipeline: 4-way parallel retrieval, unified RRF fusion, single rerank, with query expansion for embedded code identifiers",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
         "Given the NL query 'how to use grpc java interceptor', when handle_nl_query() runs, then it executes 4-way parallel retrieval (BM25 code + vector code + BM25 doc + vector doc), fuses with RRF, reranks, and returns structured context results",
         "Given an empty query string, when handle_nl_query() is called, then it raises a ValidationError with a descriptive message",
         "Given the NL query 'how does AuthService validate tokens', when query expansion runs, then it extracts 'AuthService' and fires a parallel symbol.raw term query merged into RRF with weight 0.3",
-        "Given a pipeline that exceeds 1-second timeout, when handle_nl_query() runs, then it returns partial results with degraded=true flag"
+        "Given a pipeline that exceeds 1-second timeout, when handle_nl_query() runs, then it returns partial results with degraded=true flag",
+        "Given repo in owner/repo@branch format, branch is parsed and forwarded to retriever"
       ],
       "dependencies": [
         12
       ],
       "st_case_path": "docs/test-cases/feature-13-natural-language-query-handler.md",
-      "st_case_count": 7
+      "st_case_count": 7,
+      "wave": 5
     },
     {
       "id": 14,
       "category": "core",
       "title": "Symbol Query Handler",
-      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match \u2192 fuzzy fallback \u2192 NL pipeline fallback",
+      "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match → fuzzy fallback → NL pipeline fallback",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
         "Given the query 'UserService.getById', when detect_query_type() runs, then it classifies as 'symbol' due to dot notation",
         "Given the symbol query 'std::vector', when handle_symbol_query() runs, then it first tries ES term query on symbol.raw, and returns matching class definitions and methods",
         "Given a symbol query for a non-existent symbol, when ES term and fuzzy queries return 0 results, then it falls back to the full NL pipeline using the query as-is",
-        "Given a symbol query exceeding 200 characters, when submitted, then it raises a ValidationError"
+        "Given a symbol query exceeding 200 characters, when submitted, then it raises a ValidationError",
+        "Given repo in owner/repo@branch format, branch is parsed and forwarded to retriever"
       ],
       "dependencies": [
         12
       ],
       "st_case_path": "docs/test-cases/feature-14-symbol-query-handler.md",
-      "st_case_count": 7
+      "st_case_count": 7,
+      "wave": 5
     },
     {
       "id": 15,
@@ -582,7 +590,7 @@
       "id": 16,
       "category": "core",
       "title": "API Key Authentication",
-      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute \u2192 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
+      "description": "Implement AuthMiddleware for FastAPI with API key validation against PostgreSQL, Redis-cached lookups, rate limiting (10 failed attempts/IP/minute → 429), role-based access (read/admin), and API key CRUD (create/revoke/rotate/list)",
       "priority": "high",
       "status": "passing",
       "verification_steps": [
@@ -603,12 +611,14 @@
       "title": "REST API Endpoints",
       "description": "Implement FastAPI router with endpoints: POST /api/v1/query, GET /api/v1/repos, POST /api/v1/repos, POST /api/v1/repos/{repo_id}/reindex, GET /api/v1/health, and API key management endpoints",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
         "Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (codeResults + docResults + rules)",
         "Given a GET to /api/v1/repos with valid API key, when processed, then it returns the list of registered repositories with their indexing status",
         "Given a GET to /api/v1/health without authentication, when processed, then it returns service health status with ES/Qdrant/Redis connectivity",
-        "Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message"
+        "Given a malformed JSON body on POST /api/v1/query, when submitted, then it returns 400 with a validation error message",
+        "POST /api/v1/query without repo_id returns 422 (required field)",
+        "POST /api/v1/query with repo_id='owner/repo@branch' parses branch and filters results"
       ],
       "dependencies": [
         13,
@@ -617,7 +627,8 @@
         16
       ],
       "st_case_path": "docs/test-cases/feature-17-rest-api-endpoints.md",
-      "st_case_count": 15
+      "st_case_count": 15,
+      "wave": 5
     },
     {
       "id": 18,
@@ -625,18 +636,22 @@
       "title": "MCP Server",
       "description": "Implement standalone MCP server exposing 3 tools: search_code_context (with max_tokens param), list_repositories, get_chunk. Uses the same query handler as REST API.",
       "priority": "high",
-      "status": "passing",
+      "status": "failing",
       "verification_steps": [
-        "Given an MCP client calling search_code_context with {query: 'spring webclient timeout', repo: 'spring-framework'}, when executed, then it returns structured context results matching REST API format",
-        "Given an MCP client calling list_repositories, when executed, then it returns the list of indexed repositories with status",
-        "Given an MCP client calling search_code_context without the optional repo parameter, when executed, then it searches across all repositories",
-        "Given an MCP tool call with missing required 'query' field, then it returns an MCP error response with a descriptive message"
+        "resolve_repository(query, libraryName) returns indexed repos with branches",
+        "search_code_context(query, repo) with repo required returns scoped results",
+        "search_code_context(query, repo='owner/repo@branch') parses branch and filters",
+        "search_code_context without repo raises TypeError",
+        "get_chunk(chunk_id) returns full chunk content",
+        "MCP error response on invalid params (no crash)",
+        "MCP error response on internal retrieval failure (no crash)"
       ],
       "dependencies": [
         13
       ],
       "st_case_path": "docs/test-cases/feature-18-mcp-server.md",
-      "st_case_count": 6
+      "st_case_count": 6,
+      "wave": 5
     },
     {
       "id": 19,
@@ -644,15 +659,17 @@
       "title": "Web UI Search Page",
       "description": "Implement Jinja2 SSR web interface with search input, repository filter dropdown, language filter checkboxes, branch selector for registration, syntax-highlighted results with htmx partial updates. Developer Dark theme per UCD.",
       "priority": "medium",
-      "status": "passing",
-      "wave": 1,
+      "status": "failing",
+      "wave": 5,
       "ui": true,
       "ui_entry": "/",
       "verification_steps": [
-        "[devtools] Navigate / \u2192 EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' \u2192 click Search \u2192 EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
-        "[devtools] Navigate / \u2192 submit empty query \u2192 EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
+        "[devtools] Navigate / → EXPECT: search input field, repository filter dropdown, language filter checkboxes rendered with Developer Dark theme (bg #1a1b26, text #c0caf5); fill query 'timeout' → click Search → EXPECT: results displayed with syntax-highlighted code snippets, repo name, file path, symbol name, relevance score; REJECT: console errors, broken styles",
+        "[devtools] Navigate / → submit empty query → EXPECT: validation message 'Please enter a search query'; REJECT: server error, blank results",
         "Given no results for a query, when displayed, then the UI shows a 'No results found' message with the Developer Dark empty state styling",
-        "[devtools] Navigate to repository registration form \u2192 enter a repo URL \u2192 EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch \u2192 submit \u2192 EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection"
+        "[devtools] Navigate to repository registration form → enter a repo URL → EXPECT: branch selector dropdown populated with available branches (fetched via Branch Listing API), defaulting to the repo's default branch; select a branch → submit → EXPECT: repository registered with the selected branch; REJECT: empty branch dropdown, console errors, missing default selection",
+        "Repository dropdown is required (no 'all repos' option)",
+        "Dropdown only shows status=indexed repositories"
       ],
       "dependencies": [
         17
@@ -1023,7 +1040,7 @@
       "id": 40,
       "category": "evaluation",
       "title": "Evaluation Corpus Management",
-      "description": "Build evaluation corpus by cloning representative open-source repos (2 per supported language, 12 total from eval/repos.json), running the full indexing pipeline (ContentExtractor \u2192 Chunker \u2192 EmbeddingEncoder \u2192 IndexWriter) into eval_ prefixed ES/Qdrant namespaces. Idempotent \u2014 skips already-indexed repos.",
+      "description": "Build evaluation corpus by cloning representative open-source repos (2 per supported language, 12 total from eval/repos.json), running the full indexing pipeline (ContentExtractor → Chunker → EmbeddingEncoder → IndexWriter) into eval_ prefixed ES/Qdrant namespaces. Idempotent — skips already-indexed repos.",
       "priority": "medium",
       "status": "passing",
       "wave": 3,
@@ -1150,6 +1167,28 @@
       ],
       "st_case_path": "docs/test-cases/feature-45-index-worker-docker-image.md",
       "st_case_count": 9
+    },
+    {
+      "id": 46,
+      "name": "Repository Resolution MCP Tool",
+      "requirement": "FR-030",
+      "wave": 5,
+      "status": "failing",
+      "dependencies": [
+        17
+      ],
+      "verification_steps": [
+        "resolve_repository(query='JSON parse', libraryName='gson') returns indexed repos with name match",
+        "Each result includes id, name, url, indexed_branch, default_branch, available_branches, last_indexed_at",
+        "libraryName matching no indexed repo returns empty list",
+        "Missing query or libraryName parameter raises TypeError",
+        "Results sorted by name match quality (exact > prefix > substring)"
+      ],
+      "title": "Repository Resolution MCP Tool",
+      "description": "resolve_repository MCP tool with query+libraryName required params, returns indexed repos with branches (Context7-aligned)",
+      "priority": "high",
+      "category": "query",
+      "ui": false
     }
   ],
   "waves": [
@@ -1161,17 +1200,22 @@
     {
       "id": 2,
       "date": "2026-03-21",
-      "description": "Strengthen AST parsing accuracy for 6 supported languages \u2014 decorator/namespace/template/enum/prototype/require/typedef patterns"
+      "description": "Strengthen AST parsing accuracy for 6 supported languages — decorator/namespace/template/enum/prototype/require/typedef patterns"
     },
     {
       "id": 3,
       "date": "2026-03-21",
-      "description": "Retrieval Quality Evaluation Pipeline \u2014 corpus management, LLM annotation, IR metrics & reporting"
+      "description": "Retrieval Quality Evaluation Pipeline — corpus management, LLM annotation, IR metrics & reporting"
     },
     {
       "id": 4,
       "date": "2026-03-23",
-      "description": "Modular Docker Images \u2014 query-api, mcp-server, index-worker (NFR-012 implementation, release blocker)"
+      "description": "Modular Docker Images — query-api, mcp-server, index-worker (NFR-012 implementation, release blocker)"
+    },
+    {
+      "id": 5,
+      "date": "2026-03-24",
+      "description": "Context7-aligned MCP interface: resolve_repository + repo required + @branch"
     }
   ]
 }

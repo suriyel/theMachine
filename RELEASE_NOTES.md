@@ -12,6 +12,15 @@
 - **Starlette migration**: `TemplateResponse` API updated for starlette 1.0 (request as 1st positional arg)
 - **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
+### Increment Wave 5 — Context7-Aligned MCP Interface (2026-03-24)
+- **New**: Feature #46 — `resolve_repository` MCP tool (query + libraryName required; returns indexed repos with branches)
+- **Modified**: #18 MCP `search_code_context` repo now **required** + `@branch` suffix + remove `max_tokens`
+- **Modified**: #17 REST `repo_id` now **required** + `@branch` parsing
+- **Modified**: #19 Web UI repo dropdown **mandatory** (indexed only)
+- **Modified**: #8, #9 Retriever adds `branch` filter to BM25/Vector queries
+- **Modified**: #13, #14 QueryHandler parses `@branch` and forwards to Retriever
+- 8 features reset to failing for re-verification
+
 ### Added
 - Initial project scaffold
 - Feature #1: Project Skeleton & CI — FastAPI app factory, health endpoint (/api/v1/health), Settings config (pydantic-settings), async database engine/session factory, Alembic migration setup

@@ -1,14 +1,23 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 45/45 active features passing (0 failing) · Last: System Testing (2026-03-24) · Verdict: **Go**
+Progress: 38/46 active features passing (8 failing) · Last: Increment Wave 5 (2026-03-24) · Next: Feature #8 — Keyword Retrieval (+branch filter)
 
-**Failing features**: None — all active features passing
-**System Testing**: COMPLETE — see docs/plans/2026-03-24-st-report.md
+**Failing features**: #8, #9, #13, #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Increment Wave 5 — 2026-03-24
+- **Date**: 2026-03-24
+- **Phase**: Increment
+- **Scope**: Context7-aligned MCP interface — resolve_repository + repo required + @branch
+- **Changes**: Added 1 feature (#46), modified 7 features (#8,#9,#13,#14,#17,#18,#19)
+- **Documents updated**: SRS (FR-006/007/011/012/015/016/017 modified, FR-030 added), Design (§4.3 MCP rewrite), ATS (mapping+INT-011)
+- **Features reset to failing**: #8, #9, #13, #14, #17, #18, #19
+- **New feature**: #46 Repository Resolution MCP Tool (FR-030)
+- **Next**: Feature #8 (Keyword Retrieval + branch filter)
 
 ### System Testing Session — 2026-03-24
 - **Phase**: System Testing (Phase 3)
