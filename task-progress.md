@@ -1,13 +1,23 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 42/46 active features passing (4 failing) · Last: #14 Symbol Query Handler (2026-03-24) · Next: #17 REST API Endpoints
+Progress: 43/46 active features passing (3 failing) · Last: #17 REST API Endpoints (2026-03-24) · Next: #18 MCP AI Agent Interface
 
-**Failing features**: #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #17: REST API Endpoints — PASS
+- Completed: 2026-03-24
+- TDD: green ✓
+- Quality Gates: 96% line, 93% branch, 100% mutation (56/56 killed)
+- Feature-ST: 17 cases, all PASS
+- Review: PASS (round 2 — S1-S5, D1-D5, T1-T3, R1-R3 all YES)
+- Git: 4a90810 feat: REST API endpoints — Wave 5 repo_id required enforcement (#17)
+#### Risks
+- ⚠ [Review] Minor: 42 test functions in test_rest_api.py lack # ST-xxx annotations (additional coverage tests beyond the ST set; T2 satisfied)
 
 ### Feature #14: Symbol Query Handler — PASS
 - Completed: 2026-03-24

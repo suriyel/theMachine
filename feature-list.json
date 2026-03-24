@@ -611,7 +611,7 @@
       "title": "REST API Endpoints",
       "description": "Implement FastAPI router with endpoints: POST /api/v1/query, GET /api/v1/repos, POST /api/v1/repos, POST /api/v1/repos/{repo_id}/reindex, GET /api/v1/health, and API key management endpoints",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given a POST to /api/v1/query with valid query body and API key, when processed, then it returns 200 with structured context results (codeResults + docResults + rules)",
         "Given a GET to /api/v1/repos with valid API key, when processed, then it returns the list of registered repositories with their indexing status",
@@ -627,7 +627,7 @@
         16
       ],
       "st_case_path": "docs/test-cases/feature-17-rest-api-endpoints.md",
-      "st_case_count": 15,
+      "st_case_count": 17,
       "wave": 5
     },
     {
