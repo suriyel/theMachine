@@ -4,6 +4,8 @@
 Demonstrates:
 - detect_query_type() heuristic for symbol vs NL classification
 - handle_symbol_query() pipeline: ES term → fuzzy → NL fallback
+- Doc BM25 search parallel to code search (design §4.2.5)
+- Branch parsing from owner/repo@branch format
 """
 
 import asyncio
@@ -74,6 +76,8 @@ async def demo_handle_symbol_query():
         score=8.5, language="cpp", chunk_type="class", symbol="std::vector",
     )]
     retriever._parse_code_hits = MagicMock(return_value=parsed)
+    # Doc BM25 search returns related documentation (design §4.2.5)
+    retriever.bm25_doc_search = AsyncMock(return_value=[])
     reranker.rerank = MagicMock(return_value=parsed)
     response_builder.build = MagicMock(return_value=QueryResponse(
         query="std::vector", query_type="symbol", repo="my-repo",
@@ -92,6 +96,14 @@ async def demo_handle_symbol_query():
     print(f"  Query Type: {result.query_type}")
     print(f"  Repo:       {result.repo}")
     print(f"  ES calls:   {retriever._execute_search.call_count} (term hit found, no fuzzy needed)")
+    print(f"  Doc search: {retriever.bm25_doc_search.call_count} call(s) (parallel doc BM25)")
+
+    # Demo branch parsing
+    print("\n=== Branch parsing ===")
+    repo_id, branch = handler._parse_repo("owner/repo@main")
+    print(f"  'owner/repo@main' → repo_id='{repo_id}', branch='{branch}'")
+    repo_id2, branch2 = handler._parse_repo("owner/repo")
+    print(f"  'owner/repo'      → repo_id='{repo_id2}', branch={branch2}")
 
 
 if __name__ == "__main__":

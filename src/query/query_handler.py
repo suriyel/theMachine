@@ -232,15 +232,23 @@ class QueryHandler:
         if len(query) > 200:
             raise ValidationError("query exceeds 200 character limit")
 
-        # Step 1b: Validate and normalize language filter
+        # Step 1b: Parse repo → (repo_id, branch)
+        repo_id: str | None = None
+        branch: str | None = None
+        if repo is not None:
+            repo_id, branch = self._parse_repo(repo)
+
+        # Step 1c: Validate and normalize language filter
         if self._language_filter is not None:
             languages = self._language_filter.validate(languages)
 
         # Step 2: ES term query (exact match on symbol.raw)
         term_bool: dict = {"must": [{"term": {"symbol.raw": query}}]}
         filter_clauses: list[dict] = []
-        if repo is not None:
-            filter_clauses.append({"term": {"repo_id": repo}})
+        if repo_id is not None:
+            filter_clauses.append({"term": {"repo_id": repo_id}})
+        if branch is not None:
+            filter_clauses.append({"term": {"branch": branch}})
         if languages:
             filter_clauses.append({"terms": {"language": languages}})
         if filter_clauses:
@@ -251,13 +259,16 @@ class QueryHandler:
         )
 
         if term_hits:
-            chunks = self._retriever._parse_code_hits(term_hits)
+            code_chunks = self._retriever._parse_code_hits(term_hits)
+            # Parallel doc BM25 search (design §4.2.5: symbol name as query on doc_chunks)
+            doc_chunks = await self._symbol_doc_search(query, repo_id, branch)
+            candidates = code_chunks + doc_chunks
             try:
-                reranked = self._reranker.rerank(query, chunks, top_k=6)
+                reranked = self._reranker.rerank(query, candidates, top_k=20)
             except Exception as exc:
                 log.warning("Reranker failed on symbol term query, using raw chunks: %s", exc)
-                reranked = chunks[:6]
-            return self._response_builder.build(reranked, query, "symbol", repo)
+                reranked = candidates[:6]
+            return self._response_builder.build(reranked, query, "symbol", repo_id)
 
         # Step 3: ES fuzzy query (fuzziness=AUTO)
         fuzzy_bool: dict = {
@@ -273,16 +284,30 @@ class QueryHandler:
         )
 
         if fuzzy_hits:
-            chunks = self._retriever._parse_code_hits(fuzzy_hits)
+            code_chunks = self._retriever._parse_code_hits(fuzzy_hits)
+            doc_chunks = await self._symbol_doc_search(query, repo_id, branch)
+            candidates = code_chunks + doc_chunks
             try:
-                reranked = self._reranker.rerank(query, chunks, top_k=6)
+                reranked = self._reranker.rerank(query, candidates, top_k=20)
             except Exception as exc:
                 log.warning("Reranker failed on symbol fuzzy query, using raw chunks: %s", exc)
-                reranked = chunks[:6]
-            return self._response_builder.build(reranked, query, "symbol", repo)
+                reranked = candidates[:6]
+            return self._response_builder.build(reranked, query, "symbol", repo_id)
 
         # Step 4: NL fallback
         return await self.handle_nl_query(query, repo, languages)
+
+    async def _symbol_doc_search(
+        self, query: str, repo_id: str | None, branch: str | None
+    ) -> list[ScoredChunk]:
+        """BM25 doc search using symbol name as query (design §4.2.5)."""
+        try:
+            return await self._retriever.bm25_doc_search(
+                query, repo_id=repo_id, top_k=20, branch=branch
+            )
+        except Exception as exc:
+            log.warning("Symbol doc search failed, continuing without docs: %s", exc)
+            return []
 
     def _extract_identifiers(self, query: str) -> list[str]:
         """Extract code identifiers from an NL query."""
