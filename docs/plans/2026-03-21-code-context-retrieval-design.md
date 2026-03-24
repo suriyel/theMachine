@@ -965,20 +965,39 @@ The MCP tool and REST API return a **dual-list response** (modeled after Context
 
 #### 4.3.4 MCP Tool Definitions
 
-The MCP server registers **three tools**:
+<!-- Wave 5: Modified 2026-03-24 — Context7-aligned two-step MCP flow -->
+
+The MCP server registers **three tools** in a two-step flow (resolve → search):
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `search_code_context` | `query` (required), `repo` (optional), `top_k` (optional, default 3), `languages` (optional), `max_tokens` (optional, default 5000) | Search code + documentation context. Returns dual-list response (codeResults + docResults + rules). `max_tokens` caps total response size for context window budget management. |
-| `list_repositories` | `query` (optional) | List indexed repositories. If `query` provided, filter by name/URL fuzzy match. Returns `[{id, name, url, default_branch, indexed_branch, last_indexed_at, status}]`. Enables Agent to discover available repos before querying. |
-| `get_chunk` | `chunk_id` (required) | Get full content of a specific chunk by ID. Bypasses truncation limit. Useful when Agent needs complete content of a truncated result from `search_code_context`. Returns single chunk with all fields. |
+| `resolve_repository` | `query` (**required** — user intent for relevance ranking), `libraryName` (**required** — repo name to search) | Resolve a repository name to an exact repo ID with branch info. Returns only `status=indexed` repos. Each result includes: `id` (owner/repo), `name`, `url`, `indexed_branch`, `default_branch`, `available_branches`, `last_indexed_at`. Matching: case-insensitive substring on name+URL, ranked by query relevance. **Must be called before `search_code_context`** unless user provides exact `owner/repo` format. |
+| `search_code_context` | `query` (**required**), `repo` (**required** — `"owner/repo"` or `"owner/repo@branch"`), `top_k` (optional, default 3), `languages` (optional) | Search code + documentation context scoped to a specific repository and optional branch. `@branch` suffix parsed and forwarded as branch filter to Retriever. Returns dual-list response (codeResults + docResults + rules). |
+| `get_chunk` | `chunk_id` (**required**) | Get full content of a specific chunk by ID. Bypasses truncation limit. Useful when Agent needs complete content of a truncated result from `search_code_context`. Returns single chunk with all fields. |
 
-#### 4.3.5 Design Notes
-- Uses the `mcp` Python SDK to register three tools.
+#### 4.3.5 Repo Reference Parsing
+
+Shared utility function `parse_repo_ref` used by both MCP and REST:
+
+```python
+def parse_repo_ref(repo: str) -> tuple[str, str | None]:
+    """Parse 'owner/repo' or 'owner/repo@branch' → (repo_name, branch)."""
+    if "@" in repo:
+        name, branch = repo.rsplit("@", 1)
+        return name, branch
+    return repo, None
+```
+
+- MCP `search_code_context` and REST `POST /api/v1/query` both call this
+- `repo_name` → DB lookup to get repo UUID → passed to Retriever for ES/Qdrant filtering
+- `branch` (if present) → passed to Retriever for `branch` term/payload filter in ES and Qdrant
+
+#### 4.3.6 Design Notes
+- Uses the `mcp` Python SDK (`FastMCP`) to register three tools.
 - Runs as a separate process (stdio transport for local, SSE for remote).
 - Shares the same `QueryHandler` and `RepoManager` code but instantiates its own ES/Qdrant/Redis connections.
 - MCP response wraps the same JSON structure above as the `content` field of the MCP tool result.
-- `list_repositories` respects API key repo access control — only returns repos the key has access to.
+- `resolve_repository` queries the Repository table directly (no ES/Qdrant needed); `available_branches` from `GitCloner.list_remote_branches()` if clone exists.
 
 ---
 
@@ -1661,8 +1680,8 @@ The `symbol.raw` sub-field (keyword type) enables exact term queries for the sym
 
 | Tool Name | Parameters | Description | SRS Trace |
 |-----------|-----------|-------------|-----------|
-| `search_code_context` | `query` (required), `repo` (optional), `top_k` (optional, default 3), `languages` (optional), `max_tokens` (optional, default 5000) | Search code + documentation context. Returns dual-list: `codeResults` + `docResults` + `rules` | FR-016 |
-| `list_repositories` | `query` (optional) | List indexed repositories, optionally filtered by name/URL | FR-015 |
+| `resolve_repository` | `query` (required), `libraryName` (required) | Resolve repo name → ID with branches. Returns indexed repos ranked by relevance. | FR-030 |
+| `search_code_context` | `query` (required), `repo` (required — `owner/repo` or `owner/repo@branch`), `top_k` (optional, default 3), `languages` (optional) | Search code + documentation context scoped to a repository. `@branch` parsed for branch filtering. | FR-016 |
 | `get_chunk` | `chunk_id` (required) | Get full content of a specific chunk (no truncation) | FR-010 |
 
 ### 6.3 Web UI Routes
