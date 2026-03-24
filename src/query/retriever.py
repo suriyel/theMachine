@@ -60,6 +60,7 @@ class Retriever:
         repo_id: str | None = None,
         languages: list[str] | None = None,
         top_k: int = 200,
+        branch: str | None = None,
     ) -> list[ScoredChunk]:
         """Execute BM25 keyword search on code_chunks index.
 
@@ -72,7 +73,7 @@ class Retriever:
         if not query or not query.strip():
             raise ValueError("query must not be empty")
 
-        body = self._build_code_query(query, repo_id, languages, top_k)
+        body = self._build_code_query(query, repo_id, languages, top_k, branch)
         hits = await self._execute_search(self._code_index, body, top_k)
         return self._parse_code_hits(hits)
 
@@ -81,6 +82,7 @@ class Retriever:
         query: str,
         repo_id: str | None = None,
         top_k: int = 200,
+        branch: str | None = None,
     ) -> list[ScoredChunk]:
         """Execute BM25 keyword search on doc_chunks index.
 
@@ -93,7 +95,7 @@ class Retriever:
         if not query or not query.strip():
             raise ValueError("query must not be empty")
 
-        body = self._build_doc_query(query, repo_id, top_k)
+        body = self._build_doc_query(query, repo_id, top_k, branch)
         hits = await self._execute_search(self._doc_index, body, top_k)
         return self._parse_doc_hits(hits)
 
@@ -159,6 +161,7 @@ class Retriever:
         repo_id: str | None,
         languages: list[str] | None,
         top_k: int,
+        branch: str | None = None,
     ) -> dict:
         """Build ES query DSL for code_chunks multi-match search."""
         must_clause = {
@@ -174,6 +177,8 @@ class Retriever:
             filter_clauses.append({"term": {"repo_id": repo_id}})
         if languages and len(languages) > 0:
             filter_clauses.append({"terms": {"language": languages}})
+        if branch is not None:
+            filter_clauses.append({"term": {"branch": branch}})
 
         bool_clause: dict = {"must": [must_clause]}
         if filter_clauses:
@@ -181,11 +186,18 @@ class Retriever:
 
         return {"query": {"bool": bool_clause}}
 
-    def _build_doc_query(self, query: str, repo_id: str | None, top_k: int) -> dict:
+    def _build_doc_query(
+        self, query: str, repo_id: str | None, top_k: int, branch: str | None = None
+    ) -> dict:
         """Build ES query DSL for doc_chunks match search."""
         bool_clause: dict = {"must": [{"match": {"content": query}}]}
+        filter_clauses: list[dict] = []
         if repo_id is not None:
-            bool_clause["filter"] = [{"term": {"repo_id": repo_id}}]
+            filter_clauses.append({"term": {"repo_id": repo_id}})
+        if branch is not None:
+            filter_clauses.append({"term": {"branch": branch}})
+        if filter_clauses:
+            bool_clause["filter"] = filter_clauses
         return {"query": {"bool": bool_clause}}
 
     async def _execute_search(
@@ -221,6 +233,7 @@ class Retriever:
                     line_start=src.get("line_start"),
                     line_end=src.get("line_end"),
                     parent_class=src.get("parent_class"),
+                    branch=src.get("branch"),
                 )
             )
         return result
@@ -240,6 +253,7 @@ class Retriever:
                     score=hit["_score"],
                     breadcrumb=src.get("breadcrumb"),
                     heading_level=src.get("heading_level"),
+                    branch=src.get("branch"),
                 )
             )
         return result

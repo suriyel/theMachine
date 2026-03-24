@@ -72,6 +72,36 @@ async def main() -> None:
         except RetrievalError as e:
             print(f"Search failed: {e}")
 
+        # --- BM25 code search with branch filter (Wave 5) ---
+        print("\n=== BM25 Code Search (branch filter) ===")
+        try:
+            results = await retriever.bm25_code_search(
+                query="getUserName",
+                repo_id="example-repo",
+                branch="main",
+                top_k=5,
+            )
+            print(f"Found {len(results)} code chunks on branch 'main':")
+            for chunk in results:
+                print(f"  [{chunk.score:.2f}] {chunk.symbol} (branch={chunk.branch})")
+        except RetrievalError as e:
+            print(f"Search failed: {e}")
+
+        # --- BM25 doc search with branch filter (Wave 5) ---
+        print("\n=== BM25 Doc Search (branch filter) ===")
+        try:
+            results = await retriever.bm25_doc_search(
+                query="timeout configuration",
+                repo_id="example-repo",
+                branch="main",
+                top_k=3,
+            )
+            print(f"Found {len(results)} doc chunks on branch 'main':")
+            for chunk in results:
+                print(f"  [{chunk.score:.2f}] {chunk.breadcrumb} (branch={chunk.branch})")
+        except RetrievalError as e:
+            print(f"Search failed: {e}")
+
         # --- Empty result handling ---
         print("\n=== Empty Result (no match) ===")
         try:

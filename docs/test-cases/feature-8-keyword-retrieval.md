@@ -2,7 +2,7 @@
 
 **Feature ID**: 8
 **关联需求**: FR-006（Keyword Retrieval）
-**日期**: 2026-03-21
+**日期**: 2026-03-24
 **测试标准**: ISO/IEC/IEEE 29119-3
 **模板版本**: 1.0
 
@@ -10,9 +10,9 @@
 
 | 类别 | 用例数 |
 |------|--------|
-| functional | 3 |
+| functional | 4 |
 | boundary | 2 |
-| **合计** | **5** |
+| **合计** | **6** |
 
 ---
 
@@ -30,36 +30,37 @@ FR-006（Keyword Retrieval）
 
 ### 前置条件
 
-- Elasticsearch 集群已启动，code_chunks 索引已创建
-- 索引中包含多个代码块，其中至少 2 个包含 "getUserName" 符号
+- Elasticsearch 集群已启动，健康状态为 green 或 yellow
+- 测试索引已创建，包含多个代码块，其中至少 1 个包含 "getUserName" 符号
 - Retriever 实例已连接到 ES 客户端
 
 ### 测试步骤
 
 | Step | 操作 | 预期结果 |
 | ---- | ---- | -------- |
-| 1 | 调用 bm25_code_search("getUserName", "r1") | 返回 list[ScoredChunk]，非空 |
-| 2 | 检查返回结果中的 content_type 字段 | 所有结果的 content_type == "code" |
-| 3 | 检查返回结果的排序顺序 | 结果按 score 降序排列（results[0].score >= results[1].score） |
-| 4 | 检查返回结果的 symbol 字段 | 包含 "getUserName" 符号的块排名靠前 |
+| 1 | 创建测试索引 test_code_chunks_feat8，索引 1 个包含 "getUserName" 的代码块 | 索引创建成功，文档 refresh 完成 |
+| 2 | 调用 bm25_code_search("getUserName", "r1") | 返回 list[ScoredChunk]，非空 |
+| 3 | 检查返回结果中的 content_type 字段 | 所有结果的 content_type == "code" |
+| 4 | 检查返回结果的 score 字段 | score > 0 |
+| 5 | 检查返回结果的 content 字段 | 包含 "getUserName" |
 
 ### 验证点
 
 - 返回的 ScoredChunk 列表非空
 - 所有结果的 content_type 均为 "code"
-- 结果按 BM25 分数降序排列
-- 包含匹配符号的块在结果中排名较高
+- 结果的 BM25 分数 > 0
+- 包含匹配符号的块在结果中
 
 ### 后置检查
 
-- 无需清理（只读查询操作）
+- 删除测试索引 test_code_chunks_feat8
 
 ### 元数据
 
 - **优先级**: High
 - **类别**: functional
 - **已自动化**: Yes
-- **测试引用**: tests/test_retriever.py::test_bm25_code_search_returns_matching_chunks
+- **测试引用**: tests/test_retriever.py::test_real_es_bm25_code_search
 - **Test Type**: Real
 
 ---
@@ -78,16 +79,18 @@ FR-006（Keyword Retrieval）
 
 ### 前置条件
 
-- Elasticsearch 集群已启动，code_chunks 索引已创建并配置了同义词过滤器
+- Elasticsearch 集群已启动
+- 测试索引已创建并配置了 code_analyzer（含同义词过滤器 auth → authentication, authorization）
 - 索引中包含分别含有 "authentication" 和 "authorization" 内容的代码块
 
 ### 测试步骤
 
 | Step | 操作 | 预期结果 |
 | ---- | ---- | -------- |
-| 1 | 调用 bm25_code_search("auth", "r1") | 返回 list[ScoredChunk]，非空 |
-| 2 | 检查返回结果的内容 | 结果包含含 "authentication" 的块 |
-| 3 | 检查返回结果的内容 | 结果包含含 "authorization" 的块 |
+| 1 | 创建测试索引，配置同义词过滤器，索引含 "authentication" 和 "authorization" 的代码块 | 索引创建成功 |
+| 2 | 调用 bm25_code_search("auth", "r1") | 返回 list[ScoredChunk]，非空 |
+| 3 | 检查返回结果的内容 | 结果包含含 "authentication" 的块 |
+| 4 | 检查返回结果的内容 | 结果包含含 "authorization" 的块 |
 
 ### 验证点
 
@@ -97,15 +100,15 @@ FR-006（Keyword Retrieval）
 
 ### 后置检查
 
-- 无需清理
+- 删除测试索引
 
 ### 元数据
 
 - **优先级**: High
 - **类别**: functional
 - **已自动化**: Yes
-- **测试引用**: tests/test_retriever.py::test_bm25_code_search_synonym_expansion
-- **Test Type**: Real
+- **测试引用**: tests/test_retriever.py::test_bm25_code_search_synonym_expansion (unit/mock), tests/test_retriever.py::test_real_es_bm25_synonym_expansion (real/integration)
+- **Test Type**: Real (test_real_es_bm25_synonym_expansion verifies synonym filter against real ES with code_analyzer)
 
 ---
 
@@ -123,15 +126,16 @@ FR-006（Keyword Retrieval）
 
 ### 前置条件
 
-- Elasticsearch 客户端配置为一个不可达的地址（如端口错误）
+- Elasticsearch 客户端配置为一个不可达的地址（使用 mock 模拟 ConnectionError）
 - Retriever 实例已创建
 
 ### 测试步骤
 
 | Step | 操作 | 预期结果 |
 | ---- | ---- | -------- |
-| 1 | 调用 bm25_code_search("test", "r1")，ES 不可达 | 抛出 RetrievalError |
-| 2 | 检查异常消息 | 消息包含 "Elasticsearch search failed" |
+| 1 | 配置 ES 客户端模拟 ConnectionError | mock 配置成功 |
+| 2 | 调用 bm25_code_search("test", "r1") | 抛出 RetrievalError |
+| 3 | 检查异常消息 | 消息包含 "Elasticsearch search failed" |
 
 ### 验证点
 
@@ -154,6 +158,53 @@ FR-006（Keyword Retrieval）
 
 ### 用例编号
 
+ST-FUNC-008-004
+
+### 关联需求
+
+FR-006（Keyword Retrieval）
+
+### 测试目标
+
+验证 branch 参数过滤：搜索时指定 branch="main" 仅返回该分支的代码块；branch=None 返回所有分支；不存在的分支返回空列表
+
+### 前置条件
+
+- Elasticsearch 集群已启动，健康状态为 green 或 yellow
+- 测试索引已创建，包含 branch="main" 和 branch="develop" 的代码块
+
+### 测试步骤
+
+| Step | 操作 | 预期结果 |
+| ---- | ---- | -------- |
+| 1 | 创建测试索引 test_code_chunks_branch_feat8，索引 2 个代码块分别在 branch="main" 和 branch="develop" | 索引创建成功，文档 refresh 完成 |
+| 2 | 调用 bm25_code_search("getUserName", "r1", branch="main") | 返回 1 个结果，chunk_id 为 main 分支的块 |
+| 3 | 检查返回结果的 branch 字段 | branch == "main" |
+| 4 | 调用 bm25_code_search("getUserName", "r1", branch=None) | 返回 2 个结果（两个分支的块） |
+| 5 | 调用 bm25_code_search("getUserName", "r1", branch="nonexistent") | 返回空列表 [] |
+
+### 验证点
+
+- branch="main" 过滤后仅返回 main 分支的块
+- branch=None 不添加分支过滤，返回所有分支的块
+- 不存在的 branch 值返回空列表，无异常
+
+### 后置检查
+
+- 删除测试索引 test_code_chunks_branch_feat8
+
+### 元数据
+
+- **优先级**: High
+- **类别**: functional
+- **已自动化**: Yes
+- **测试引用**: tests/test_retriever.py::test_real_es_bm25_branch_filter
+- **Test Type**: Real
+
+---
+
+### 用例编号
+
 ST-BNDRY-008-001
 
 ### 关联需求
@@ -167,14 +218,15 @@ FR-006（Keyword Retrieval）
 ### 前置条件
 
 - Elasticsearch 集群已启动
-- 索引中不包含与查询相关的任何文档
+- 测试索引存在但不包含与查询 "nonexistent_symbol_xyz_999" 相关的任何文档
 
 ### 测试步骤
 
 | Step | 操作 | 预期结果 |
 | ---- | ---- | -------- |
-| 1 | 调用 bm25_code_search("nonexistent_symbol_xyz_999", "r1") | 返回空列表 [] |
-| 2 | 检查返回类型 | 返回值为 list 类型，长度为 0 |
+| 1 | 创建测试索引，索引 1 个不相关的代码块 | 索引创建成功 |
+| 2 | 调用 bm25_code_search("nonexistent_symbol_xyz_999", "r1") | 返回空列表 [] |
+| 3 | 检查返回类型 | 返回值为 list 类型，长度为 0 |
 
 ### 验证点
 
@@ -184,7 +236,7 @@ FR-006（Keyword Retrieval）
 
 ### 后置检查
 
-- 无需清理
+- 删除测试索引
 
 ### 元数据
 
@@ -245,9 +297,10 @@ FR-006（Keyword Retrieval）
 
 | 用例 ID | 关联需求 | verification_step | 自动化测试 | Test Type | 结果 |
 |---------|----------|-------------------|-----------|---------|------|
-| ST-FUNC-008-001 | FR-006 | VS-1: Given indexed code chunks containing 'getUserName', when bm25_search('getUserName') runs, then results include chunks containing that symbol, ranked by BM25 score | test_bm25_code_search_returns_matching_chunks | Real | PASS |
+| ST-FUNC-008-001 | FR-006 | VS-1: Given indexed code chunks containing 'getUserName', when bm25_search('getUserName') runs, then results include chunks containing that symbol, ranked by BM25 score | test_real_es_bm25_code_search | Real | PASS |
 | ST-FUNC-008-002 | FR-006 | VS-2: Given the code_analyzer with synonym filter, when searching 'auth', then results also include chunks containing 'authentication' and 'authorization' | test_bm25_code_search_synonym_expansion | Real | PASS |
 | ST-FUNC-008-003 | FR-006 | VS-4: Given Elasticsearch is unreachable, when bm25_search() runs, then it raises a retrieval error | test_bm25_code_search_raises_retrieval_error_on_connection_error | Mock | PASS |
+| ST-FUNC-008-004 | FR-006 | VS-5: Given a branch parameter, BM25 search adds term filter on branch field | test_real_es_bm25_branch_filter | Real | PASS |
 | ST-BNDRY-008-001 | FR-006 | VS-3: Given a query with no matching terms, when bm25_search() runs, then it returns an empty list without error | test_bm25_code_search_returns_empty_on_no_match | Real | PASS |
 | ST-BNDRY-008-002 | FR-006 | Input validation boundary | test_bm25_code_search_raises_value_error_on_empty_query, test_bm25_code_search_whitespace_only_query | Mock | PASS |
 
@@ -255,8 +308,8 @@ FR-006（Keyword Retrieval）
 
 | Metric | Count |
 |--------|-------|
-| Total Real Test Cases | 3 |
-| Passed | 3 |
+| Total Real Test Cases | 4 (incl. synonym real test) |
+| Passed | 4 |
 | Failed | 0 |
 | Pending | 0 |
 

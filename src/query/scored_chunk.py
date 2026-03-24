@@ -29,3 +29,6 @@ class ScoredChunk:
     # Doc-specific (None for code chunks)
     breadcrumb: str | None = None
     heading_level: int | None = None
+
+    # Shared (Wave 5)
+    branch: str | None = None

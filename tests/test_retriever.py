@@ -65,6 +65,7 @@ def _doc_source(
     breadcrumb: str = "docs/README.md > Getting Started",
     content: str = "Configure timeout settings for the WebClient.",
     heading_level: int = 2,
+    branch: str = "main",
 ) -> dict:
     return {
         "repo_id": repo_id,
@@ -72,6 +73,7 @@ def _doc_source(
         "breadcrumb": breadcrumb,
         "content": content,
         "heading_level": heading_level,
+        "branch": branch,
     }
 
 
@@ -421,6 +423,7 @@ async def test_bm25_code_search_scored_chunk_fields(es_client):
     assert chunk.line_start == 25
     assert chunk.line_end == 40
     assert chunk.parent_class == "LoginService"
+    assert chunk.branch == "main"  # Wave 5: branch field populated from ES source
 
 
 # ---------------------------------------------------------------------------
@@ -536,6 +539,251 @@ async def test_bm25_doc_search_scored_chunk_fields(es_client):
     assert chunk.language is None
     assert chunk.symbol is None
     assert chunk.line_start is None
+
+
+# ---------------------------------------------------------------------------
+# T6 (Wave 5): Happy path — branch filter on code search
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_filters_by_branch(es_client):
+    """VS-5: Given branch='main', query DSL contains branch term filter
+    and all returned chunks have branch='main'."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("c1", 5.0, _code_source(branch="main")),
+        _make_es_hit("c2", 3.0, _code_source(branch="main")),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search("getUserName", "r1", branch="main")
+
+    assert len(results) == 2
+    for r in results:
+        assert r.branch == "main"
+    # Verify the branch filter was included in the ES query DSL
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    filters = body["query"]["bool"]["filter"]
+    branch_filter = [f for f in filters if "term" in f and "branch" in f["term"]]
+    assert len(branch_filter) == 1
+    assert branch_filter[0]["term"]["branch"] == "main"
+
+
+# ---------------------------------------------------------------------------
+# T7 (Wave 5): Happy path — branch filter on doc search
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_doc_search_filters_by_branch(es_client):
+    """VS-5: Given branch='main', doc search query DSL contains branch term filter."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("d1", 4.0, {**_doc_source(), "branch": "main"}),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_doc_search("timeout", "r1", branch="main")
+
+    assert len(results) == 1
+    assert results[0].branch == "main"
+    # Verify branch filter in doc query DSL
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    filters = body["query"]["bool"]["filter"]
+    branch_filter = [f for f in filters if "term" in f and "branch" in f["term"]]
+    assert len(branch_filter) == 1
+    assert branch_filter[0]["term"]["branch"] == "main"
+
+
+# ---------------------------------------------------------------------------
+# T8 (Wave 5): Happy path — no branch filter when branch=None
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_no_branch_filter_when_none(es_client):
+    """When branch=None (default), no branch filter applied — chunks from all branches."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("c1", 5.0, _code_source(branch="main")),
+        _make_es_hit("c2", 3.0, _code_source(branch="develop")),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search("getUserName", "r1", branch=None)
+
+    assert len(results) == 2
+    # Verify NO branch filter in query DSL
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    filters = body["query"]["bool"].get("filter", [])
+    branch_filter = [f for f in filters if "term" in f and "branch" in f.get("term", {})]
+    assert len(branch_filter) == 0
+
+
+# ---------------------------------------------------------------------------
+# T17 (Wave 5): Boundary — non-existent branch returns empty list
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_nonexistent_branch_returns_empty(es_client):
+    """Non-existent branch value: ES returns 0 hits → empty list."""
+    from src.query.retriever import Retriever
+
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response([]))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search("getUserName", "r1", branch="nonexistent-branch")
+
+    assert results == []
+    # Verify branch filter WAS applied in query
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    filters = body["query"]["bool"]["filter"]
+    branch_filter = [f for f in filters if "term" in f and "branch" in f["term"]]
+    assert len(branch_filter) == 1
+    assert branch_filter[0]["term"]["branch"] == "nonexistent-branch"
+
+
+# ---------------------------------------------------------------------------
+# T18 (Wave 5): Happy path — branch field populated in ScoredChunk
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_branch_field_in_scored_chunk(es_client):
+    """ScoredChunk.branch populated from ES source when present."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("c1", 5.0, _code_source(branch="feature-x")),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search("test", "r1", branch="feature-x")
+
+    assert len(results) == 1
+    assert results[0].branch == "feature-x"
+    assert results[0].chunk_id == "c1"
+
+
+# ---------------------------------------------------------------------------
+# T19 (Wave 5): Boundary — branch + language combined filter
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_branch_and_language_combined(es_client):
+    """Both branch and language filters present in query DSL when both specified."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("c1", 5.0, _code_source(branch="main", language="python")),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search(
+        "test", "r1", languages=["python"], branch="main"
+    )
+
+    assert len(results) == 1
+    assert results[0].branch == "main"
+    assert results[0].language == "python"
+    # Verify BOTH filters are present
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    filters = body["query"]["bool"]["filter"]
+    branch_filter = [f for f in filters if "term" in f and "branch" in f.get("term", {})]
+    lang_filter = [f for f in filters if "terms" in f and "language" in f["terms"]]
+    assert len(branch_filter) == 1
+    assert len(lang_filter) == 1
+    assert branch_filter[0]["term"]["branch"] == "main"
+    assert lang_filter[0]["terms"]["language"] == ["python"]
+
+
+# ---------------------------------------------------------------------------
+# T18b (Wave 5): Happy path — doc chunk branch field populated
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_doc_search_branch_field_in_scored_chunk(es_client):
+    """Doc ScoredChunk.branch populated from ES source."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("d1", 3.0, {**_doc_source(), "branch": "develop"}),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_doc_search("timeout", "r1", branch="develop")
+
+    assert len(results) == 1
+    assert results[0].branch == "develop"
+    assert results[0].content_type == "doc"
+
+
+# ---------------------------------------------------------------------------
+# T20: Boundary — bm25_code_search with no repo_id, no languages, no branch
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_code_search_no_filters(es_client):
+    """When repo_id=None, languages=None, branch=None — no filter clause at all."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("c1", 5.0, _code_source()),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_code_search("getUserName", repo_id=None, languages=None, branch=None)
+
+    assert len(results) == 1
+    # Verify NO filter clause in query DSL
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    assert "filter" not in body["query"]["bool"]
+
+
+# ---------------------------------------------------------------------------
+# T21: Boundary — bm25_doc_search with no repo_id, no branch
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_bm25_doc_search_no_filters(es_client):
+    """When repo_id=None, branch=None — no filter clause at all."""
+    from src.query.retriever import Retriever
+
+    hits = [
+        _make_es_hit("d1", 3.0, _doc_source()),
+    ]
+    es_client._client.search = AsyncMock(return_value=_mock_es_search_response(hits))
+
+    retriever = Retriever(es_client)
+    results = await retriever.bm25_doc_search("timeout", repo_id=None, branch=None)
+
+    assert len(results) == 1
+    # Verify NO filter clause in query DSL
+    call_kwargs = es_client._client.search.call_args
+    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body")
+    assert "filter" not in body["query"]["bool"]
 
 
 # ---------------------------------------------------------------------------
@@ -691,6 +939,238 @@ async def test_real_es_bm25_doc_search():
         assert results[0].content_type == "doc"
         assert "timeout" in results[0].content.lower()
         assert results[0].score > 0
+
+    finally:
+        try:
+            await es_client._client.indices.delete(index=test_index, ignore_unavailable=True)
+        except Exception:
+            pass
+        await es_client.close()
+
+
+@pytest.mark.real
+@pytest.mark.asyncio
+async def test_real_es_bm25_branch_filter():
+    """[integration] Real Elasticsearch: branch filter returns only matching branch.
+
+    feature #8 — Keyword Retrieval (BM25) — Wave 5 branch filter
+    """
+    import os
+
+    from elastic_transport import ConnectionTimeout
+
+    from src.query.retriever import Retriever
+
+    es_url = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
+    es_client = ElasticsearchClient(es_url)
+    await es_client.connect()
+
+    try:
+        healthy = await es_client.health_check()
+        if not healthy:
+            pytest.skip("Elasticsearch not available")
+
+        test_index = "test_code_chunks_branch_feat8"
+        try:
+            await es_client._client.indices.delete(index=test_index, ignore_unavailable=True)
+        except Exception:
+            pass
+
+        try:
+            await es_client._client.indices.create(
+                index=test_index,
+                body={
+                    "settings": {"number_of_shards": 1, "number_of_replicas": 0},
+                    "mappings": {
+                        "properties": {
+                            "repo_id": {"type": "keyword"},
+                            "file_path": {"type": "text"},
+                            "language": {"type": "keyword"},
+                            "chunk_type": {"type": "keyword"},
+                            "symbol": {"type": "text"},
+                            "signature": {"type": "text"},
+                            "doc_comment": {"type": "text"},
+                            "content": {"type": "text"},
+                            "line_start": {"type": "integer"},
+                            "line_end": {"type": "integer"},
+                            "parent_class": {"type": "text"},
+                            "branch": {"type": "keyword"},
+                        }
+                    },
+                },
+            )
+        except (ConnectionTimeout, Exception) as exc:
+            if "ConnectionTimeout" in type(exc).__name__:
+                pytest.skip("Elasticsearch timed out on index creation")
+            raise
+
+        # Index chunks on two different branches
+        await es_client._client.index(
+            index=test_index,
+            id="main-chunk-1",
+            body=_code_source(
+                symbol="getUserName",
+                content="public String getUserName() { return name; }",
+                branch="main",
+            ),
+            refresh=False,
+        )
+        await es_client._client.index(
+            index=test_index,
+            id="develop-chunk-1",
+            body=_code_source(
+                symbol="getUserName",
+                content="public String getUserName() { return this.name; }",
+                branch="develop",
+            ),
+            refresh="wait_for",
+        )
+
+        retriever = Retriever(es_client, code_index=test_index)
+
+        # Search with branch="main" — should only return main-chunk-1
+        results_main = await retriever.bm25_code_search(
+            "getUserName", "r1", branch="main"
+        )
+        assert len(results_main) == 1
+        assert results_main[0].chunk_id == "main-chunk-1"
+        assert results_main[0].branch == "main"
+
+        # Search with branch=None — should return both
+        results_all = await retriever.bm25_code_search("getUserName", "r1", branch=None)
+        assert len(results_all) == 2
+
+        # Search with non-existent branch — should return empty
+        results_empty = await retriever.bm25_code_search(
+            "getUserName", "r1", branch="nonexistent"
+        )
+        assert results_empty == []
+
+    finally:
+        try:
+            await es_client._client.indices.delete(index=test_index, ignore_unavailable=True)
+        except Exception:
+            pass
+        await es_client.close()
+
+
+@pytest.mark.real
+@pytest.mark.asyncio
+async def test_real_es_bm25_synonym_expansion():
+    """[integration] Real Elasticsearch: synonym filter maps 'auth' to
+    'authentication' and 'authorization' via a custom code_analyzer.
+
+    feature #8 — Keyword Retrieval (BM25) — VS-2: synonym expansion
+    """
+    import os
+
+    from elastic_transport import ConnectionTimeout
+
+    from src.query.retriever import Retriever
+
+    es_url = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
+    es_client = ElasticsearchClient(es_url)
+    await es_client.connect()
+
+    try:
+        healthy = await es_client.health_check()
+        if not healthy:
+            pytest.skip("Elasticsearch not available")
+
+        test_index = "test_code_chunks_synonym_feat8"
+        try:
+            await es_client._client.indices.delete(index=test_index, ignore_unavailable=True)
+        except Exception:
+            pass
+
+        # Create index with a code_analyzer that includes synonym filter
+        try:
+            await es_client._client.indices.create(
+                index=test_index,
+                body={
+                    "settings": {
+                        "number_of_shards": 1,
+                        "number_of_replicas": 0,
+                        "analysis": {
+                            "filter": {
+                                "code_synonyms": {
+                                    "type": "synonym",
+                                    "synonyms": [
+                                        "auth, authentication, authorization"
+                                    ],
+                                }
+                            },
+                            "analyzer": {
+                                "code_analyzer": {
+                                    "type": "custom",
+                                    "tokenizer": "standard",
+                                    "filter": ["lowercase", "code_synonyms"],
+                                }
+                            },
+                        },
+                    },
+                    "mappings": {
+                        "properties": {
+                            "repo_id": {"type": "keyword"},
+                            "file_path": {"type": "text"},
+                            "language": {"type": "keyword"},
+                            "chunk_type": {"type": "keyword"},
+                            "symbol": {"type": "text", "analyzer": "code_analyzer"},
+                            "signature": {"type": "text", "analyzer": "code_analyzer"},
+                            "doc_comment": {"type": "text", "analyzer": "code_analyzer"},
+                            "content": {"type": "text", "analyzer": "code_analyzer"},
+                            "line_start": {"type": "integer"},
+                            "line_end": {"type": "integer"},
+                            "parent_class": {"type": "text"},
+                            "branch": {"type": "keyword"},
+                        }
+                    },
+                },
+            )
+        except (ConnectionTimeout, Exception) as exc:
+            if "ConnectionTimeout" in type(exc).__name__:
+                pytest.skip("Elasticsearch timed out on index creation")
+            raise
+
+        # Index chunks containing 'authentication' and 'authorization' —
+        # the exact synonym terms that 'auth' should expand to
+        await es_client._client.index(
+            index=test_index,
+            id="auth-chunk-1",
+            body=_code_source(
+                symbol="checkAuthentication",
+                content="def check_authentication(user, password): verify authentication credentials",
+                branch="main",
+            ),
+            refresh=False,
+        )
+        await es_client._client.index(
+            index=test_index,
+            id="auth-chunk-2",
+            body=_code_source(
+                symbol="checkAuthorization",
+                content="def check_authorization(token): check authorization permissions",
+                branch="main",
+            ),
+            refresh="wait_for",
+        )
+
+        retriever = Retriever(es_client, code_index=test_index)
+
+        # Search for 'auth' — synonym filter should match both
+        # 'authentication' and 'authorization' via the code_analyzer
+        results = await retriever.bm25_code_search("auth", "r1")
+
+        assert len(results) >= 2, (
+            f"Expected at least 2 results from synonym expansion of 'auth', "
+            f"got {len(results)}"
+        )
+        chunk_ids = {r.chunk_id for r in results}
+        assert "auth-chunk-1" in chunk_ids, "Missing 'authenticate' chunk"
+        assert "auth-chunk-2" in chunk_ids, "Missing 'authorize' chunk"
+        for r in results:
+            assert r.score > 0
+            assert r.content_type == "code"
 
     finally:
         try:
