@@ -1,7 +1,7 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 45/45 active features passing (0 failing) · Last: System Testing (2026-03-24) · Verdict: Conditional-Go
+Progress: 45/45 active features passing (0 failing) · Last: System Testing (2026-03-24) · Verdict: **Go**
 
 **Failing features**: None — all active features passing
 **System Testing**: COMPLETE — see docs/plans/2026-03-24-st-report.md
@@ -24,9 +24,10 @@ Progress: 45/45 active features passing (0 failing) · Last: System Testing (202
 - **Real test cases**: 261 total, 261 passed, 0 failed
 - **Defects found**: DEF-003 (Docker aiohttp) — Major, FIXED in this session
 - **Dependency fixes**: jinja2 3.1.5→3.1.6, mcp 1.9.0→1.9.4, python-multipart 0.0.20→0.0.22, elasticsearch→elasticsearch[async]
-- **Deferred**: 4 CVEs (mcp 2, starlette 2) — require major version upgrades
+- **CVE resolution round 2**: fastapi→0.135.2 (starlette→1.0.0), mcp→1.23.0, pydantic→2.12.5 — 0 remaining CVEs
+- **Starlette migration**: `TemplateResponse` API updated for starlette 1.0 in web_router.py
 - **Docker images**: All 3 rebuilt and verified (non-root, no dev deps, health check)
-- **Verdict**: **Conditional-Go**
+- **Verdict**: **Go**
 - **ST Plan**: docs/plans/2026-03-23-st-plan.md
 - **ST Report**: docs/plans/2026-03-24-st-report.md
 

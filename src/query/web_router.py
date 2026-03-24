@@ -64,9 +64,9 @@ class WebRouter:
             log.warning("Failed to load repository list for search page", exc_info=True)
 
         return self._templates.TemplateResponse(
+            request,
             "search.html",
-            {
-                "request": request,
+            context={
                 "repos": repos,
                 "languages": _SUPPORTED_LANGUAGES,
             },
@@ -203,5 +203,4 @@ class WebRouter:
     # ------------------------------------------------------------------
 
     def _render_partial(self, request: Request, template: str, **context) -> HTMLResponse:
-        context["request"] = request
-        return self._templates.TemplateResponse(template, context)
+        return self._templates.TemplateResponse(request, template, context=context)

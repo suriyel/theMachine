@@ -5,11 +5,12 @@
 ### System Testing (2026-03-24)
 - **ST Completed**: All 45 active features passing; 1126 tests, 95% line coverage
 - **Defects Fixed**: DEF-001 (startup client connect), DEF-002 (Celery module-level instance), DEF-003 (Docker aiohttp dependency)
-- **Security**: pip-audit — 5/9 CVEs fixed (jinja2, mcp, python-multipart, filelock); 4 deferred (starlette, mcp major)
-- **Dependencies Updated**: `elasticsearch[async]==8.17.0`, `mcp==1.9.4`, `jinja2==3.1.6`, `python-multipart==0.0.22`
+- **Security**: pip-audit — 9/9 CVEs fixed, zero known vulnerabilities
+- **Dependencies Updated**: `fastapi==0.135.2` (was 0.115.6), `mcp==1.23.0` (was 1.9.0), `pydantic>=2.11.0` (was 2.10.5), `elasticsearch[async]==8.17.0`, `jinja2==3.1.6`, `python-multipart==0.0.22`, `starlette==1.0.0` (via fastapi)
 - **Docker Images Rebuilt**: codecontext-api, codecontext-mcp, codecontext-worker — all verified with updated deps
 - **261 Real test cases**: 261 passed, 0 failed across 45 feature ST documents
-- **Verdict**: Conditional-Go — see docs/plans/2026-03-24-st-report.md
+- **Starlette migration**: `TemplateResponse` API updated for starlette 1.0 (request as 1st positional arg)
+- **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
 ### Added
 - Initial project scaffold
