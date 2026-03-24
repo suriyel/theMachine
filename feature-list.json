@@ -553,7 +553,7 @@
       "title": "Symbol Query Handler",
       "description": "Implement QueryHandler.handle_symbol_query() with auto-detection heuristic (dots, camelCase, snake_case, ::, #), ES term exact match \u2192 fuzzy fallback \u2192 NL pipeline fallback",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "Given the query 'UserService.getById', when detect_query_type() runs, then it classifies as 'symbol' due to dot notation",
         "Given the symbol query 'std::vector', when handle_symbol_query() runs, then it first tries ES term query on symbol.raw, and returns matching class definitions and methods",
@@ -565,7 +565,7 @@
         12
       ],
       "st_case_path": "docs/test-cases/feature-14-symbol-query-handler.md",
-      "st_case_count": 7,
+      "st_case_count": 8,
       "wave": 5
     },
     {

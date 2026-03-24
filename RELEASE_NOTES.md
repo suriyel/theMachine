@@ -13,6 +13,7 @@
 - **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
 ### Updated
+- Feature #14: Symbol Query Handler — Wave 5 branch filter support: `_parse_repo()` parses `owner/repo@branch`; branch forwarded to ES term/fuzzy filter clauses and doc BM25 search; parallel doc search added per design §4.2.5 (code+doc candidates reranked with top_k=20); security tests for injection payloads
 - Feature #13: Natural Language Query Handler — Wave 5 branch filter support: `_parse_repo()` splits `owner/repo@branch`; branch forwarded to all 4 retriever calls + symbol boost search; repo parameter now required; security input handling tests added
 - Feature #9: Semantic Retrieval (Vector) — branch filter support (`branch` parameter on `vector_code_search`/`vector_doc_search`); `_build_qdrant_filter` branch condition; `branch` field in parsed ScoredChunks
 - Feature #8: Keyword Retrieval (BM25) — branch filter support (`branch` parameter on `bm25_code_search`/`bm25_doc_search`); `ScoredChunk.branch` field; real integration test for synonym expansion

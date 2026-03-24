@@ -1,13 +1,25 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 41/46 active features passing (5 failing) · Last: #13 Natural Language Query Handler (2026-03-24) · Next: #14 Symbol Query Handler
+Progress: 42/46 active features passing (4 failing) · Last: #14 Symbol Query Handler (2026-03-24) · Next: #17 REST API Endpoints
 
-**Failing features**: #14, #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #17, #18, #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #14: Symbol Query Handler — PASS
+- Completed: 2026-03-24
+- TDD: green ✓
+- Quality Gates: 97% line, 90% branch, 100% mutation (56/56 killed)
+- Feature-ST: 8 cases, all PASS
+- Review: PASS (doc BM25 search + branch filter + security tests added per reviewer feedback)
+- Git: feat: symbol query handler — Wave 5 branch filter support
+#### Risks
+- ⚠ [Coverage] src/query/query_handler.py:243,253,287-289 — 5 uncovered lines in async handle_query/handle_symbol_query paths (degraded response edge cases)
+- ⚠ [Mutant] src/query/query_handler.py (async methods) — mutmut 3.2.0 skips async def; handle_symbol_query not mutation-tested
+- ⚠ [Dependency] mutmut v3.2.0 — patched hardcoded test paths; re-patch needed after pip reinstall
 
 ### Feature #13: Natural Language Query Handler — PASS
 - Completed: 2026-03-24
