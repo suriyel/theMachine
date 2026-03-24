@@ -240,23 +240,29 @@ Admin --> UC22
 
 ### FR-006: Keyword Retrieval
 
+<!-- Wave 5: Modified 2026-03-24 — add branch filter parameter -->
+
 **Priority**: Must
-**EARS**: When a query is received by the retrieval engine, the system shall execute a BM25 keyword search against the Elasticsearch index and return the top-200 candidate chunks.
+**EARS**: When a query is received by the retrieval engine, the system shall execute a BM25 keyword search against the Elasticsearch index and return the top-200 candidate chunks, optionally filtered by branch.
 **Acceptance Criteria**:
 - Given the query "WebClient timeout", when BM25 retrieval runs, then the system shall return up to 200 chunks ranked by BM25 score, with chunks containing exact token matches ranked highest.
 - Given a query with no matching terms in the index, when BM25 retrieval runs, then the system shall return an empty candidate list.
 - Given that Elasticsearch is unreachable, then the retrieval engine shall proceed with vector-only results and log a degradation warning.
+- Given a branch parameter (e.g., "main"), when BM25 retrieval runs, then the system shall add a term filter on the `branch` field so only chunks from that branch are returned.
 
 ---
 
 ### FR-007: Semantic Retrieval
 
+<!-- Wave 5: Modified 2026-03-24 — add branch filter parameter -->
+
 **Priority**: Must
-**EARS**: When a query is received by the retrieval engine, the system shall encode the query into a dense vector and execute an approximate nearest neighbor search against the Qdrant index, returning the top-200 candidate chunks.
+**EARS**: When a query is received by the retrieval engine, the system shall encode the query into a dense vector and execute an approximate nearest neighbor search against the Qdrant index, returning the top-200 candidate chunks, optionally filtered by branch.
 **Acceptance Criteria**:
 - Given the query "how to configure spring http client timeout", when vector retrieval runs, then the system shall return up to 200 chunks ranked by cosine similarity, including semantically related chunks (e.g., WebClient.Builder, responseTimeout) even if exact terms do not match.
 - Given a query with no semantically similar content in the index, when vector retrieval runs, then the system shall return an empty candidate list.
 - Given that Qdrant is unreachable, then the retrieval engine shall proceed with BM25-only results and log a degradation warning.
+- Given a branch parameter (e.g., "main"), when vector retrieval runs, then the system shall add a payload filter on the `branch` field so only vectors from that branch are returned.
 
 ---
 
@@ -295,23 +301,28 @@ Admin --> UC22
 
 ### FR-011: Natural Language Query Handler
 
+<!-- Wave 5: Modified 2026-03-24 — repo is now required; branch parameter forwarded to retriever -->
+
 **Priority**: Must
-**EARS**: When a user submits a natural language query (e.g., "how to configure spring http client timeout"), the system shall execute the full hybrid retrieval pipeline (BM25 + vector + fusion + rerank) and return structured context results.
+**EARS**: When a user submits a natural language query with a mandatory repository identifier (e.g., `repo="google/gson"` or `repo="google/gson@main"`), the system shall execute the full hybrid retrieval pipeline (BM25 + vector + fusion + rerank) scoped to that repository and optional branch, and return structured context results.
 **Acceptance Criteria**:
-- Given the natural language query "how to use grpc java interceptor", when the query handler processes it, then the system shall return top-3 results containing relevant gRPC interceptor code, documentation, or examples.
+- Given the natural language query "how to use grpc java interceptor" with repo="google/gson", when the query handler processes it, then the system shall return top-3 results from the gson repository.
 - Given an empty query string, when submitted, then the system shall return a 400 error with a descriptive message.
 - Given a query exceeding 500 characters, when submitted, then the system shall return a 400 error indicating the maximum query length.
-- Given a retrieval pipeline that exceeds the 1-second timeout, then the system shall return partial results (from whichever stage completed) with a `degraded: true` flag.
+- Given a retrieval pipeline that exceeds the timeout, then the system shall return partial results with a `degraded: true` flag.
+- Given a repo parameter in `owner/repo@branch` format, when the query handler processes it, then it shall parse the branch and forward it to the retriever for branch-scoped filtering.
 
 ---
 
 ### FR-012: Symbol Query Handler
 
+<!-- Wave 5: Modified 2026-03-24 — repo is now required; branch parameter forwarded to retriever -->
+
 **Priority**: Must
-**EARS**: When a user submits a symbol query (e.g., "org.springframework.web.client.RestTemplate"), the system shall prioritize BM25 keyword retrieval for exact symbol matching and return results containing the specified symbol.
+**EARS**: When a user submits a symbol query with a mandatory repository identifier, the system shall prioritize BM25 keyword retrieval for exact symbol matching within that repository and optional branch, and return results containing the specified symbol.
 **Acceptance Criteria**:
-- Given the symbol query "std::vector", when the symbol handler processes it, then the top results shall contain the std::vector class definition, methods, and usage examples.
-- Given a symbol that does not exist in any indexed repository, when queried, then the system shall return an empty result set with a 200 status.
+- Given the symbol query "std::vector" with a repo parameter, when the symbol handler processes it, then the top results shall contain the std::vector class definition from that repository.
+- Given a symbol that does not exist in the specified repository, when queried, then the system shall return an empty result set with a 200 status.
 - Given a symbol query exceeding 200 characters, when submitted, then the system shall return a 400 error.
 
 ---
@@ -340,24 +351,32 @@ Admin --> UC22
 
 ### FR-015: REST API Endpoints
 
+<!-- Wave 5: Modified 2026-03-24 — repo_id is now required in query endpoint; supports @branch suffix -->
+
 **Priority**: Must
 **EARS**: The system shall expose RESTful HTTP endpoints for query submission (`POST /api/v1/query`), repository listing (`GET /api/v1/repos`), repository registration (`POST /api/v1/repos`), manual reindex (`POST /api/v1/repos/{repo_id}/reindex`), and health check (`GET /api/v1/health`).
 **Acceptance Criteria**:
-- Given a POST request to `/api/v1/query` with a valid query body and API key, when processed, then the system shall return structured context results with a 200 status.
+- Given a POST request to `/api/v1/query` with a valid query body including a **required** `repo_id` field (format: `"owner/repo"` or `"owner/repo@branch"`), when processed, then the system shall return structured context results scoped to that repository with a 200 status.
+- Given a POST request to `/api/v1/query` **without** the `repo_id` field, when processed, then the system shall return 422 (validation error: repo_id is required).
+- Given a `repo_id` in `"owner/repo@branch"` format, when processed, then the system shall parse the branch and use it to filter retrieval results by the `branch` field.
 - Given a GET request to `/api/v1/repos`, when processed, then the system shall return the list of registered repositories with their indexing status.
 - Given a GET request to `/api/v1/health`, when processed, then the system shall return the service health status without authentication.
 - Given a malformed JSON request body, when submitted to any endpoint, then the system shall return 400 with a validation error message.
-- Note: detailed request/response JSON schemas are deferred to the design document (OpenAPI specification).
 
 ---
 
 ### FR-016: MCP Server
 
+<!-- Wave 5: Modified 2026-03-24 — repo is now required; resolve_repository tool added; max_tokens removed; @branch support -->
+
 **Priority**: Must
-**EARS**: The system shall implement an MCP server that exposes a `search_code_context` tool, allowing AI agents to submit queries and receive structured context results via the Model Context Protocol.
+**EARS**: The system shall implement an MCP server that exposes `resolve_repository`, `search_code_context`, and `get_chunk` tools, allowing AI agents to discover repositories and query code context via the Model Context Protocol using a two-step flow (resolve → search).
 **Acceptance Criteria**:
-- Given an MCP client calling the `search_code_context` tool with parameters `{query: "spring webclient timeout", repo: "spring-framework", top_k: 3}`, when the tool executes, then the system shall return structured context results identical in content to the REST API response.
-- Given an MCP client calling the tool without the optional `repo` parameter, when executed, then the system shall search across all indexed repositories.
+- Given an MCP client calling `resolve_repository` with `{query: "JSON parsing", libraryName: "gson"}`, when the tool executes, then the system shall return a list of matching indexed repositories with `id`, `name`, `url`, `indexed_branch`, `default_branch`, and `available_branches`.
+- Given `resolve_repository` called with a name that matches no indexed repository, when executed, then the system shall return an empty list.
+- Given an MCP client calling `search_code_context` with `{query: "spring webclient timeout", repo: "spring-framework"}` (repo **required**), when the tool executes, then the system shall return structured context results scoped to that repository.
+- Given `search_code_context` called with `repo: "spring-framework@main"`, when executed, then the system shall parse the `@main` branch suffix and filter retrieval results by the `branch` field.
+- Given `search_code_context` called **without** the `repo` parameter, then the system shall raise a TypeError (missing required argument).
 - Given an MCP tool call with invalid parameters (missing required `query` field), then the system shall return an MCP error response with a descriptive message.
 - Given an internal retrieval failure during MCP tool execution, then the system shall return an MCP error response rather than crashing the MCP connection.
 
@@ -366,12 +385,14 @@ Admin --> UC22
 ### FR-017: Web UI Search Page
 
 <!-- Wave 1: Modified 2026-03-21 — add branch selector to repository registration form -->
+<!-- Wave 5: Modified 2026-03-24 — repository selection is now mandatory; dropdown shows only indexed repos -->
 
 **Priority**: Should
-**EARS**: When a developer accesses the Web UI, the system shall display a search interface supporting natural language search, symbol search, repository filtering, and language filtering, with results displayed as syntax-highlighted code snippets with metadata. The repository registration form shall include a branch selector.
+**EARS**: When a developer accesses the Web UI, the system shall display a search interface with a **mandatory** repository selector (only indexed repos), language filtering, and natural language / symbol search, with results displayed as syntax-highlighted code snippets with metadata. The repository registration form shall include a branch selector.
 **Acceptance Criteria**:
-- Given a developer accessing the Web UI root URL, when the page loads, then it shall display a search input, repository filter dropdown, and language filter checkboxes.
-- Given a search query submitted via the Web UI, when results are returned, then each result shall display: code snippet with syntax highlighting, repository name, file path, symbol name, and relevance score.
+- Given a developer accessing the Web UI root URL, when the page loads, then it shall display a search input, a **required** repository dropdown (only `status=indexed` repos, no "all repos" option), and language filter checkboxes.
+- Given no repository selected, when a search is submitted, then the UI shall display a validation message requiring repository selection.
+- Given a search query submitted with a selected repository, when results are returned, then each result shall display: code snippet with syntax highlighting, repository name, file path, symbol name, and relevance score.
 - Given no results for a query, when displayed, then the UI shall show a "No results found" message.
 - Given the repository registration form, when the user enters a repository URL and the repo is already cloned, then the UI shall fetch available branches via the Branch Listing API and display a branch selector dropdown defaulting to the repo's default branch.
 
@@ -517,6 +538,19 @@ Admin --> UC22
 - Given the built image is run with CELERY_BROKER_URL set, when the container starts, then `celery -A src.indexing.celery_app worker` is the active process.
 - Given the image is built, then it contains a HEALTHCHECK using `celery inspect ping`.
 - Given the image is built, then it contains only production dependencies and runs as a non-root user.
+
+### FR-030: Repository Resolution MCP Tool [Wave 5]
+
+<!-- Wave 5: Added 2026-03-24 — Context7-aligned two-step MCP flow -->
+
+**Priority**: Must
+**EARS**: When an AI agent calls the `resolve_repository` MCP tool with a query and library name, the system shall return a ranked list of matching indexed repositories with branch information, enabling the agent to select the correct repository before searching.
+**Acceptance Criteria**:
+- Given `resolve_repository(query="JSON parsing", libraryName="gson")`, when the tool executes, then the system shall return a list of indexed repositories whose name or URL contains "gson", ranked by relevance to the query intent.
+- Given each result in the list, it shall include: `id` (owner/repo format), `name`, `url`, `indexed_branch`, `default_branch`, `available_branches` (list of remote branch names if cloned), and `last_indexed_at`.
+- Given a `libraryName` that matches no indexed repository, when executed, then the system shall return an empty list.
+- Given `resolve_repository` called without the `query` or `libraryName` parameter, then the system shall raise a TypeError (missing required argument).
+- Given multiple matching repositories, then the results shall be sorted by name match quality (exact match first, then prefix match, then substring match).
 
 ---
 
