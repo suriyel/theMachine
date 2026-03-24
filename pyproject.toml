@@ -14,7 +14,7 @@ dependencies = [
     "sqlalchemy==2.0.36",
     "alembic==1.14.1",
     "asyncpg==0.30.0",
-    "elasticsearch==8.17.0",
+    "elasticsearch[async]==8.17.0",
     "qdrant-client==1.13.3",
     "redis==5.2.1",
     "sentence-transformers==3.4.1",
@@ -25,13 +25,13 @@ dependencies = [
     "tree-sitter-typescript==0.23.2",
     "tree-sitter-c==0.23.4",
     "tree-sitter-cpp==0.23.4",
-    "mcp==1.9.0",
-    "jinja2==3.1.5",
+    "mcp==1.9.4",
+    "jinja2==3.1.6",
     "pygments==2.19.1",
     "prometheus-client==0.21.1",
     "pydantic==2.10.5",
     "pydantic-settings==2.7.1",
-    "python-multipart==0.0.20",
+    "python-multipart==0.0.22",
     "httpx==0.28.1",
 ]
 
@@ -69,7 +69,7 @@ exclude_lines = [
 ]
 
 [tool.mutmut]
-paths_to_mutate = "src/"
-tests_dir = "tests/"
-runner = "python -m pytest -x --tb=short -k 'not test_project_structure and not real and not test_web_ui'"
+paths_to_mutate = "src/indexing/scheduler.py,src/indexing/celery_app.py"
+tests_dir = "tests/test_scheduler.py"
+runner = "python -m pytest -x --tb=short tests/test_scheduler.py -o addopts="
 

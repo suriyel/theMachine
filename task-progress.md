@@ -1,13 +1,34 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 45/45 active features passing (0 failing) · Last: #45 index-worker Docker Image (2026-03-24) · Next: System Testing
+Progress: 45/45 active features passing (0 failing) · Last: System Testing (2026-03-24) · Verdict: Conditional-Go
 
 **Failing features**: None — all active features passing
+**System Testing**: COMPLETE — see docs/plans/2026-03-24-st-report.md
 
 ---
 
 ## Session Log
+
+### System Testing Session — 2026-03-24
+- **Phase**: System Testing (Phase 3)
+- **Scope**: Cross-feature & system-wide verification before release
+- **Services**: query-api (PID 443380, port 8000), index-worker (PID 443395), celery-beat (PID 443412)
+- **External deps**: PostgreSQL, Elasticsearch (green), Qdrant, Redis, RabbitMQ — all running
+- **Regression**: 1126/1126 passing, 95% line coverage, >80% branch coverage
+- **Integration**: 10 cross-feature tests PASS (auth→query, cache→endpoint, lang+repo filter, RRF→rerank, etc.)
+- **E2E**: 11 persona workflow tests PASS (AI Agent, Developer, Platform Engineer)
+- **NFR**: 13 security/reliability tests PASS (NFR-009 auth, NFR-010 SHA-256, input validation, error handling)
+- **Compatibility**: 5 platform tests PASS (Python 3.12, Linux x86_64, module imports, future annotations)
+- **Exploratory**: 5 charters — API edge cases, security injection, web UI, Celery worker, Docker security — no defects
+- **Real test cases**: 261 total, 261 passed, 0 failed
+- **Defects found**: DEF-003 (Docker aiohttp) — Major, FIXED in this session
+- **Dependency fixes**: jinja2 3.1.5→3.1.6, mcp 1.9.0→1.9.4, python-multipart 0.0.20→0.0.22, elasticsearch→elasticsearch[async]
+- **Deferred**: 4 CVEs (mcp 2, starlette 2) — require major version upgrades
+- **Docker images**: All 3 rebuilt and verified (non-root, no dev deps, health check)
+- **Verdict**: **Conditional-Go**
+- **ST Plan**: docs/plans/2026-03-23-st-plan.md
+- **ST Report**: docs/plans/2026-03-24-st-report.md
 
 ### Session 0 — 2026-03-21 (Init)
 - **Phase**: Initialization
