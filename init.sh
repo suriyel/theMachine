@@ -76,18 +76,73 @@ echo "--- Step 5: Verifying dev tools ---"
 pip install pytest pytest-cov pytest-asyncio mutmut --quiet
 echo "Dev tools installed ✓"
 
-# --- Step 6: Database migrations ---
+# --- Step 6: Patch mutmut 3.2.0 known issues ---
 echo ""
-echo "--- Step 6: Checking Alembic migrations ---"
+echo "--- Step 6: Patching mutmut 3.2.0 ---"
+
+MUTMUT_MAIN=".venv/lib/python3.12/site-packages/mutmut/__main__.py"
+if [ -f "$MUTMUT_MAIN" ]; then
+    PATCHED=0
+
+    # Patch 1: strip_prefix('src.') breaks src-as-package projects.
+    # mutmut strips the 'src.' prefix from module names derived from file paths,
+    # causing a mismatch with the actual module names (which start with 'src.').
+    # Fix: remove the strip_prefix call so the file-path-derived name keeps 'src.'.
+    if grep -q "strip_prefix(str(filename)" "$MUTMUT_MAIN"; then
+        sed -i "s|module_name = strip_prefix(str(filename)\[:-len(filename.suffix)\].replace(os.sep, '.'), prefix='src.')|module_name = str(filename)[:-len(filename.suffix)].replace(os.sep, '.')|" "$MUTMUT_MAIN"
+        PATCHED=$((PATCHED + 1))
+        echo "  Patch 1 applied: strip_prefix removal ✓"
+    else
+        echo "  Patch 1 already applied ✓"
+    fi
+
+    # Patch 2: KeyError on third-party __init__ in stats collection.
+    # When pytest collects stats, functions from third-party packages appear in
+    # mutmut._stats but not in tests_by_mangled_function_name, causing KeyError.
+    # Fix: guard with 'if function in' check (matches the hammett runner pattern).
+    # Detection: the StatsCollector class has the unguarded .add() if it does NOT
+    # contain 'if function in mutmut.tests_by_mangled_function_name:'.
+    if grep -q 'class StatsCollector' "$MUTMUT_MAIN" && \
+       ! grep -q 'if function in mutmut.tests_by_mangled_function_name:' "$MUTMUT_MAIN"; then
+        sed -i '/for function in mutmut._stats:/{
+            n
+            s|                    mutmut.tests_by_mangled_function_name\[function\].add(|                    if function in mutmut.tests_by_mangled_function_name:\n                        mutmut.tests_by_mangled_function_name[function].add(|
+        }' "$MUTMUT_MAIN"
+        PATCHED=$((PATCHED + 1))
+        echo "  Patch 2 applied: KeyError guard in StatsCollector ✓"
+    else
+        echo "  Patch 2 already applied ✓"
+    fi
+
+    # Patch 3: Hardcoded test file fallbacks in PytestRunner.
+    # run_stats() and run_tests() fall back to specific test files when no tests
+    # are provided. Replace with 'tests/' so all tests are discovered.
+    if grep -q "test_query_handler.py\|test_real_features.py\|test_vector_retrieval.py\|test_retriever.py" "$MUTMUT_MAIN"; then
+        sed -i "s|\['tests/test_query_handler.py', 'tests/test_real_features.py'\]|['tests/']|g" "$MUTMUT_MAIN"
+        sed -i "s|\['tests/test_vector_retrieval.py', 'tests/test_retriever.py'\]|['tests/']|g" "$MUTMUT_MAIN"
+        PATCHED=$((PATCHED + 1))
+        echo "  Patch 3 applied: hardcoded test paths → tests/ ✓"
+    else
+        echo "  Patch 3 already applied ✓"
+    fi
+
+    echo "mutmut patches verified ($PATCHED new patches applied) ✓"
+else
+    echo "WARNING: mutmut __main__.py not found — patches will be applied after mutmut install"
+fi
+
+# --- Step 7: Database migrations ---
+echo ""
+echo "--- Step 7: Checking Alembic migrations ---"
 if [ -f "alembic.ini" ]; then
     echo "Alembic config found ✓ (run 'alembic upgrade head' when database is available)"
 else
     echo "No alembic.ini found (will be created during feature implementation)"
 fi
 
-# --- Step 7: Create .env from example if missing ---
+# --- Step 8: Create .env from example if missing ---
 echo ""
-echo "--- Step 7: Checking .env ---"
+echo "--- Step 8: Checking .env ---"
 if [ -f ".env" ]; then
     echo ".env file exists ✓"
 elif [ -f ".env.example" ]; then
@@ -97,7 +152,7 @@ else
     echo "No .env or .env.example found (will be created during initialization)"
 fi
 
-# --- Step 8: Verify ---
+# --- Step 9: Verify ---
 echo ""
 echo "=== Environment Check ==="
 echo "Python:           $(python --version)"
