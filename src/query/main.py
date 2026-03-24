@@ -25,6 +25,8 @@ from src.query.rank_fusion import RankFusion
 from src.query.reranker import Reranker
 from src.query.response_builder import ResponseBuilder
 from src.query.retriever import Retriever
+from src.indexing.embedding_encoder import EmbeddingEncoder
+from src.indexing.exceptions import EmbeddingModelError
 from src.shared.clients.elasticsearch import ElasticsearchClient
 from src.shared.clients.qdrant import QdrantClientWrapper
 from src.shared.clients.redis import RedisClient
@@ -65,7 +67,15 @@ def build_app():
     engine = get_engine(database_url)
     session_factory = get_session_factory(engine)
 
-    retriever = Retriever(es_client=es_client, qdrant_client=qdrant_client)
+    try:
+        embedding_encoder = EmbeddingEncoder()
+    except EmbeddingModelError:
+        embedding_encoder = None
+    retriever = Retriever(
+        es_client=es_client,
+        qdrant_client=qdrant_client,
+        embedding_encoder=embedding_encoder,
+    )
     rank_fusion = RankFusion()
     reranker = Reranker()
     response_builder = ResponseBuilder()
@@ -74,6 +84,8 @@ def build_app():
         rank_fusion=rank_fusion,
         reranker=reranker,
         response_builder=response_builder,
+        search_timeout=float(os.environ.get("SEARCH_TIMEOUT", "5.0")),
+        pipeline_timeout=float(os.environ.get("PIPELINE_TIMEOUT", "15.0")),
     )
     auth_middleware = AuthMiddleware(
         session_factory=session_factory,

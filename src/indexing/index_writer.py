@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Any, Callable, Coroutine
 
 import numpy as np
@@ -74,28 +75,31 @@ class IndexWriter:
             f"ES {es_index}",
         )
 
-        # Write to Qdrant
+        # Write to Qdrant (use UUID5 from chunk_id string — Qdrant requires UUID or uint)
+        _NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
         points = [
             PointStruct(
-                id=chunk.chunk_id,
+                id=str(uuid.uuid5(_NS, chunk.chunk_id)),
                 vector=embedding.tolist(),
                 payload={
                     "repo_id": repo_id,
+                    "chunk_id": chunk.chunk_id,
                     "file_path": chunk.file_path,
+                    "content": chunk.content,
                     "language": chunk.language,
                     "chunk_type": chunk.chunk_type,
                     "symbol": chunk.symbol,
+                    "signature": chunk.signature,
+                    "doc_comment": chunk.doc_comment,
+                    "line_start": chunk.line_start,
+                    "line_end": chunk.line_end,
+                    "parent_class": chunk.parent_class,
                     "branch": chunk.branch,
                 },
             )
             for chunk, embedding in zip(chunks, embeddings)
         ]
-        await self._retry_write(
-            lambda: self._qdrant._client.upsert(
-                collection_name=qdrant_collection, points=points
-            ),
-            f"Qdrant {qdrant_collection}",
-        )
+        await self._batch_qdrant_upsert(qdrant_collection, points)
 
     async def write_doc_chunks(
         self,
@@ -129,24 +133,23 @@ class IndexWriter:
             "ES doc_chunks",
         )
 
+        _NS = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
         points = [
             PointStruct(
-                id=chunk.chunk_id,
+                id=str(uuid.uuid5(_NS, chunk.chunk_id)),
                 vector=embedding.tolist(),
                 payload={
                     "repo_id": repo_id,
+                    "chunk_id": chunk.chunk_id,
                     "file_path": chunk.file_path,
+                    "content": chunk.content,
                     "breadcrumb": chunk.breadcrumb,
+                    "heading_level": chunk.heading_level,
                 },
             )
             for chunk, embedding in zip(chunks, embeddings)
         ]
-        await self._retry_write(
-            lambda: self._qdrant._client.upsert(
-                collection_name="doc_embeddings", points=points
-            ),
-            "Qdrant doc_embeddings",
-        )
+        await self._batch_qdrant_upsert("doc_embeddings", points)
 
     async def write_rule_chunks(
         self, chunks: list[RuleChunk], repo_id: str
@@ -204,6 +207,19 @@ class IndexWriter:
                     collection_name=coll, points_selector=qdrant_filter
                 ),
                 f"Qdrant {collection}",
+            )
+
+    async def _batch_qdrant_upsert(
+        self, collection_name: str, points: list[PointStruct], batch_size: int = 100
+    ) -> None:
+        """Upsert points to Qdrant in batches to avoid payload size limits."""
+        for start in range(0, len(points), batch_size):
+            batch = points[start : start + batch_size]
+            await self._retry_write(
+                lambda b=batch: self._qdrant._client.upsert(
+                    collection_name=collection_name, points=b
+                ),
+                f"Qdrant {collection_name}[{start}:{start+len(batch)}]",
             )
 
     async def _retry_write(

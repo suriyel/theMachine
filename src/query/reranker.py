@@ -111,22 +111,32 @@ class Reranker:
         Returns list of dicts with 'index' and 'relevance_score' keys,
         sorted by relevance_score descending.
         """
-        url = self._base_url
+        # Detect API format: OpenAI-compatible (/reranks) vs DashScope native
+        is_openai_compat = "/compatible" in self._base_url
+        url = f"{self._base_url}/reranks" if is_openai_compat else self._base_url
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
         }
-        payload = {
-            "model": self._model,
-            "input": {
+        if is_openai_compat:
+            payload = {
+                "model": self._model,
                 "query": query,
                 "documents": documents,
-            },
-            "parameters": {
                 "top_n": top_n,
-                "return_documents": False,
-            },
-        }
+            }
+        else:
+            payload = {
+                "model": self._model,
+                "input": {
+                    "query": query,
+                    "documents": documents,
+                },
+                "parameters": {
+                    "top_n": top_n,
+                    "return_documents": False,
+                },
+            }
 
         # Clear proxy env vars for direct HTTPS connections
         env_overrides: dict[str, str] = {}
