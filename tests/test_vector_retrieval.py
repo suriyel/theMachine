@@ -528,6 +528,172 @@ async def test_qdrant_connectivity_real():
 
 
 # ---------------------------------------------------------------------------
+# T25: Real integration — branch filter against live Qdrant (VS-4)
+# [integration]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.real
+@pytest.mark.asyncio
+async def test_real_vector_search_branch_filter():
+    """[integration] Verify branch filter works end-to-end against real Qdrant.
+
+    feature #9 — Semantic Retrieval (Vector), VS-4
+
+    Creates a temporary Qdrant collection with vectors on two branches,
+    verifies that vector_code_search(branch="main") returns only the
+    "main" vectors, not "develop" vectors.
+
+    Requires QDRANT_URL in environment pointing to a running Qdrant instance.
+    """
+    import os
+    import uuid
+
+    import numpy as np
+    from qdrant_client import AsyncQdrantClient, models
+
+    from src.shared.clients.qdrant import QdrantClientWrapper
+
+    # Clear proxy env vars
+    proxy_keys = ("ALL_PROXY", "all_proxy", "HTTP_PROXY", "http_proxy",
+                  "HTTPS_PROXY", "https_proxy")
+    saved: dict[str, str] = {}
+    for key in proxy_keys:
+        val = os.environ.pop(key, None)
+        if val is not None:
+            saved[key] = val
+
+    collection_name = f"test_branch_filter_{uuid.uuid4().hex[:8]}"
+    url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+    raw_client = AsyncQdrantClient(url=url)
+
+    try:
+        # 1. Create temp collection (1024-dim cosine, matching production config)
+        await raw_client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(
+                size=1024,
+                distance=models.Distance.COSINE,
+            ),
+        )
+
+        # 2. Insert 3 vectors: 2 on "main", 1 on "develop"
+        rng = np.random.default_rng(42)
+        main_vec_1 = rng.random(1024, dtype=np.float32).tolist()
+        main_vec_2 = rng.random(1024, dtype=np.float32).tolist()
+        dev_vec = rng.random(1024, dtype=np.float32).tolist()
+
+        await raw_client.upsert(
+            collection_name=collection_name,
+            points=[
+                models.PointStruct(
+                    id=1,
+                    vector=main_vec_1,
+                    payload={
+                        "repo_id": "repo-1",
+                        "file_path": "src/a.py",
+                        "content": "def timeout(): pass",
+                        "language": "python",
+                        "chunk_type": "function",
+                        "symbol": "timeout",
+                        "branch": "main",
+                    },
+                ),
+                models.PointStruct(
+                    id=2,
+                    vector=main_vec_2,
+                    payload={
+                        "repo_id": "repo-1",
+                        "file_path": "src/b.py",
+                        "content": "def configure(): pass",
+                        "language": "python",
+                        "chunk_type": "function",
+                        "symbol": "configure",
+                        "branch": "main",
+                    },
+                ),
+                models.PointStruct(
+                    id=3,
+                    vector=dev_vec,
+                    payload={
+                        "repo_id": "repo-1",
+                        "file_path": "src/c.py",
+                        "content": "def experimental(): pass",
+                        "language": "python",
+                        "chunk_type": "function",
+                        "symbol": "experimental",
+                        "branch": "develop",
+                    },
+                ),
+            ],
+        )
+
+        # 3. Build Retriever with real Qdrant, mock encoder (returns fixed vector)
+        wrapper = QdrantClientWrapper(url=url)
+        await wrapper.connect()
+        es_mock = MagicMock(spec=ElasticsearchClient)
+        encoder_mock = MagicMock()
+        # Use main_vec_1 as query vector so it matches the "main" points well
+        encoder_mock.encode_query = MagicMock(
+            return_value=np.array(main_vec_1, dtype=np.float32)
+        )
+
+        retriever = Retriever(
+            es_client=es_mock,
+            embedding_encoder=encoder_mock,
+            qdrant_client=wrapper,
+            code_collection=collection_name,
+        )
+
+        # 4. Search with branch="main" — should get only "main" results
+        results = await retriever.vector_code_search(
+            query="timeout config",
+            repo_id="repo-1",
+            branch="main",
+            top_k=10,
+        )
+
+        assert len(results) == 2, f"Expected 2 'main' results, got {len(results)}"
+        for chunk in results:
+            assert chunk.branch == "main", f"Expected branch='main', got '{chunk.branch}'"
+            assert chunk.content_type == "code"
+            assert chunk.repo_id == "repo-1"
+            assert 0.0 <= chunk.score <= 1.0
+
+        # 5. Search with branch="develop" — should get only 1 result
+        encoder_mock.encode_query = MagicMock(
+            return_value=np.array(dev_vec, dtype=np.float32)
+        )
+        dev_results = await retriever.vector_code_search(
+            query="experimental",
+            repo_id="repo-1",
+            branch="develop",
+            top_k=10,
+        )
+        assert len(dev_results) == 1, f"Expected 1 'develop' result, got {len(dev_results)}"
+        assert dev_results[0].branch == "develop"
+        assert dev_results[0].symbol == "experimental"
+
+        # 6. Search without branch — should get all 3
+        encoder_mock.encode_query = MagicMock(
+            return_value=np.array(main_vec_1, dtype=np.float32)
+        )
+        all_results = await retriever.vector_code_search(
+            query="any",
+            repo_id="repo-1",
+            top_k=10,
+        )
+        assert len(all_results) == 3, f"Expected 3 total results, got {len(all_results)}"
+
+        await wrapper.close()
+
+    finally:
+        # Cleanup: delete temp collection
+        await raw_client.delete_collection(collection_name)
+        await raw_client.close()
+        os.environ.update(saved)
+
+
+# ---------------------------------------------------------------------------
 # T18: Happy path — branch filter applied to Qdrant (VS-4)
 # [unit]
 # ---------------------------------------------------------------------------

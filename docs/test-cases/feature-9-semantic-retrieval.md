@@ -350,7 +350,7 @@ FR-007（Semantic Retrieval）
 | ST-FUNC-009-001 | FR-007 | VS-1: 语义相关块即使无精确匹配也能返回 | test_vector_code_search_returns_scored_chunks | Mock | PASS |
 | ST-FUNC-009-002 | FR-007 | VS-2: 返回最多 200 个候选结果 | test_vector_code_search_returns_up_to_top_k | Mock | PASS |
 | ST-FUNC-009-003 | FR-007 | VS-3: Qdrant 不可达时抛出 RetrievalError 并记录降级警告 | test_vector_code_search_qdrant_unreachable, test_vector_code_search_qdrant_unreachable_logs_warning | Mock | PASS |
-| ST-FUNC-009-004 | FR-007 | VS-4: branch 参数添加 payload 过滤 | test_vector_code_search_branch_filter, test_vector_doc_search_with_branch | Mock | PASS |
+| ST-FUNC-009-004 | FR-007 | VS-4: branch 参数添加 payload 过滤 | test_vector_code_search_branch_filter, test_vector_doc_search_with_branch, **test_real_vector_search_branch_filter** | Mock + Real | PASS |
 | ST-BNDRY-009-001 | FR-007 | VS-2 (边界): 无匹配结果返回空列表 | test_vector_code_search_no_results | Mock | PASS |
 | ST-BNDRY-009-002 | FR-007 | (边界): 空查询抛出 ValueError | test_vector_code_search_empty_query, test_vector_code_search_whitespace_query | Mock | PASS |
 | ST-BNDRY-009-003 | FR-007 | VS-4 (边界): branch-only 过滤和无过滤条件 | test_vector_code_search_branch_only_filter, test_vector_code_search_no_filters | Mock | PASS |
@@ -359,10 +359,10 @@ FR-007（Semantic Retrieval）
 
 | Metric | Count |
 |--------|-------|
-| Total Real Test Cases | 0 |
-| Passed | 0 |
+| Total Real Test Cases | 1 |
+| Passed | 1 |
 | Failed | 0 |
 | Pending | 0 |
 
 > Real test cases = test cases with Test Type `Real` (executed against a real running environment, not Mock).
-> Note: Feature #9 is a pure retrieval module with no direct service endpoint. All test cases exercise the Retriever class with mocked external dependencies (Qdrant, EmbeddingEncoder). Real connectivity is verified by the integration test `test_qdrant_connectivity_real` in the unit test suite.
+> `test_real_vector_search_branch_filter` creates a temporary Qdrant collection, inserts vectors with different `branch` payloads, and verifies that `vector_code_search(branch="main")` returns only "main" vectors — exercising the full search path against a live Qdrant instance.
