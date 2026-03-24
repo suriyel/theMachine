@@ -1,7 +1,8 @@
 """Example: Natural Language Query Handler (Feature #13).
 
 Demonstrates the QueryHandler orchestrating the full hybrid retrieval pipeline
-with query expansion, symbol boost, and degraded response handling.
+with query expansion, symbol boost, degraded response handling, and Wave 5
+branch parsing (owner/repo@branch format).
 """
 
 from __future__ import annotations
@@ -83,7 +84,18 @@ async def main() -> None:
     print("\n--- Query Type Detection ---")
     print(f"detect_query_type('anything'): {handler.detect_query_type('anything')}")
 
-    # 4. Validation errors
+    # 4. Branch parsing (Wave 5)
+    print("\n--- Branch Parsing (Wave 5) ---")
+    repo_id, branch = handler._parse_repo("google/gson@main")
+    print(f"'google/gson@main' → repo_id={repo_id}, branch={branch}")
+
+    repo_id2, branch2 = handler._parse_repo("google/gson")
+    print(f"'google/gson' → repo_id={repo_id2}, branch={branch2}")
+
+    repo_id3, branch3 = handler._parse_repo("org/repo@feature@fix")
+    print(f"'org/repo@feature@fix' → repo_id={repo_id3}, branch={branch3}")
+
+    # 5. Validation errors
     print("\n--- Validation ---")
     try:
         await handler.handle_nl_query("", "test-repo")
@@ -95,7 +107,12 @@ async def main() -> None:
     except ValidationError as e:
         print(f"Too long: {e}")
 
-    # 5. Degraded response (simulated timeout)
+    try:
+        await handler.handle_nl_query("valid query", "")
+    except ValidationError as e:
+        print(f"Empty repo: {e}")
+
+    # 6. Degraded response (simulated timeout)
     print("\n--- Degraded Response ---")
     retriever.bm25_code_search = AsyncMock(side_effect=asyncio.TimeoutError())
     response = await handler.handle_nl_query("test query", "test-repo")

@@ -307,17 +307,9 @@ async def test_handle_nl_query_with_repo(handler):
 # [unit] A6: NL query end-to-end without repo filter
 @pytest.mark.asyncio
 async def test_handle_nl_query_without_repo(handler):
-    """VS-3: NL pipeline works with repo=None, searches all repos."""
-    handler._response_builder.build.return_value = _make_response(repo=None)
-
-    response = await handler.handle_nl_query("timeout handling", repo=None)
-
-    assert response.repo is None
-    # Verify retriever methods called with repo=None
-    handler._retriever.bm25_code_search.assert_called()
-    bm25_args = handler._retriever.bm25_code_search.call_args[0]
-    # Second positional arg is repo
-    assert bm25_args[1] is None
+    """Wave 5: repo=None raises ValidationError (repo is now required)."""
+    with pytest.raises(ValidationError, match="repo"):
+        await handler.handle_nl_query("timeout handling", repo=None)
 
 
 # [unit] A7: Symbol query with repo filter

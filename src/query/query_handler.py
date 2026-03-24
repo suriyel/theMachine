@@ -44,40 +44,59 @@ class QueryHandler:
         self._search_timeout = search_timeout
         self._pipeline_timeout = pipeline_timeout
 
+    def _parse_repo(self, repo: str) -> tuple[str, str | None]:
+        """Parse repo string into (repo_id, branch).
+
+        Splits on last '@' if present: 'owner/repo@branch' → ('owner/repo', 'branch').
+        """
+        if not repo or not repo.strip():
+            raise ValidationError("repo must not be empty")
+        if "@" in repo:
+            idx = repo.rfind("@")
+            repo_id = repo[:idx]
+            branch = repo[idx + 1:]
+            if not branch:
+                branch = None
+            return (repo_id, branch)
+        return (repo, None)
+
     async def handle_nl_query(
         self,
         query: str,
-        repo: str | None = None,
+        repo: str,
         languages: list[str] | None = None,
     ) -> QueryResponse:
         """Execute the full NL retrieval pipeline.
 
         Raises:
-            ValidationError: If query is empty or exceeds 500 chars.
+            ValidationError: If query is empty or exceeds 500 chars, or repo is empty.
             RetrievalError: If all 4 primary retrieval paths fail.
         """
-        # Step 1: Validate
+        # Step 1: Validate query
         if not query or not query.strip():
             raise ValidationError("query must not be empty")
         if len(query) > 500:
             raise ValidationError("query exceeds 500 character limit")
 
-        # Step 1b: Validate and normalize language filter
+        # Step 2: Parse repo → (repo_id, branch)
+        repo_id, branch = self._parse_repo(repo)
+
+        # Step 3: Validate and normalize language filter
         if self._language_filter is not None:
             languages = self._language_filter.validate(languages)
 
-        # Step 2: Extract identifiers for symbol boost
+        # Step 4: Extract identifiers for symbol boost
         identifiers = self._extract_identifiers(query)
 
         # Wrap entire pipeline in pipeline_timeout
         try:
             response = await asyncio.wait_for(
-                self._run_pipeline(query, repo, languages, identifiers),
+                self._run_pipeline(query, repo_id, branch, languages, identifiers),
                 timeout=self._pipeline_timeout,
             )
         except asyncio.TimeoutError:
             log.warning("Pipeline exceeded %ss timeout, returning degraded empty response", self._pipeline_timeout)
-            response = self._response_builder.build([], query, "nl", repo)
+            response = self._response_builder.build([], query, "nl", repo_id)
             response.degraded = True
 
         return response
@@ -85,7 +104,8 @@ class QueryHandler:
     async def _run_pipeline(
         self,
         query: str,
-        repo: str | None,
+        repo_id: str | None,
+        branch: str | None,
         languages: list[str] | None,
         identifiers: list[str],
     ) -> QueryResponse:
@@ -93,19 +113,19 @@ class QueryHandler:
         # Step 3: Build retrieval tasks with individual timeouts
         tasks = [
             asyncio.wait_for(
-                self._retriever.bm25_code_search(query, repo, languages=languages, top_k=200),
+                self._retriever.bm25_code_search(query, repo_id, languages=languages, top_k=200, branch=branch),
                 timeout=self._search_timeout,
             ),
             asyncio.wait_for(
-                self._retriever.vector_code_search(query, repo, languages=languages, top_k=200),
+                self._retriever.vector_code_search(query, repo_id, languages=languages, top_k=200, branch=branch),
                 timeout=self._search_timeout,
             ),
             asyncio.wait_for(
-                self._retriever.bm25_doc_search(query, repo, top_k=100),
+                self._retriever.bm25_doc_search(query, repo_id, top_k=100, branch=branch),
                 timeout=self._search_timeout,
             ),
             asyncio.wait_for(
-                self._retriever.vector_doc_search(query, repo, top_k=100),
+                self._retriever.vector_doc_search(query, repo_id, top_k=100, branch=branch),
                 timeout=self._search_timeout,
             ),
         ]
@@ -113,7 +133,7 @@ class QueryHandler:
         if identifiers:
             tasks.append(
                 asyncio.wait_for(
-                    self._symbol_boost_search(identifiers, repo),
+                    self._symbol_boost_search(identifiers, repo_id, branch=branch),
                     timeout=self._search_timeout,
                 )
             )
@@ -154,7 +174,7 @@ class QueryHandler:
             degraded = True
 
         # Step 10: Build response
-        response = self._response_builder.build(reranked, query, "nl", repo)
+        response = self._response_builder.build(reranked, query, "nl", repo_id)
 
         # Step 11: Mark degraded
         if degraded:
@@ -277,14 +297,19 @@ class QueryHandler:
         return identifiers
 
     async def _symbol_boost_search(
-        self, identifiers: list[str], repo: str | None
+        self, identifiers: list[str], repo: str | None, branch: str | None = None
     ) -> list[ScoredChunk]:
         """Fire parallel ES term queries on symbol.raw for each identifier."""
         tasks = []
         for ident in identifiers:
             boost_bool: dict = {"must": [{"term": {"symbol.raw": ident}}]}
+            filter_clauses: list[dict] = []
             if repo is not None:
-                boost_bool["filter"] = [{"term": {"repo_id": repo}}]
+                filter_clauses.append({"term": {"repo_id": repo}})
+            if branch is not None:
+                filter_clauses.append({"term": {"branch": branch}})
+            if filter_clauses:
+                boost_bool["filter"] = filter_clauses
             tasks.append(
                 self._retriever._execute_search(
                     self._retriever._code_index,

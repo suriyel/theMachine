@@ -197,7 +197,7 @@ async def test_d1_query_handler_passes_languages_to_retriever() -> None:
         language_filter=language_filter,
     )
 
-    await handler.handle_nl_query("timeout", languages=["java"])
+    await handler.handle_nl_query("timeout", "test-repo", languages=["java"])
 
     # Verify retriever was called with validated languages
     mock_retriever.bm25_code_search.assert_called_once()
@@ -243,7 +243,7 @@ async def test_d2_query_handler_empty_languages_passes_none() -> None:
         language_filter=language_filter,
     )
 
-    await handler.handle_nl_query("timeout", languages=[])
+    await handler.handle_nl_query("timeout", "test-repo", languages=[])
 
     # Verify retriever was called with languages=None (no filter)
     call_kwargs = mock_retriever.bm25_code_search.call_args
@@ -377,7 +377,7 @@ async def test_d3_endpoint_returns_400_for_unsupported_language() -> None:
     client = TestClient(app)
     response = client.post(
         "/api/v1/query",
-        json={"query": "timeout", "languages": ["rust"]},
+        json={"query": "timeout", "repo_id": "test/repo", "languages": ["rust"]},
         headers={"Authorization": "Bearer test-key"},
     )
 
