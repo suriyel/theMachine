@@ -4,9 +4,25 @@ from __future__ import annotations
 
 from src.shared.exceptions import ValidationError
 
+# Canonical language identifiers — must match values stored in ES/Qdrant
+# by chunker.EXT_TO_LANGUAGE (the indexing-time source of truth).
 SUPPORTED_LANGUAGES: frozenset[str] = frozenset(
-    {"java", "python", "typescript", "javascript", "c", "c++"}
+    {"java", "python", "typescript", "javascript", "c", "cpp"}
 )
+
+# Alias mapping: common user-facing names → canonical index values.
+# Covers: display names, file extensions, abbreviations, Pygments aliases.
+_LANGUAGE_ALIASES: dict[str, str] = {
+    "c++": "cpp",
+    "cxx": "cpp",
+    "cc": "cpp",
+    "hpp": "cpp",
+    "ts": "typescript",
+    "tsx": "typescript",
+    "js": "javascript",
+    "jsx": "javascript",
+    "py": "python",
+}
 
 
 class LanguageFilter:
@@ -19,24 +35,30 @@ class LanguageFilter:
             languages: List of language strings, or None.
 
         Returns:
-            Normalized (lowercased, stripped) list if all valid, or None if
-            input is None or empty.
+            Normalized list mapped to canonical index identifiers if all valid,
+            or None if input is None or empty.
 
         Raises:
-            ValidationError: If any language is not in SUPPORTED_LANGUAGES.
+            ValidationError: If any language is not in SUPPORTED_LANGUAGES
+                and has no known alias.
         """
         if languages is None:
             return None
         if not languages:
             return None
 
-        normalized = [lang.lower().strip() for lang in languages]
+        normalized = []
+        for lang in languages:
+            key = lang.lower().strip()
+            key = _LANGUAGE_ALIASES.get(key, key)
+            normalized.append(key)
 
         unsupported = [lang for lang in normalized if lang not in SUPPORTED_LANGUAGES]
         if unsupported:
             raise ValidationError(
                 f"Unsupported language(s): {unsupported}. "
-                f"Supported: {sorted(SUPPORTED_LANGUAGES)}"
+                f"Supported: {sorted(SUPPORTED_LANGUAGES)}. "
+                f"Aliases: {sorted(_LANGUAGE_ALIASES.keys())}"
             )
 
         return normalized

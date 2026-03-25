@@ -16,10 +16,10 @@
       </select>
     </div>
     <div class="language-filters">
-      {% for lang in languages %}
+      {% for value, label in languages %}
       <label>
-        <input type="checkbox" name="languages" value="{{ lang }}">
-        {{ lang }}
+        <input type="checkbox" name="languages" value="{{ value }}">
+        {{ label }}
       </label>
       {% endfor %}
     </div>

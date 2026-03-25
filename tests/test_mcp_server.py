@@ -256,7 +256,7 @@ async def test_search_code_context_symbol_query_with_repo(
     result = await tool.fn(query="MyClass.method", repo="my-org/my-app")
 
     mock_query_handler.handle_symbol_query.assert_called_once_with(
-        "MyClass.method", "my-org/my-app"
+        "MyClass.method", "my-org/my-app", None
     )
     mock_query_handler.handle_nl_query.assert_not_called()
     parsed = json.loads(result)

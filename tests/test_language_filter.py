@@ -58,19 +58,31 @@ def test_a4_case_normalization_upper(lf: LanguageFilter) -> None:
     assert result == ["typescript"]
 
 
-# [unit] — special character language c++
-def test_a5_cpp_special_char(lf: LanguageFilter) -> None:
-    """Given ['c++'], validate returns ['c++'] (not rejected by special chars)."""
+# [unit] — c++ alias resolves to canonical "cpp"
+def test_a5_cpp_alias(lf: LanguageFilter) -> None:
+    """Given ['c++'], validate returns ['cpp'] (alias mapped to index value)."""
     result = lf.validate(["c++"])
-    assert result == ["c++"]
+    assert result == ["cpp"]
 
 
-# [unit] — all 6 supported languages accepted
+# [unit] — all 6 canonical languages accepted
 def test_a6_all_six_supported(lf: LanguageFilter) -> None:
-    """Given all 6 supported languages, validate returns all 6."""
-    all_langs = ["java", "python", "typescript", "javascript", "c", "c++"]
+    """Given all 6 canonical languages, validate returns all 6."""
+    all_langs = ["java", "python", "typescript", "javascript", "c", "cpp"]
     result = lf.validate(all_langs)
     assert result == all_langs
+
+
+# [unit] — common aliases resolve correctly
+def test_a7_aliases_resolve(lf: LanguageFilter) -> None:
+    """Given common aliases, validate maps them to canonical index values."""
+    assert lf.validate(["ts"]) == ["typescript"]
+    assert lf.validate(["js"]) == ["javascript"]
+    assert lf.validate(["py"]) == ["python"]
+    assert lf.validate(["c++"]) == ["cpp"]
+    assert lf.validate(["cxx"]) == ["cpp"]
+    assert lf.validate(["tsx"]) == ["typescript"]
+    assert lf.validate(["jsx"]) == ["javascript"]
 
 
 # ---- Error Handling (B1-B3) ----

@@ -176,7 +176,7 @@ def create_mcp_server(
 
         try:
             if query_type == "symbol":
-                response = await query_handler.handle_symbol_query(query, repo)
+                response = await query_handler.handle_symbol_query(query, repo, languages)
             else:
                 response = await query_handler.handle_nl_query(
                     query, repo, languages

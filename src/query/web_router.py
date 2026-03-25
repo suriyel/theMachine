@@ -23,7 +23,15 @@ log = logging.getLogger(__name__)
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 # Supported languages for checkbox filters (CON-001)
-_SUPPORTED_LANGUAGES = ["python", "java", "javascript", "typescript", "c", "c++"]
+# (value sent to backend, display label shown in UI)
+_SUPPORTED_LANGUAGES = [
+    ("python", "python"),
+    ("java", "java"),
+    ("javascript", "javascript"),
+    ("typescript", "typescript"),
+    ("c", "c"),
+    ("cpp", "c++"),
+]
 
 
 class WebRouter:
