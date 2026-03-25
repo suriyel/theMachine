@@ -69,6 +69,7 @@
 | FR-028 | mcp-server Docker 镜像 | 构建成功/mcp进程存活/HEALTHCHECK/无dev依赖/非root | FUNC,BNDRY,SEC | 5 | High | 4条标准 |
 | FR-029 | index-worker Docker 镜像 | 构建成功/celery worker/HEALTHCHECK/无dev依赖/非root | FUNC,BNDRY,SEC | 5 | High | 4条标准 |
 | FR-030 | 仓库解析MCP工具 [Wave5] | resolve_repository(query+libraryName必填)/名称匹配/无匹配→空列表/缺参数→TypeError/排序相关性/返回branches | FUNC,BNDRY | 8 | Critical | Wave5新增; 5条标准; Context7对齐 |
+| FR-031 | Web UI 索引管理页 [Wave6] | 仓库列表(含索引状态)/Stats查询(ES+Qdrant计数)/单仓库Reindex(Celery派发)/Reindex All(确认提示)/Delete索引(确认提示)/操作反馈/非MCP暴露 | FUNC,BNDRY,UI,A11Y | 12 | High | Wave6新增; 7条验收标准; ui:true→+UI+A11Y; 含确认提示安全交互 |
 
 ### 2.2 非功能需求 (NFR)
 
@@ -104,13 +105,13 @@
 
 | 类别 | 涉及需求数 | 总最低用例数 |
 |------|-----------|------------|
-| FUNC | 50 (30FR+12NFR+8IFR) | 225 |
-| BNDRY | 43 (29FR+6NFR+8IFR) | 192 |
+| FUNC | 51 (31FR+12NFR+8IFR) | 237 |
+| BNDRY | 44 (30FR+6NFR+8IFR) | 204 |
 | SEC | 12 (8FR+2NFR+2Docker) | 56 |
 | PERF | 8 (1FR+7NFR) | 30 |
-| UI | 2 (FR-017+IFR-002) | 17 |
-| A11Y | 2 (FR-017+IFR-002) | 17 |
-| **合计** | **63 需求 (含FR-030)** | **~320** |
+| UI | 3 (FR-017+FR-031+IFR-002) | 29 |
+| A11Y | 3 (FR-017+FR-031+IFR-002) | 29 |
+| **合计** | **64 需求 (含FR-031)** | **~332** |
 
 ---
 
@@ -193,6 +194,7 @@
 | INT-009 | 评估管线 (语料→标注→评估→报告) | #40,#41,#42,#8,#9 | eval/repos.json → index → LLM queries → annotate → IR metrics → report | 端到端评估管线执行; golden dataset 格式正确 | System ST |
 | INT-010 | 分支选择流 | #33,#4,#3,#19 | Web UI → Branch Listing API → GitCloner.list_remote_branches → 选择分支 → 注册 | 分支列表返回正确; 注册时indexed_branch设置正确 | System ST |
 | INT-011 | MCP两步式流程 [Wave5] | #46,#18,#13,#14 | resolve_repository(query,name) → 选择repo → search_code_context(query,repo@branch) → 结果 | resolve返回indexed仓库+branches; search用@branch过滤; 两步连贯执行 | System ST |
+| INT-012 | Web UI索引管理→Celery→索引管线 [Wave6] | #47,#21,#22,#4,#5,#6,#7 | Admin page → Reindex → Celery task → Clone → Extract → Chunk → Embed → Write | 前端操作触发后端Celery任务; 索引数据更新; 删除后计数归零 | System ST |
 
 ---
 
@@ -206,7 +208,8 @@
 | API 认证 + 密钥管理 | Critical | 全系统安全 | 深度 (FUNC+BNDRY+SEC) | 安全边界; 暴力破解防护 |
 | 6语言 AST 分块 | High | 索引质量, 检索召回率 | 深度 (FUNC+BNDRY, 16条标准) | 6种语言 × 3级粒度 |
 | Docker 镜像安全 | High | 部署安全 | 标准 (FUNC+BNDRY+SEC) | 非root, 无dev依赖, HEALTHCHECK |
-| Web UI | Medium | Feature #19 | 标准 (FUNC+BNDRY+UI+A11Y) | 单页面; 主要面向开发者 |
+| Web UI (搜索) | Medium | Feature #19 | 标准 (FUNC+BNDRY+UI+A11Y) | 单页面; 主要面向开发者 |
+| Web UI (索引管理) | Medium | Feature #47 | 标准 (FUNC+BNDRY+UI+A11Y) | 管理页面; 含破坏性操作确认提示 |
 | 远程 Embedding/Reranker API | High | 检索质量 | 标准 (FUNC+BNDRY) | DashScope API 延迟+可用性 |
 | 缓存一致性 | Medium | 查询新鲜度 | 标准 (FUNC+BNDRY) | Redis + L1 缓存; 失效路径 |
 | 定时调度 | Medium | 索引新鲜度 | 标准 (FUNC+BNDRY) | Celery beat + worker |
