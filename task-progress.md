@@ -1,13 +1,23 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 43/46 active features passing (3 failing) · Last: #17 REST API Endpoints (2026-03-24) · Next: #18 MCP AI Agent Interface
+Progress: 44/46 active features passing (2 failing) · Last: #18 MCP Server (2026-03-25) · Next: #46 Repository Resolution MCP Tool
 
-**Failing features**: #18, #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #19, #46 — Wave 5 Context7-aligned MCP interface
 
 ---
 
 ## Session Log
+
+### Feature #18: MCP Server — PASS
+- Completed: 2026-03-25
+- TDD: green ✓
+- Quality Gates: 100% line, 100% branch, 98.6% mutation (68/69 killed)
+- Feature-ST: 9 cases, all PASS
+- Inline Check: PASS (P2: 4/4 methods verified, T2: 35/35 tests found, D3: OK)
+- Git: a709fd9 feat: MCP server — Wave 5 Context7-aligned two-step flow (#18)
+#### Risks
+- ⚠ [Mutant] src/query/mcp_server.py:61 — Equivalent mutant: `select(None)` vs `select(Repository)` identical with mocked DB session
 
 ### Feature #17: REST API Endpoints — PASS
 - Completed: 2026-03-24

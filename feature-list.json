@@ -636,7 +636,7 @@
       "title": "MCP Server",
       "description": "Implement standalone MCP server exposing 3 tools: search_code_context (with max_tokens param), list_repositories, get_chunk. Uses the same query handler as REST API.",
       "priority": "high",
-      "status": "failing",
+      "status": "passing",
       "verification_steps": [
         "resolve_repository(query, libraryName) returns indexed repos with branches",
         "search_code_context(query, repo) with repo required returns scoped results",
@@ -650,7 +650,7 @@
         13
       ],
       "st_case_path": "docs/test-cases/feature-18-mcp-server.md",
-      "st_case_count": 6,
+      "st_case_count": 9,
       "wave": 5
     },
     {
