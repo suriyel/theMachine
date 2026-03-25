@@ -1198,7 +1198,7 @@
       "title": "Web UI Index Management Page",
       "requirement": "FR-031",
       "wave": 6,
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         19,
         22
@@ -1216,7 +1216,9 @@
       "priority": "high",
       "category": "query",
       "ui": true,
-      "ui_entry": "/admin/indexes"
+      "ui_entry": "/admin/indexes",
+      "st_case_path": "docs/test-cases/feature-47-web-ui-index-management-page.md",
+      "st_case_count": 12
     },
     {
       "id": 48,

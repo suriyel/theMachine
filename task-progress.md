@@ -1,13 +1,26 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 47/50 active features passing (3 failing) · Last: #48 Fix delete_repo_index branch filter (2026-03-25) · Next: #49 Fix reindex API Celery dispatch
+Progress: 48/50 active features passing (2 failing) · Last: #47 Web UI Index Management Page (2026-03-25) · Next: #49 Fix reindex API Celery dispatch
 
-**Failing features**: #47 Web UI Index Management Page, #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
+**Failing features**: #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
 
 ---
 
 ## Session Log
+
+### Feature #47: Web UI Index Management Page — PASS
+- Completed: 2026-03-25
+- TDD: green ✓
+- Quality Gates: 99% line, 98% branch, 83.6% mutation (112/134 killed)
+- Feature-ST: 12 cases, all PASS
+- Inline Check: PASS (P2: 5/5 methods verified, T2: 54/54 tests found, D3: OK, U1: OK)
+- Git: e79d316 feat: web UI index management page — list, stats, reindex, delete (#47)
+- Service deps: None (TDD), Feature-ST managed lifecycle
+#### Risks
+- ⚠ [Mutant] web_router.py:233,237 — 8 SQL statement mutants survive (mock session ignores query content)
+- ⚠ [Mutant] web_router.py:279-289 — 8 Qdrant fallback mutants survive (mock returns canned data)
+- ⚠ [Mutant] web_router.py:133,189,230 — 5 log.warning text mutations equivalent (no observable behavior change)
 
 ### Feature #48: Fix delete_repo_index branch filter — PASS
 - Completed: 2026-03-25

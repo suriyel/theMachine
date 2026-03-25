@@ -19,6 +19,7 @@
 - **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
 ### Added
+- Feature #47: Web UI Index Management Page — admin page at `/admin/indexes` with 5 HTMX-powered actions (list repos, view ES/Qdrant stats, reindex single, reindex all, delete index with confirmation). 54 unit tests, 12 ST acceptance cases. Web UI only — not exposed via MCP.
 - Feature #46: Repository Resolution MCP Tool — `resolve_repository` enhanced with 5-tier match quality sorting (exact name > exact URL segment > prefix name > prefix URL segment > substring), `available_branches` populated from `GitCloner.list_remote_branches()` when clone exists, graceful degradation on git errors
 - Feature #19: Web UI Search Page — mandatory indexed-repo dropdown (no "all repos"), language filter checkboxes, branch selector for registration (via `list_remote_branches_by_url`), syntax-highlighted results with htmx partial updates, Developer Dark theme per UCD
 
