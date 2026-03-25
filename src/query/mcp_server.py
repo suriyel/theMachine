@@ -1,12 +1,16 @@
-"""MCP Server — Feature #18.
+"""MCP Server — Feature #18 (Wave 5).
 
-Standalone MCP server exposing search_code_context, list_repositories, and
+Standalone MCP server exposing resolve_repository, search_code_context, and
 get_chunk tools via the Model Context Protocol.  Delegates to the same
 QueryHandler used by the REST API.
+
+Wave 5: Context7-aligned two-step flow (resolve → search).
+- resolve_repository replaces list_repositories
+- repo is required in search_code_context
+- max_tokens removed
 """
 
 import json
-from typing import Optional
 
 from elasticsearch import NotFoundError
 from mcp.server.fastmcp import FastMCP
@@ -30,34 +34,82 @@ def create_mcp_server(
         es_client: ElasticsearchClient for chunk retrieval.
 
     Returns:
-        Configured FastMCP instance with search_code_context,
-        list_repositories, and get_chunk tools registered.
+        Configured FastMCP instance with resolve_repository,
+        search_code_context, and get_chunk tools registered.
     """
     mcp = FastMCP("code-context-retrieval")
 
     @mcp.tool()
+    async def resolve_repository(query: str, libraryName: str) -> str:
+        """Resolve a repository name to indexed repositories with branch info.
+
+        Returns only status=indexed repositories matching the libraryName.
+        Must be called before search_code_context to discover repo identifiers.
+
+        Args:
+            query: User intent for relevance ranking.
+            libraryName: Repository name to search (case-insensitive substring match).
+        """
+        if not query or not query.strip():
+            raise ValueError("query is required")
+        if not libraryName or not libraryName.strip():
+            raise ValueError("libraryName is required")
+
+        session = session_factory()
+        try:
+            result = await session.execute(
+                select(Repository).where(Repository.status == "indexed")
+            )
+            repos = result.scalars().all()
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to resolve repositories: {exc}"
+            ) from exc
+        finally:
+            await session.close()
+
+        lib_lower = libraryName.lower()
+        filtered = [
+            r
+            for r in repos
+            if lib_lower in r.name.lower() or lib_lower in r.url.lower()
+        ]
+
+        return json.dumps(
+            [
+                {
+                    "id": r.name,
+                    "name": r.name,
+                    "url": r.url,
+                    "indexed_branch": r.indexed_branch,
+                    "default_branch": r.default_branch,
+                    "available_branches": [],
+                    "last_indexed_at": (
+                        r.last_indexed_at.isoformat()
+                        if r.last_indexed_at
+                        else None
+                    ),
+                }
+                for r in filtered
+            ]
+        )
+
+    @mcp.tool()
     async def search_code_context(
         query: str,
-        repo: Optional[str] = None,
+        repo: str,
         top_k: int = 3,
-        languages: Optional[list[str]] = None,
-        max_tokens: int = 5000,
+        languages: list[str] | None = None,
     ) -> str:
-        """Search code and documentation context.
-
-        Returns structured results with code snippets, documentation,
-        and repository rules.
+        """Search code and documentation context scoped to a repository.
 
         Args:
             query: Natural language or symbol query string.
-            repo: Optional repository name to scope the search.
+            repo: Repository identifier (required). Use "owner/repo" or
+                "owner/repo@branch" format. @branch suffix is parsed by
+                QueryHandler internally.
             top_k: Number of results to return (default 3).
-                Reserved for future use — QueryHandler does not yet
-                accept top_k; included per design spec §4.3.4.
             languages: Optional list of programming languages to filter by.
-            max_tokens: Maximum response size in tokens (default 5000).
-                Reserved for future use — response truncation by token
-                budget not yet implemented; included per design spec §4.3.4.
         """
         if not query or not query.strip():
             raise ValueError("query is required")
@@ -77,51 +129,6 @@ def create_mcp_server(
             raise ValueError(str(exc)) from exc
 
         return response.model_dump_json()
-
-    @mcp.tool()
-    async def list_repositories(query: Optional[str] = None) -> str:
-        """List indexed repositories.
-
-        Args:
-            query: Optional filter — matches against repository name or URL
-                   (case-insensitive substring match).
-        """
-        session = session_factory()
-        try:
-            result = await session.execute(select(Repository))
-            repos = result.scalars().all()
-        except Exception as exc:
-            raise RuntimeError(f"Failed to list repositories: {exc}") from exc
-        finally:
-            await session.close()
-
-        if query and query.strip():
-            query_lower = query.lower()
-            repos = [
-                r
-                for r in repos
-                if query_lower in r.name.lower()
-                or query_lower in r.url.lower()
-            ]
-
-        return json.dumps(
-            [
-                {
-                    "id": str(r.id),
-                    "name": r.name,
-                    "url": r.url,
-                    "default_branch": r.default_branch,
-                    "indexed_branch": r.indexed_branch,
-                    "last_indexed_at": (
-                        r.last_indexed_at.isoformat()
-                        if r.last_indexed_at
-                        else None
-                    ),
-                    "status": r.status,
-                }
-                for r in repos
-            ]
-        )
 
     @mcp.tool()
     async def get_chunk(chunk_id: str) -> str:

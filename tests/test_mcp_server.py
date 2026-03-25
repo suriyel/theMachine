@@ -1,9 +1,10 @@
-"""Tests for Feature #18 — MCP Server.
+"""Tests for Feature #18 — MCP Server (Wave 5).
 
-Tests the MCP server tool handlers: search_code_context, list_repositories, get_chunk.
-The MCP server delegates to QueryHandler (Feature #13) for search operations.
+Tests the MCP server tool handlers: resolve_repository, search_code_context, get_chunk.
+Wave 5 changes: replace list_repositories with resolve_repository(query, libraryName),
+make repo required in search_code_context, remove max_tokens, add @branch pass-through.
 
-# Security: N/A — MCP server auth is deferred (not in v1 scope per design §4.3.5)
+# Security: N/A — MCP server auth is deferred (not in v1 scope per design §4.3.6)
 """
 
 from __future__ import annotations
@@ -68,14 +69,11 @@ def mock_query_handler():
 
 @pytest.fixture
 def mock_session_factory():
-    """Create a mock async session factory returning repos."""
-    repo1_id = uuid.uuid4()
-    repo2_id = uuid.uuid4()
-    repo3_id = uuid.uuid4()
+    """Create a mock async session factory returning repos with status."""
     now = datetime(2026, 3, 22, 12, 0, 0)
 
     repo1 = MagicMock()
-    repo1.id = repo1_id
+    repo1.id = uuid.uuid4()
     repo1.name = "spring-framework"
     repo1.url = "https://github.com/spring-projects/spring-framework"
     repo1.default_branch = "main"
@@ -84,7 +82,7 @@ def mock_session_factory():
     repo1.status = "indexed"
 
     repo2 = MagicMock()
-    repo2.id = repo2_id
+    repo2.id = uuid.uuid4()
     repo2.name = "react"
     repo2.url = "https://github.com/facebook/react"
     repo2.default_branch = "main"
@@ -93,7 +91,7 @@ def mock_session_factory():
     repo2.status = "pending"
 
     repo3 = MagicMock()
-    repo3.id = repo3_id
+    repo3.id = uuid.uuid4()
     repo3.name = "spring-boot"
     repo3.url = "https://github.com/spring-projects/spring-boot"
     repo3.default_branch = "main"
@@ -101,17 +99,31 @@ def mock_session_factory():
     repo3.last_indexed_at = now
     repo3.status = "indexed"
 
+    all_repos = [repo1, repo2, repo3]
+    indexed_repos = [r for r in all_repos if r.status == "indexed"]
+
     session = AsyncMock()
-    result_mock = MagicMock()
-    scalars_mock = MagicMock()
-    scalars_mock.all.return_value = [repo1, repo2, repo3]
-    result_mock.scalars.return_value = scalars_mock
-    session.execute = AsyncMock(return_value=result_mock)
+
+    def _make_result(repos):
+        result_mock = MagicMock()
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = repos
+        result_mock.scalars.return_value = scalars_mock
+        return result_mock
+
+    async def _execute(stmt):
+        """Simulate DB: return indexed-only if WHERE clause filters by status."""
+        stmt_str = str(stmt)
+        if "status" in stmt_str:
+            return _make_result(indexed_repos)
+        return _make_result(all_repos)
+
+    session.execute = AsyncMock(side_effect=_execute)
     session.close = AsyncMock()
 
     factory = MagicMock()
     factory.return_value = session
-    factory._repos = [repo1, repo2, repo3]
+    factory._repos = all_repos
 
     return factory
 
@@ -124,32 +136,67 @@ def mock_es_client():
     return client
 
 
+def _get_tool(mcp, tool_name):
+    """Helper to extract a tool function from FastMCP by name."""
+    tools = mcp._tool_manager._tools
+    tool = tools.get(tool_name)
+    assert tool is not None, f"{tool_name} tool not registered"
+    return tool
+
+
 # ---------------------------------------------------------------------------
-# A1: Happy path — search_code_context returns JSON with correct structure
+# A1: resolve_repository returns only indexed repos with all required fields
+# [unit] — mocks DB session
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_repository_returns_indexed_repos_only(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """A1: resolve_repository filters to status=indexed repos, excludes pending."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    result = await tool.fn(query="JSON parsing", libraryName="spring")
+
+    parsed = json.loads(result)
+    # Must return only the 2 indexed repos (spring-framework, spring-boot), not react
+    assert len(parsed) == 2
+    names = {r["name"] for r in parsed}
+    assert names == {"spring-framework", "spring-boot"}
+    assert "react" not in names
+
+    # Verify all required fields present on each result
+    for repo in parsed:
+        assert "id" in repo
+        assert "name" in repo
+        assert "url" in repo
+        assert "indexed_branch" in repo
+        assert "default_branch" in repo
+        assert "available_branches" in repo
+        assert "last_indexed_at" in repo
+        # Must NOT have "status" field (not part of resolve_repository response)
+        assert isinstance(repo["available_branches"], list)
+
+
+# ---------------------------------------------------------------------------
+# A2: search_code_context with repo required returns scoped results
 # [unit] — mocks QueryHandler
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_search_code_context_returns_valid_json(
+async def test_search_code_context_with_required_repo(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """A1: search_code_context with valid query returns JSON response matching REST format."""
+    """A2: search_code_context with required repo returns structured JSON."""
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
 
-    # Get the tool function
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
-    assert search_tool is not None, "search_code_context tool not registered"
-
-    result = await search_tool.fn(
-        query="spring webclient timeout",
-        repo="spring-framework",
-    )
+    result = await tool.fn(query="spring webclient timeout", repo="spring-framework")
 
     parsed = json.loads(result)
     assert parsed["query"] == "spring webclient timeout"
@@ -160,105 +207,64 @@ async def test_search_code_context_returns_valid_json(
     assert len(parsed["doc_results"]) == 1
     assert parsed["doc_results"][0]["file_path"] == "docs/webclient.md"
 
-
-# ---------------------------------------------------------------------------
-# A2: Happy path — list_repositories returns JSON array with correct fields
-# [unit] — mocks session
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_list_repositories_returns_all_repos(
-    mock_query_handler, mock_session_factory, mock_es_client
-):
-    """A2: list_repositories returns JSON array with all 7 required fields."""
-    from src.query.mcp_server import create_mcp_server
-
-    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    list_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "list_repositories":
-            list_tool = tool_fn
-            break
-    assert list_tool is not None, "list_repositories tool not registered"
-
-    result = await list_tool.fn()
-
-    parsed = json.loads(result)
-    assert len(parsed) == 3
-
-    repo = parsed[0]
-    assert "id" in repo
-    assert repo["name"] == "spring-framework"
-    assert repo["url"] == "https://github.com/spring-projects/spring-framework"
-    assert repo["default_branch"] == "main"
-    assert repo["indexed_branch"] == "main"
-    assert repo["last_indexed_at"] is not None
-    assert repo["status"] == "indexed"
-
-
-# ---------------------------------------------------------------------------
-# A3: Happy path — search without repo param searches all repos
-# [unit] — mocks QueryHandler
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_search_code_context_without_repo(
-    mock_query_handler, mock_session_factory, mock_es_client
-):
-    """A3: search_code_context without repo calls QueryHandler with repo=None."""
-    from src.query.mcp_server import create_mcp_server
-
-    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
-
-    await search_tool.fn(query="timeout")
-
+    # Verify repo was passed to QueryHandler
     mock_query_handler.handle_nl_query.assert_called_once_with(
-        "timeout", None, None
+        "spring webclient timeout", "spring-framework", None
     )
 
 
 # ---------------------------------------------------------------------------
-# A4: Happy path — symbol query dispatches to handle_symbol_query
+# A3: search_code_context with @branch passes repo string as-is to QueryHandler
 # [unit] — mocks QueryHandler
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_search_code_context_symbol_query(
+async def test_search_code_context_branch_passthrough(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """A4: When detect_query_type returns 'symbol', handle_symbol_query is called."""
+    """A3: repo='spring-framework@main' is passed directly to QueryHandler (no MCP-layer parsing)."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    await tool.fn(query="spring webclient timeout", repo="spring-framework@main")
+
+    # QueryHandler receives the full repo string including @branch
+    mock_query_handler.handle_nl_query.assert_called_once_with(
+        "spring webclient timeout", "spring-framework@main", None
+    )
+
+
+# ---------------------------------------------------------------------------
+# A4: symbol query dispatches to handle_symbol_query with repo
+# [unit] — mocks QueryHandler
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_search_code_context_symbol_query_with_repo(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """A4: symbol query type dispatches to handle_symbol_query with repo passed."""
     from src.query.mcp_server import create_mcp_server
 
     mock_query_handler.detect_query_type.return_value = "symbol"
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
 
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
-
-    result = await search_tool.fn(query="MyClass.method")
+    result = await tool.fn(query="MyClass.method", repo="my-org/my-app")
 
     mock_query_handler.handle_symbol_query.assert_called_once_with(
-        "MyClass.method", None
+        "MyClass.method", "my-org/my-app"
     )
     mock_query_handler.handle_nl_query.assert_not_called()
-
     parsed = json.loads(result)
     assert parsed["query_type"] == "symbol"
 
 
 # ---------------------------------------------------------------------------
-# A5: Happy path — get_chunk returns full content
+# A5: get_chunk returns full content
 # [unit] — mocks ES client
 # ---------------------------------------------------------------------------
 
@@ -280,15 +286,9 @@ async def test_get_chunk_returns_full_content(
     mock_es_client._client.get = AsyncMock(return_value=chunk_doc)
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "get_chunk")
 
-    get_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "get_chunk":
-            get_tool = tool_fn
-            break
-    assert get_tool is not None, "get_chunk tool not registered"
-
-    result = await get_tool.fn(chunk_id="abc123")
+    result = await tool.fn(chunk_id="abc123")
 
     parsed = json.loads(result)
     assert parsed["file_path"] == "src/WebClient.java"
@@ -298,26 +298,42 @@ async def test_get_chunk_returns_full_content(
 
 
 # ---------------------------------------------------------------------------
-# A6: Happy path — list_repositories with fuzzy filter
-# [unit] — mocks session
+# A6: resolve_repository with no match returns empty array
+# [unit] — mocks DB session
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_repositories_with_filter(
+async def test_resolve_repository_no_match_returns_empty(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """A6: list_repositories with query='spring' returns only matching repos."""
+    """A6: resolve_repository with non-matching libraryName returns empty array."""
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
 
-    list_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "list_repositories":
-            list_tool = tool_fn
-            break
+    result = await tool.fn(query="JSON parsing", libraryName="nonexistent")
 
-    result = await list_tool.fn(query="spring")
+    parsed = json.loads(result)
+    assert parsed == []
+
+
+# ---------------------------------------------------------------------------
+# A7: resolve_repository case-insensitive matching
+# [unit] — mocks DB session
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_repository_case_insensitive(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """A7: resolve_repository matches case-insensitively on name+URL."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    result = await tool.fn(query="auth", libraryName="SPRING")
 
     parsed = json.loads(result)
     assert len(parsed) == 2
@@ -326,7 +342,7 @@ async def test_list_repositories_with_filter(
 
 
 # ---------------------------------------------------------------------------
-# B1: Error — empty query raises ValueError
+# B1: error — empty query in search_code_context raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -338,19 +354,14 @@ async def test_search_code_context_empty_query_raises(
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "search_code_context")
 
     with pytest.raises(ValueError, match="query is required"):
-        await search_tool.fn(query="")
+        await tool.fn(query="", repo="x")
 
 
 # ---------------------------------------------------------------------------
-# B2: Error — RetrievalError becomes RuntimeError
+# B2: error — RetrievalError becomes RuntimeError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -358,7 +369,7 @@ async def test_search_code_context_empty_query_raises(
 async def test_search_code_context_retrieval_error(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """B2: RetrievalError from QueryHandler is caught and re-raised as RuntimeError."""
+    """B2: RetrievalError from QueryHandler is re-raised as RuntimeError."""
     from src.query.mcp_server import create_mcp_server
 
     mock_query_handler.handle_nl_query = AsyncMock(
@@ -366,19 +377,14 @@ async def test_search_code_context_retrieval_error(
     )
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "search_code_context")
 
     with pytest.raises(RuntimeError, match="Retrieval failed"):
-        await search_tool.fn(query="test query")
+        await tool.fn(query="test query", repo="x")
 
 
 # ---------------------------------------------------------------------------
-# B3: Error — empty chunk_id raises ValueError
+# B3: error — empty chunk_id raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -390,19 +396,14 @@ async def test_get_chunk_empty_id_raises(
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    get_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "get_chunk":
-            get_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "get_chunk")
 
     with pytest.raises(ValueError, match="chunk_id is required"):
-        await get_tool.fn(chunk_id="")
+        await tool.fn(chunk_id="")
 
 
 # ---------------------------------------------------------------------------
-# B4: Error — chunk not found raises ValueError
+# B4: error — chunk not found raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -419,55 +420,22 @@ async def test_get_chunk_not_found_raises(
     )
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    get_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "get_chunk":
-            get_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "get_chunk")
 
     with pytest.raises(ValueError, match="Chunk not found"):
-        await get_tool.fn(chunk_id="nonexistent")
+        await tool.fn(chunk_id="nonexistent")
 
 
 # ---------------------------------------------------------------------------
-# B4b: Error — ES connection failure in get_chunk raises RuntimeError
+# B5: error — DB failure in resolve_repository raises RuntimeError
 # [unit]
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_get_chunk_es_connection_failure(
-    mock_query_handler, mock_session_factory, mock_es_client
-):
-    """B4b: get_chunk raises RuntimeError when ES connection fails."""
-    from src.query.mcp_server import create_mcp_server
-
-    mock_es_client._client.get = AsyncMock(
-        side_effect=ConnectionError("ES connection refused")
-    )
-
-    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    get_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "get_chunk":
-            get_tool = tool_fn
-            break
-
-    with pytest.raises(RuntimeError, match="Failed to retrieve chunk"):
-        await get_tool.fn(chunk_id="abc123")
-
-
-# ---------------------------------------------------------------------------
-# B5: Error — DB failure in list_repositories raises RuntimeError
-# [unit]
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_list_repositories_db_failure(
+async def test_resolve_repository_db_failure(
     mock_query_handler, mock_es_client
 ):
-    """B5: list_repositories raises RuntimeError on DB session failure."""
+    """B5: resolve_repository raises RuntimeError on DB session failure."""
     from src.query.mcp_server import create_mcp_server
 
     failing_session = AsyncMock()
@@ -478,19 +446,14 @@ async def test_list_repositories_db_failure(
     factory.return_value = failing_session
 
     mcp = create_mcp_server(mock_query_handler, factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
 
-    list_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "list_repositories":
-            list_tool = tool_fn
-            break
-
-    with pytest.raises(RuntimeError, match="Failed to list repositories"):
-        await list_tool.fn()
+    with pytest.raises(RuntimeError, match="Failed to resolve repositories"):
+        await tool.fn(query="test", libraryName="x")
 
 
 # ---------------------------------------------------------------------------
-# B6: Error — ValidationError becomes ValueError
+# B6: error — ValidationError becomes ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -506,19 +469,94 @@ async def test_search_code_context_validation_error(
     )
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "search_code_context")
 
     with pytest.raises(ValueError, match="Unsupported language: rust"):
-        await search_tool.fn(query="test query")
+        await tool.fn(query="test query", repo="x")
 
 
 # ---------------------------------------------------------------------------
-# C1: Boundary — whitespace-only query raises ValueError
+# B7: error — search_code_context without repo raises TypeError
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_search_code_context_without_repo_raises_type_error(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """B7: search_code_context without repo argument raises TypeError (missing required arg)."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    with pytest.raises(TypeError):
+        await tool.fn(query="test")
+
+
+# ---------------------------------------------------------------------------
+# B8: error — empty query in resolve_repository raises ValueError
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_repository_empty_query_raises(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """B8: resolve_repository with empty query raises ValueError."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    with pytest.raises(ValueError, match="query is required"):
+        await tool.fn(query="", libraryName="spring")
+
+
+# ---------------------------------------------------------------------------
+# B9: error — empty libraryName in resolve_repository raises ValueError
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_repository_empty_library_name_raises(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """B9: resolve_repository with empty libraryName raises ValueError."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    with pytest.raises(ValueError, match="libraryName is required"):
+        await tool.fn(query="test", libraryName="")
+
+
+# ---------------------------------------------------------------------------
+# B10: error — ES ConnectionError in get_chunk raises RuntimeError
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_chunk_es_connection_failure(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """B10: get_chunk raises RuntimeError when ES connection fails."""
+    from src.query.mcp_server import create_mcp_server
+
+    mock_es_client._client.get = AsyncMock(
+        side_effect=ConnectionError("ES connection refused")
+    )
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "get_chunk")
+
+    with pytest.raises(RuntimeError, match="Failed to retrieve chunk"):
+        await tool.fn(chunk_id="abc123")
+
+
+# ---------------------------------------------------------------------------
+# C1: boundary — whitespace-only query raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -530,19 +568,14 @@ async def test_search_code_context_whitespace_query_raises(
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "search_code_context")
 
     with pytest.raises(ValueError, match="query is required"):
-        await search_tool.fn(query="   ")
+        await tool.fn(query="   ", repo="x")
 
 
 # ---------------------------------------------------------------------------
-# C2: Boundary — whitespace-only chunk_id raises ValueError
+# C2: boundary — whitespace-only chunk_id raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -554,45 +587,33 @@ async def test_get_chunk_whitespace_id_raises(
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    get_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "get_chunk":
-            get_tool = tool_fn
-            break
+    tool = _get_tool(mcp, "get_chunk")
 
     with pytest.raises(ValueError, match="chunk_id is required"):
-        await get_tool.fn(chunk_id="   ")
+        await tool.fn(chunk_id="   ")
 
 
 # ---------------------------------------------------------------------------
-# C3: Boundary — empty string filter returns all repos
+# C3: boundary — whitespace-only libraryName raises ValueError
 # [unit]
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_repositories_empty_filter_returns_all(
+async def test_resolve_repository_whitespace_library_name_raises(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """C3: list_repositories with empty string query returns all repos (no filter)."""
+    """C3: resolve_repository with whitespace-only libraryName raises ValueError."""
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
 
-    list_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "list_repositories":
-            list_tool = tool_fn
-            break
-
-    result = await list_tool.fn(query="")
-
-    parsed = json.loads(result)
-    assert len(parsed) == 3
+    with pytest.raises(ValueError, match="libraryName is required"):
+        await tool.fn(query="test", libraryName="   ")
 
 
 # ---------------------------------------------------------------------------
-# C4: Boundary — single char query accepted
+# C4: boundary — single char query accepted
 # [unit]
 # ---------------------------------------------------------------------------
 
@@ -604,66 +625,51 @@ async def test_search_code_context_single_char_query(
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
 
-    search_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "search_code_context":
-            search_tool = tool_fn
-            break
+    result = await tool.fn(query="x", repo="x")
 
-    result = await search_tool.fn(query="x")
-
-    # Should not raise — handler was called
     mock_query_handler.handle_nl_query.assert_called()
     parsed = json.loads(result)
     assert "query" in parsed
 
 
 # ---------------------------------------------------------------------------
-# C5: Boundary — case-insensitive filter
-# [unit]
+# C5: boundary — tool registration: exactly 3 tools, correct names (no list_repositories)
+# [integration] — uses real mcp SDK
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_repositories_case_insensitive_filter(
+async def test_mcp_server_registers_three_correct_tools(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """C5: list_repositories with uppercase query matches case-insensitively."""
-    from src.query.mcp_server import create_mcp_server
-
-    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
-
-    list_tool = None
-    for tool_name, tool_fn in mcp._tool_manager._tools.items():
-        if tool_name == "list_repositories":
-            list_tool = tool_fn
-            break
-
-    result = await list_tool.fn(query="SPRING")
-
-    parsed = json.loads(result)
-    assert len(parsed) == 2
-    names = {r["name"] for r in parsed}
-    assert "spring-framework" in names
-    assert "spring-boot" in names
-
-
-# ---------------------------------------------------------------------------
-# Integration: MCP server tool registration
-# [integration] — verifies FastMCP tool registration (real mcp SDK)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_mcp_server_registers_three_tools(
-    mock_query_handler, mock_session_factory, mock_es_client
-):
-    """Integration: create_mcp_server registers exactly 3 tools with correct names."""
+    """C5: create_mcp_server registers resolve_repository, search_code_context, get_chunk (NOT list_repositories)."""
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
 
     tool_names = set(mcp._tool_manager._tools.keys())
-    assert tool_names == {"search_code_context", "list_repositories", "get_chunk"}
+    assert tool_names == {"resolve_repository", "search_code_context", "get_chunk"}
+    assert "list_repositories" not in tool_names
+
+
+# ---------------------------------------------------------------------------
+# C6: boundary — whitespace-only query in resolve_repository raises ValueError
+# [unit]
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_repository_whitespace_query_raises(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """C6: resolve_repository with whitespace-only query raises ValueError."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    with pytest.raises(ValueError, match="query is required"):
+        await tool.fn(query="   ", libraryName="spring")
 
 
 # ---------------------------------------------------------------------------
@@ -673,39 +679,325 @@ async def test_mcp_server_registers_three_tools(
 
 @pytest.mark.real
 @pytest.mark.asyncio
-async def test_real_mcp_sdk_tool_registration_feature_18(
+async def test_real_mcp_sdk_tool_schemas_wave5(
     mock_query_handler, mock_session_factory, mock_es_client
 ):
-    """Real test: FastMCP SDK registers tools with correct input schemas.
+    """Real test: FastMCP SDK registers Wave 5 tools with correct input schemas.
 
     Verifies the real mcp SDK (no mocking of SDK internals) correctly
     parses our tool function signatures and generates valid JSON schemas.
-    Feature #18 — MCP Server.
+    Feature #18 — MCP Server Wave 5.
     """
     from src.query.mcp_server import create_mcp_server
 
     mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
 
-    # Verify tool count
     tools = mcp._tool_manager._tools
     assert len(tools) == 3
 
-    # Verify search_code_context schema has required 'query' param
+    # resolve_repository: both query and libraryName required
+    resolve_tool = tools["resolve_repository"]
+    resolve_schema = resolve_tool.parameters
+    assert "query" in resolve_schema.get("properties", {})
+    assert "query" in resolve_schema.get("required", [])
+    assert "libraryName" in resolve_schema.get("properties", {})
+    assert "libraryName" in resolve_schema.get("required", [])
+
+    # search_code_context: query and repo both required, no max_tokens
     search_tool = tools["search_code_context"]
-    schema = search_tool.parameters
-    assert "query" in schema.get("properties", {})
-    assert "query" in schema.get("required", [])
-    # Optional params should exist but not be required
-    assert "repo" in schema["properties"]
-    assert "repo" not in schema.get("required", [])
+    search_schema = search_tool.parameters
+    assert "query" in search_schema.get("properties", {})
+    assert "query" in search_schema.get("required", [])
+    assert "repo" in search_schema.get("properties", {})
+    assert "repo" in search_schema.get("required", [])
+    # max_tokens should NOT be in schema (removed in Wave 5)
+    assert "max_tokens" not in search_schema.get("properties", {})
 
-    # Verify list_repositories has optional query param
-    list_tool = tools["list_repositories"]
-    list_schema = list_tool.parameters
-    assert "query" in list_schema.get("properties", {})
-
-    # Verify get_chunk has required chunk_id param
+    # get_chunk: chunk_id required (unchanged)
     get_tool = tools["get_chunk"]
     get_schema = get_tool.parameters
     assert "chunk_id" in get_schema.get("properties", {})
     assert "chunk_id" in get_schema.get("required", [])
+
+
+# ---------------------------------------------------------------------------
+# Mutation-killing tests — strengthen assertions to detect surviving mutants
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_mcp_server_name_is_code_context_retrieval(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 1: verify FastMCP server name is exactly 'code-context-retrieval'."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    assert mcp.name == "code-context-retrieval"
+
+
+@pytest.mark.asyncio
+async def test_resolve_repository_query_error_message_exact(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 7: verify exact 'query is required' error message in resolve_repository."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    with pytest.raises(ValueError) as exc_info:
+        await tool.fn(query="", libraryName="spring")
+    assert str(exc_info.value) == "query is required"
+
+
+@pytest.mark.asyncio
+async def test_resolve_repository_libraryname_error_message_exact(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 11: verify exact 'libraryName is required' error message."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    with pytest.raises(ValueError) as exc_info:
+        await tool.fn(query="test", libraryName="")
+    assert str(exc_info.value) == "libraryName is required"
+
+
+@pytest.mark.asyncio
+async def test_resolve_repository_queries_repository_model(
+    mock_query_handler, mock_es_client
+):
+    """Kill mutants 13-15: verify the DB query uses Repository model with status='indexed'.
+
+    Mutant 13: select(None) instead of select(Repository) — crashes on compile
+    Mutant 14: status != 'indexed' instead of == — wrong operator in compiled SQL
+    Mutant 15: 'XXindexedXX' instead of 'indexed' — wrong literal in compiled SQL
+    """
+    from src.query.mcp_server import create_mcp_server
+
+    captured_stmts = []
+
+    session = AsyncMock()
+
+    repo = MagicMock()
+    repo.id = uuid.uuid4()
+    repo.name = "test-repo"
+    repo.url = "https://github.com/test/repo"
+    repo.default_branch = "main"
+    repo.indexed_branch = "main"
+    repo.last_indexed_at = datetime(2026, 1, 1)
+    repo.status = "indexed"
+
+    result_mock = MagicMock()
+    scalars_mock = MagicMock()
+    scalars_mock.all.return_value = [repo]
+    result_mock.scalars.return_value = scalars_mock
+
+    async def _capture_execute(stmt):
+        captured_stmts.append(stmt)
+        return result_mock
+
+    session.execute = AsyncMock(side_effect=_capture_execute)
+    session.close = AsyncMock()
+
+    factory = MagicMock()
+    factory.return_value = session
+
+    mcp = create_mcp_server(mock_query_handler, factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    await tool.fn(query="test", libraryName="test")
+
+    assert len(captured_stmts) == 1
+    stmt = captured_stmts[0]
+    stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    # Must reference repository table, status column, and exact 'indexed' value
+    assert "repository" in stmt_str.lower()
+    # Mutant 15 check: the literal must be exactly 'indexed' not 'XXindexedXX'
+    assert "'indexed'" in stmt_str
+    # Mutant 14 check: must use = not != (or <>)
+    assert "status = 'indexed'" in stmt_str or "status == 'indexed'" in stmt_str
+    # Mutant 13 check: select(None) would fail to compile to a valid FROM clause
+    stmt_upper = stmt_str.upper()
+    assert "FROM REPOSITORY" in stmt_upper or "FROM REPOSITORIES" in stmt_upper
+
+
+@pytest.mark.asyncio
+async def test_resolve_repository_or_filter_name_only(
+    mock_query_handler, mock_es_client
+):
+    """Kill mutant 21: verify OR logic — match on name alone should return result.
+
+    If 'or' is mutated to 'and', a repo whose name matches but URL doesn't
+    would be filtered out incorrectly.
+    """
+    from src.query.mcp_server import create_mcp_server
+
+    # Create a repo where the search term is in the name but NOT in the URL
+    repo = MagicMock()
+    repo.id = uuid.uuid4()
+    repo.name = "my-unique-lib"
+    repo.url = "https://github.com/org/completely-different-url"
+    repo.default_branch = "main"
+    repo.indexed_branch = "main"
+    repo.last_indexed_at = datetime(2026, 1, 1)
+    repo.status = "indexed"
+
+    session = AsyncMock()
+    result_mock = MagicMock()
+    scalars_mock = MagicMock()
+    scalars_mock.all.return_value = [repo]
+    result_mock.scalars.return_value = scalars_mock
+    session.execute = AsyncMock(return_value=result_mock)
+    session.close = AsyncMock()
+
+    factory = MagicMock()
+    factory.return_value = session
+
+    mcp = create_mcp_server(mock_query_handler, factory, mock_es_client)
+    tool = _get_tool(mcp, "resolve_repository")
+
+    # "unique" is in name "my-unique-lib" but NOT in URL
+    result = await tool.fn(query="test", libraryName="unique")
+    parsed = json.loads(result)
+    assert len(parsed) == 1
+    assert parsed[0]["name"] == "my-unique-lib"
+
+
+@pytest.mark.asyncio
+async def test_search_code_context_default_top_k_is_3(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 31: verify default top_k parameter is 3."""
+    from src.query.mcp_server import create_mcp_server
+    import inspect
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    # Check the function signature for default top_k
+    sig = inspect.signature(tool.fn)
+    top_k_param = sig.parameters.get("top_k")
+    assert top_k_param is not None
+    assert top_k_param.default == 3
+
+
+@pytest.mark.asyncio
+async def test_search_code_context_query_error_message_exact(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 35: verify exact 'query is required' message in search_code_context."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    with pytest.raises(ValueError) as exc_info:
+        await tool.fn(query="", repo="x")
+    assert str(exc_info.value) == "query is required"
+
+
+@pytest.mark.asyncio
+async def test_search_code_context_passes_query_to_detect_type(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 36: verify detect_query_type receives actual query, not None."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    await tool.fn(query="spring webclient timeout", repo="spring-framework")
+
+    mock_query_handler.detect_query_type.assert_called_once_with(
+        "spring webclient timeout"
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_code_context_passes_languages_param(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 47: verify languages param is passed through to handle_nl_query."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "search_code_context")
+
+    await tool.fn(
+        query="spring webclient timeout",
+        repo="spring-framework",
+        languages=["java", "kotlin"],
+    )
+
+    mock_query_handler.handle_nl_query.assert_called_once_with(
+        "spring webclient timeout", "spring-framework", ["java", "kotlin"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_chunk_error_message_exact(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutant 57: verify exact 'chunk_id is required' error message."""
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "get_chunk")
+
+    with pytest.raises(ValueError) as exc_info:
+        await tool.fn(chunk_id="")
+    assert str(exc_info.value) == "chunk_id is required"
+
+
+@pytest.mark.asyncio
+async def test_get_chunk_calls_es_with_correct_index_and_id(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """Kill mutants 58-66: verify get_chunk calls ES with correct index names and chunk_id."""
+    from src.query.mcp_server import create_mcp_server
+    from elasticsearch import NotFoundError
+
+    chunk_id = "test-chunk-abc123"
+
+    # Test 1: Found in code_chunks — verify correct index and id
+    chunk_doc = {"_source": {"content": "test code", "file_path": "a.py"}}
+    mock_es_client._client.get = AsyncMock(return_value=chunk_doc)
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool = _get_tool(mcp, "get_chunk")
+
+    await tool.fn(chunk_id=chunk_id)
+
+    mock_es_client._client.get.assert_called_once_with(
+        index="code_chunks", id=chunk_id
+    )
+
+    # Test 2: Not found in code_chunks, falls back to doc_chunks
+    call_count = 0
+
+    async def _get_side_effect(index, id):
+        nonlocal call_count
+        call_count += 1
+        if index == "code_chunks":
+            raise NotFoundError(404, "not found", {})
+        elif index == "doc_chunks":
+            return {"_source": {"content": "test doc", "file_path": "readme.md"}}
+        raise NotFoundError(404, "not found", {})
+
+    mock_es_client._client.get = AsyncMock(side_effect=_get_side_effect)
+
+    mcp2 = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    tool2 = _get_tool(mcp2, "get_chunk")
+
+    result = await tool2.fn(chunk_id=chunk_id)
+    parsed = json.loads(result)
+    assert parsed["content"] == "test doc"
+    assert call_count == 2
+
+    # Verify both calls were made with correct args
+    calls = mock_es_client._client.get.call_args_list
+    assert calls[0].kwargs == {"index": "code_chunks", "id": chunk_id}
+    assert calls[1].kwargs == {"index": "doc_chunks", "id": chunk_id}
