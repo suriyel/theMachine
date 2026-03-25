@@ -14,6 +14,7 @@
 
 ### Added
 - Feature #46: Repository Resolution MCP Tool — `resolve_repository` enhanced with 5-tier match quality sorting (exact name > exact URL segment > prefix name > prefix URL segment > substring), `available_branches` populated from `GitCloner.list_remote_branches()` when clone exists, graceful degradation on git errors
+- Feature #19: Web UI Search Page — mandatory indexed-repo dropdown (no "all repos"), language filter checkboxes, branch selector for registration (via `list_remote_branches_by_url`), syntax-highlighted results with htmx partial updates, Developer Dark theme per UCD
 
 ### Updated
 - Feature #18: MCP Server — Wave 5 Context7-aligned two-step flow: `resolve_repository(query, libraryName)` replaces `list_repositories`; `repo` now required in `search_code_context`; `@branch` suffix pass-through to QueryHandler; `max_tokens` removed; only `status=indexed` repos returned

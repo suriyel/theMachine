@@ -659,7 +659,7 @@
       "title": "Web UI Search Page",
       "description": "Implement Jinja2 SSR web interface with search input, repository filter dropdown, language filter checkboxes, branch selector for registration, syntax-highlighted results with htmx partial updates. Developer Dark theme per UCD.",
       "priority": "medium",
-      "status": "failing",
+      "status": "passing",
       "wave": 5,
       "ui": true,
       "ui_entry": "/",
@@ -675,7 +675,7 @@
         17
       ],
       "st_case_path": "docs/test-cases/feature-19-web-ui-search-page.md",
-      "st_case_count": 7
+      "st_case_count": 12
     },
     {
       "id": 20,
