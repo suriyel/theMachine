@@ -1,0 +1,35 @@
+{
+  "title": "索引管理工具 + 索引管线修复",
+  "description": "新增 CLI 索引管理脚本（reindex/delete/list/stats），修复 reindex API 未派发 Celery 任务、delete_repo_index branch 过滤 bug、Celery worker 缺 psycopg2 三个阻塞性问题。直接需求：type-fest 仓库因 TS type_alias_declaration chunker 修复需要重新索引。",
+  "requested_by": "search-precision-analysis-session",
+  "requested_date": "2026-03-25",
+  "priority": "high",
+  "design_reference": "docs/features/2026-03-25-index-management-tool.md",
+  "changes": [
+    {
+      "type": "new_feature",
+      "title": "CLI Index Management Tool",
+      "description": "scripts/manage_index.py — async CLI with reindex/reindex-all/delete/list/stats subcommands. Reuses existing IndexWriter, ContentExtractor, Chunker, DocChunker, RuleExtractor, EmbeddingEncoder.",
+      "srs_trace": ["FR-019", "FR-020"],
+      "files": ["scripts/manage_index.py"]
+    },
+    {
+      "type": "bugfix",
+      "title": "Fix delete_repo_index branch filter on doc/rule indices",
+      "description": "doc_chunks and rule_chunks ES documents have no 'branch' field, but delete_repo_index filters on repo_id+branch for all indices — doc/rule data never gets deleted. Fix: use repo_id-only filter for doc/rule indices.",
+      "files": ["src/indexing/index_writer.py"]
+    },
+    {
+      "type": "bugfix",
+      "title": "Fix reindex API endpoint not dispatching Celery task",
+      "description": "POST /repos/{id}/reindex creates IndexJob record but never calls reindex_repo_task.delay(). Add Celery dispatch after DB commit.",
+      "files": ["src/query/api/v1/endpoints/repos.py"]
+    },
+    {
+      "type": "bugfix",
+      "title": "Add psycopg2-binary for Celery worker sync DB access",
+      "description": "Celery worker's _get_sync_session() needs psycopg2 (sync PG driver), only asyncpg is installed. Add psycopg2-binary to dev dependencies.",
+      "files": ["pyproject.toml"]
+    }
+  ]
+}
