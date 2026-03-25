@@ -1,13 +1,25 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 46/50 active features passing (4 failing) · Last: Increment Wave 6 (2026-03-25) · Next: #48 Fix delete_repo_index branch filter
+Progress: 47/50 active features passing (3 failing) · Last: #48 Fix delete_repo_index branch filter (2026-03-25) · Next: #49 Fix reindex API Celery dispatch
 
-**Failing features**: #47 Web UI Index Management Page, #48 Fix delete_repo_index branch filter, #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
+**Failing features**: #47 Web UI Index Management Page, #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
 
 ---
 
 ## Session Log
+
+### Feature #48: Fix delete_repo_index branch filter — PASS
+- Completed: 2026-03-25
+- TDD: green ✓
+- Quality Gates: 95.9% line, 83.3% branch, 86.4% mutation (19/22 killed)
+- Feature-ST: 5 cases, all PASS
+- Inline Check: PASS (P2: 1/1 methods verified, T2: 14/14 tests found, D3: OK)
+- Git: fix: delete_repo_index branch filter on doc/rule indices (#48)
+- Service deps: None (TDD), Feature-ST mock-based
+#### Risks
+- ⚠ [Mutant] index_writer.py:198,225,232 — 3 equivalent mutants survive (error message label strings only)
+- ⚠ [Coverage] Branch coverage 83.3% within +5% of 80% threshold — could regress if new branches added
 
 ### Session — Increment Wave 6
 - **Date**: 2026-03-25
