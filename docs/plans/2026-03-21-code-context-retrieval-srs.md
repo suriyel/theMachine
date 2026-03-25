@@ -554,6 +554,24 @@ Admin --> UC22
 
 ---
 
+### FR-031: Web UI Index Management Page [Wave 6]
+
+<!-- Wave 6: Added 2026-03-25 — Index management integrated into Web UI -->
+
+**Priority**: Must
+**EARS**: When an administrator navigates to the index management page in the Web UI, the system shall display a table of all registered repositories with their index status, document counts, and last-indexed timestamp, and shall provide actions to reindex a single repository, reindex all repositories, delete a repository's index data, and view per-repository index statistics, with confirmation prompts for destructive operations.
+**Scope**: Web UI only — not exposed via MCP protocol.
+**Acceptance Criteria**:
+- Given the Web UI is running, when a user navigates to `/admin/indexes`, then the system shall render a page listing all registered repositories with columns: name, status, indexed branch, last indexed timestamp.
+- Given the index management page, when the user clicks "Stats" on a repository, then the system shall display per-index document counts: `code_chunks`, `doc_chunks`, `rule_chunks` (ES) and `code_embeddings`, `doc_embeddings` (Qdrant).
+- Given the index management page, when the user clicks "Reindex" on a repository, then the system shall dispatch a Celery reindex task and display a success message with the job ID.
+- Given the index management page, when the user clicks "Reindex All", then the system shall display a confirmation prompt; upon confirmation, dispatch reindex tasks for all indexed repositories and display a summary message.
+- Given the index management page, when the user clicks "Delete Index" on a repository, then the system shall display a confirmation prompt; upon confirmation, delete all ES and Qdrant index data for that repository and display a success message.
+- Given any action completes, the page shall update via HTMX partial without full page reload.
+- Given the MCP server, the index management routes shall NOT be accessible via MCP tools.
+
+---
+
 ### 4.1 Process Flows
 
 #### Flow: Repository Indexing Pipeline
