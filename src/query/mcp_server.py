@@ -1,4 +1,4 @@
-"""MCP Server — Feature #18 (Wave 5).
+"""MCP Server — Features #18, #46 (Wave 5).
 
 Standalone MCP server exposing resolve_repository, search_code_context, and
 get_chunk tools via the Model Context Protocol.  Delegates to the same
@@ -8,9 +8,11 @@ Wave 5: Context7-aligned two-step flow (resolve → search).
 - resolve_repository replaces list_repositories
 - repo is required in search_code_context
 - max_tokens removed
+- Feature #46: match quality sorting + available_branches population
 """
 
 import json
+import logging
 
 from elasticsearch import NotFoundError
 from mcp.server.fastmcp import FastMCP
@@ -20,11 +22,58 @@ from src.query.exceptions import RetrievalError
 from src.shared.exceptions import ValidationError
 from src.shared.models.repository import Repository
 
+logger = logging.getLogger(__name__)
+
+
+def _score_match(name: str, url: str, library_name_lower: str) -> int:
+    """Score a repository's match quality against a library name.
+
+    Returns:
+        Integer tier: 0=exact name, 1=exact URL segment, 2=prefix name,
+        3=prefix URL segment, 4=substring. -1 if no match.
+    """
+    name_lower = name.lower()
+    url_lower = url.lower()
+    url_segment = url.rstrip("/").rsplit("/", 1)[-1].lower()
+
+    if name_lower == library_name_lower:
+        return 0
+    if url_segment == library_name_lower:
+        return 1
+    if name_lower.startswith(library_name_lower):
+        return 2
+    if url_segment.startswith(library_name_lower):
+        return 3
+    if library_name_lower in name_lower or library_name_lower in url_lower:
+        return 4
+    return -1
+
+
+def _populate_branches(repo, git_cloner) -> list[str]:
+    """Get available branches for a repository, with graceful degradation.
+
+    Returns empty list if git_cloner is None, clone_path is missing,
+    or any git error occurs.
+    """
+    if git_cloner is None:
+        return []
+    if not repo.clone_path:
+        return []
+    try:
+        return git_cloner.list_remote_branches(repo.clone_path)
+    except Exception:
+        logger.warning(
+            "Failed to list branches for %s at %s",
+            repo.name, repo.clone_path,
+        )
+        return []
+
 
 def create_mcp_server(
     query_handler,
     session_factory,
     es_client,
+    git_cloner=None,
 ) -> FastMCP:
     """Create and configure the MCP server with 3 tools.
 
@@ -32,6 +81,7 @@ def create_mcp_server(
         query_handler: QueryHandler instance for search operations.
         session_factory: Async session factory for DB access.
         es_client: ElasticsearchClient for chunk retrieval.
+        git_cloner: Optional GitCloner for populating available_branches.
 
     Returns:
         Configured FastMCP instance with resolve_repository,
@@ -68,13 +118,19 @@ def create_mcp_server(
         finally:
             await session.close()
 
-        lib_lower = libraryName.lower()
-        filtered = [
-            r
-            for r in repos
-            if lib_lower in r.name.lower() or lib_lower in r.url.lower()
-        ]
+        lib_lower = libraryName.strip().lower()
 
+        # Score and filter repos by match quality
+        scored = []
+        for r in repos:
+            tier = _score_match(r.name, r.url, lib_lower)
+            if tier >= 0:
+                scored.append((tier, r))
+
+        # Sort by tier ascending (exact=0 first, substring=4 last)
+        scored.sort(key=lambda x: x[0])
+
+        # Build response with branch population
         return json.dumps(
             [
                 {
@@ -83,14 +139,16 @@ def create_mcp_server(
                     "url": r.url,
                     "indexed_branch": r.indexed_branch,
                     "default_branch": r.default_branch,
-                    "available_branches": [],
+                    "available_branches": _populate_branches(
+                        r, git_cloner
+                    ),
                     "last_indexed_at": (
                         r.last_indexed_at.isoformat()
                         if r.last_indexed_at
                         else None
                     ),
                 }
-                for r in filtered
+                for _, r in scored
             ]
         )
 
