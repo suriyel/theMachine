@@ -1691,6 +1691,11 @@ The `symbol.raw` sub-field (keyword type) enables exact term queries for the sym
 | GET | `/login` | None | API key login page | FR-014 |
 | GET | `/` | API Key (cookie) | Search page (SSR) | FR-017 |
 | GET | `/search` | API Key (cookie) | Search results (HTMX partial) | FR-017, FR-018 |
+| GET | `/admin/indexes` | API Key (cookie) | Index management page (SSR) | FR-031 |
+| GET | `/admin/indexes/{repo_id}/stats` | API Key (cookie) | Index stats (HTMX partial) | FR-031 |
+| POST | `/admin/indexes/{repo_id}/reindex` | API Key (cookie) | Trigger reindex (HTMX partial) | FR-031 |
+| POST | `/admin/indexes/reindex-all` | API Key (cookie) | Trigger reindex all (HTMX partial) | FR-031 |
+| POST | `/admin/indexes/{repo_id}/delete` | API Key (cookie) | Delete index data (HTMX partial) | FR-031 |
 
 ---
 
@@ -1886,6 +1891,125 @@ docker/Dockerfile.worker
 - Redis 7.4.x (sentinel or cluster)
 - RabbitMQ 3.13.x (cluster or single node)
 
+### 4.9 Feature: Web UI Index Management (FR-031) [Wave 6]
+
+#### 4.9.1 Overview
+Dedicated admin page (`/admin/indexes`) in the existing Web UI for managing repository indexes. Provides list, stats, reindex, reindex-all, and delete capabilities with confirmation prompts for destructive operations. Web UI only — **not exposed via MCP**.
+
+#### 4.9.2 Class Diagram
+
+```mermaid
+classDiagram
+    class WebRouter {
+        +index_management_page(request: Request): HTMLResponse
+        +index_stats(request: Request, repo_id: UUID): HTMLResponse
+        +index_reindex(request: Request, repo_id: UUID): HTMLResponse
+        +index_reindex_all(request: Request): HTMLResponse
+        +index_delete(request: Request, repo_id: UUID): HTMLResponse
+    }
+
+    class IndexWriter {
+        +delete_repo_index(repo_id: str, branch: str): None
+    }
+
+    WebRouter --> IndexWriter : uses (delete)
+    WebRouter --> ElasticsearchClient : uses (stats/count)
+    WebRouter --> QdrantClientWrapper : uses (stats/count)
+```
+
+#### 4.9.3 Sequence Diagram — Reindex Single Repo
+
+```mermaid
+sequenceDiagram
+    participant U as Admin (Browser)
+    participant W as WebRouter
+    participant DB as PostgreSQL
+    participant C as Celery
+
+    U->>W: POST /admin/indexes/{repo_id}/reindex
+    W->>DB: SELECT repo WHERE id=repo_id
+    W->>DB: INSERT IndexJob(status=pending)
+    W->>C: reindex_repo_task.delay(repo_id)
+    W-->>U: HTMX partial: "Reindex queued" success message
+```
+
+#### 4.9.4 Sequence Diagram — Delete Index
+
+```mermaid
+sequenceDiagram
+    participant U as Admin (Browser)
+    participant W as WebRouter
+    participant DB as PostgreSQL
+    participant IW as IndexWriter
+    participant ES as Elasticsearch
+    participant Q as Qdrant
+
+    U->>W: POST /admin/indexes/{repo_id}/delete (confirmed)
+    W->>DB: SELECT repo WHERE id=repo_id
+    W->>IW: delete_repo_index(repo_id, branch)
+    IW->>ES: delete_by_query (code_chunks: repo_id+branch)
+    IW->>ES: delete_by_query (doc_chunks: repo_id only)
+    IW->>ES: delete_by_query (rule_chunks: repo_id only)
+    IW->>Q: delete (code_embeddings: repo_id+branch)
+    IW->>Q: delete (doc_embeddings: repo_id only)
+    W->>DB: UPDATE repo SET last_indexed_at=NULL
+    W-->>U: HTMX partial: "Index deleted" success message
+```
+
+#### 4.9.5 Page Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Code Context Retrieval          [Search] [Indexes] │  ← nav links
+├─────────────────────────────────────────────────────┤
+│  Index Management                  [⟳ Reindex All]  │
+├───────┬──────────┬────────┬──────────┬──────────────┤
+│ Name  │ Status   │ Branch │ Indexed  │ Actions      │
+├───────┼──────────┼────────┼──────────┼──────────────┤
+│ repo1 │ indexed  │ main   │ 2h ago   │ [Stats][⟳][✕]│
+│ repo2 │ pending  │ dev    │ never    │ [Stats][⟳][✕]│
+└───────┴──────────┴────────┴──────────┴──────────────┘
+```
+
+- **Stats**: Expands inline row showing ES/Qdrant doc counts per index
+- **⟳ (Reindex)**: Dispatches Celery task, shows success toast
+- **✕ (Delete)**: Confirmation prompt → deletes all index data
+- **⟳ Reindex All**: Confirmation prompt → queues reindex for all indexed repos
+
+#### 4.9.6 Design Notes
+
+- **HTMX integration**: All actions use HTMX (hx-post, hx-confirm for destructive ops, hx-target for partial updates). No full page reloads.
+- **Confirmation**: `hx-confirm="Are you sure?"` attribute on Delete and Reindex All buttons — browser native confirm dialog.
+- **Stats query**: ES `_count` API per index filtered by repo_id; Qdrant `count` API per collection filtered by repo_id. Rendered inline via HTMX partial.
+- **Templates**: `templates/admin/indexes.html` (main page), `templates/partials/index_stats.html` (stats row), `templates/partials/index_action_result.html` (action feedback).
+- **Auth**: Same API key cookie auth as search page. No additional permission level required (existing admin key sufficient).
+- **No MCP exposure**: Routes registered on WebRouter only. MCP server has no knowledge of admin routes.
+- **Celery dispatch**: Reindex uses `reindex_repo_task.delay()` from `src.indexing.scheduler` — same task used by scheduled refresh and the (fixed) REST API endpoint.
+
+#### 4.9.7 Bugfix: `delete_repo_index` Branch Filter (FR-020) [Wave 6]
+
+**Problem**: `doc_chunks` and `rule_chunks` ES documents have no `branch` field (not written by `write_doc_chunks` / `write_rule_chunks`). Similarly `doc_embeddings` Qdrant collection has no `branch` payload. But `delete_repo_index` filters all indices by `repo_id + branch` → doc/rule data never gets deleted.
+
+**Fix**: Split delete queries:
+- `code_chunks` + `code_embeddings` → filter by `repo_id + branch` (has branch field) ✓
+- `doc_chunks` + `rule_chunks` + `doc_embeddings` → filter by `repo_id` only (no branch field)
+
+#### 4.9.8 Bugfix: Reindex API Celery Dispatch (FR-020) [Wave 6]
+
+**Problem**: `POST /api/v1/repos/{repo_id}/reindex` creates `IndexJob` record but never calls `reindex_repo_task.delay()`. The job sits in "pending" forever.
+
+**Fix**: After `session.commit()` in the reindex endpoint, dispatch the Celery task:
+```python
+from src.indexing.scheduler import reindex_repo_task
+reindex_repo_task.delay(str(repo.id))
+```
+
+#### 4.9.9 Bugfix: psycopg2-binary Dependency (FR-019, FR-020) [Wave 6]
+
+**Problem**: Celery worker's `_get_sync_session()` requires a synchronous PostgreSQL driver (`psycopg2`), but only `asyncpg` is installed. Any Celery task touching the DB crashes.
+
+**Fix**: Add `psycopg2-binary>=2.9` to `[project.optional-dependencies] dev` in `pyproject.toml`.
+
 ---
 
 ## 11. Development Plan
@@ -1951,6 +2075,11 @@ docker/Dockerfile.worker
 | 43 | P0 | query-api Docker image (+ src/query/main.py) | FR-027 (Wave 4) | #1, #17 | M8 |
 | 44 | P0 | mcp-server Docker image | FR-028 (Wave 4) | #1, #18 | M8 |
 | 45 | P0 | index-worker Docker image | FR-029 (Wave 4) | #1, #21 | M8 |
+| 46 | P1 | Repository Resolution MCP Tool | FR-030 (Wave 5) | #18 | M4 |
+| 47 | P1 | Web UI Index Management Page | FR-031 (Wave 6) | #19, #22 | M5 |
+| 48 | P1 | Fix delete_repo_index branch filter | Bugfix (Wave 6) | #7 | M2 |
+| 49 | P1 | Fix reindex API Celery dispatch | Bugfix (Wave 6) | #22 | M5 |
+| 50 | P1 | Add psycopg2-binary dependency | Bugfix (Wave 6) | #21 | M5 |
 
 ### 11.3 Dependency Chain
 
@@ -2009,6 +2138,13 @@ graph LR
     F18 --> F44
     F1 --> F45["#45 index-worker image<br/>W4"]
     F21 --> F45
+
+    F18 --> F46["#46 Repo Resolution MCP<br/>W5"]
+    F19 --> F47["#47 Web UI Index Mgmt<br/>W6"]
+    F22 --> F47
+    F7 --> F48["#48 Fix delete branch filter<br/>W6 bugfix"]
+    F22 --> F49["#49 Fix reindex dispatch<br/>W6 bugfix"]
+    F21 --> F50["#50 Add psycopg2-binary<br/>W6 bugfix"]
 ```
 
 ### 11.4 Risk & Mitigation
