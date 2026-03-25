@@ -71,7 +71,15 @@ class Reranker:
             )
             return candidates[:top_k]
 
-        documents = [c.content for c in candidates]
+        # Filter out empty-content candidates — DashScope rerank API rejects
+        # empty documents with 400 InvalidParameter.
+        valid = [(i, c) for i, c in enumerate(candidates) if c.content]
+        if not valid:
+            log.warning("All candidates have empty content, falling back to fusion order")
+            return candidates[:top_k]
+
+        orig_indices, valid_candidates = zip(*valid)
+        documents = [c.content for c in valid_candidates]
 
         try:
             results = self._call_api(query, documents, top_k)
@@ -82,16 +90,16 @@ class Reranker:
             )
             return candidates[:top_k]
 
-        # Map API results back to ScoredChunks
+        # Map API results back to ScoredChunks (remap filtered indices to original)
         scored: list[ScoredChunk] = []
         for item in results:
-            idx = item["index"]
+            filtered_idx = item["index"]
             score = float(item["relevance_score"])
             if score < self._threshold:
                 continue
-            if idx < 0 or idx >= len(candidates):
+            if filtered_idx < 0 or filtered_idx >= len(valid_candidates):
                 continue
-            scored.append(replace(candidates[idx], score=score))
+            scored.append(replace(valid_candidates[filtered_idx], score=score))
 
         if not scored:
             log.warning(
