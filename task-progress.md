@@ -1,13 +1,20 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 46/46 active features passing (0 failing) · Last: #19 Web UI Search Page (2026-03-25) · Next: System Testing
+Progress: 46/50 active features passing (4 failing) · Last: Increment Wave 6 (2026-03-25) · Next: #48 Fix delete_repo_index branch filter
 
-**Failing features**: None — all active features passing
+**Failing features**: #47 Web UI Index Management Page, #48 Fix delete_repo_index branch filter, #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
 
 ---
 
 ## Session Log
+
+### Session — Increment Wave 6
+- **Date**: 2026-03-25
+- **Phase**: Increment
+- **Scope**: Web UI Index Management + index pipeline bugfixes
+- **Changes**: Added 4 features (#47–#50), modified 0 features, deprecated 0 features
+- **Documents updated**: SRS (FR-031), Design (§4.9, §6.3, §11.2, §11.3), ATS (FR-031 mapping, INT-012, coverage stats)
 
 ### Feature #19: Web UI Search Page — PASS
 - Completed: 2026-03-25

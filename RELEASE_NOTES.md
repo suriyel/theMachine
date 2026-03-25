@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Increment Wave 6 — Web UI Index Management + Bugfixes (2026-03-25)
+- **New**: Feature #47 — Web UI Index Management Page (`/admin/indexes`) with list, stats, reindex, reindex-all, delete actions and confirmation prompts for destructive operations (Web UI only, not MCP)
+- **Bugfix**: Feature #48 — Fix `delete_repo_index` branch filter on doc/rule indices (repo_id-only filter for branchless indices)
+- **Bugfix**: Feature #49 — Fix reindex API endpoint not dispatching Celery task after creating IndexJob
+- **Bugfix**: Feature #50 — Add `psycopg2-binary` dependency for Celery worker sync DB access
+
 ### System Testing (2026-03-24)
 - **ST Completed**: All 45 active features passing; 1126 tests, 95% line coverage
 - **Defects Fixed**: DEF-001 (startup client connect), DEF-002 (Celery module-level instance), DEF-003 (Docker aiohttp dependency)
