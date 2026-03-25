@@ -81,6 +81,32 @@ class GitCloner:
                 branches.append(line[len("origin/"):])
         return sorted(branches)
 
+    async def list_remote_branches_by_url(self, url: str) -> list[str]:
+        """List remote branches from a repository URL using git ls-remote.
+
+        This is an async wrapper for the synchronous git command, intended
+        for use by the web router's htmx branch listing endpoint.
+
+        Args:
+            url: Git repository URL (HTTPS or SSH).
+
+        Returns:
+            Sorted list of branch names. Returns empty list on failure.
+        """
+        try:
+            output = self._run_git(["ls-remote", "--heads", url])
+        except CloneError:
+            logger.warning("Failed to list remote branches for %s", url)
+            return []
+
+        branches = []
+        for line in output.strip().splitlines():
+            # Format: <sha>\trefs/heads/<branch>
+            parts = line.split("\t")
+            if len(parts) == 2 and parts[1].startswith("refs/heads/"):
+                branches.append(parts[1][len("refs/heads/"):])
+        return sorted(branches)
+
     def _clone(
         self, url: str, dest_path: str, branch: str | None = None
     ) -> None:

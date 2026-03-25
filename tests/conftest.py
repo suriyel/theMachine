@@ -16,6 +16,26 @@ if os.path.basename(os.getcwd()) == "mutants":
     if "MUTANT_UNDER_TEST" not in os.environ:
         os.environ["MUTANT_UNDER_TEST"] = ""
 
+    # Remove the editable-install finder so mutants/src/ takes priority
+    # over the project-root editable install at /home/.../theMachine/src.
+    # The editable finder is a class (not instance) in meta_path, so check
+    # both type(f).__name__ and getattr(f, '__name__', '').
+    sys.meta_path[:] = [
+        f for f in sys.meta_path
+        if "Editable" not in type(f).__name__
+        and "Editable" not in getattr(f, "__name__", "")
+    ]
+    # Also remove editable namespace path hooks and entries
+    sys.path_hooks[:] = [
+        h for h in sys.path_hooks
+        if "Editable" not in getattr(h, "__qualname__", "")
+    ]
+    sys.path[:] = [p for p in sys.path if "__editable__" not in p]
+    # Clear import caches so PathFinder re-resolves from cleaned sys.path
+    import importlib
+    sys.path_importer_cache.clear()
+    importlib.invalidate_caches()
+
 
 def _fix_mutmut_src_prefix():
     """Fix mutmut 3.x src/ layout prefix mismatch on every pytest invocation.
@@ -40,20 +60,9 @@ def _fix_mutmut_src_prefix():
     if _mut not in _special and not _mut.startswith("src."):
         os.environ["MUTANT_UNDER_TEST"] = "src." + _mut
 
-    # Patch record_trampoline_hit during stats collection
-    if _mut == "stats":
-        try:
-            import mutmut.__main__ as _mutmut_main
-            _orig_record = _mutmut_main.record_trampoline_hit
-
-            def _patched_record(name):
-                if name.startswith("src."):
-                    name = name[4:]
-                _orig_record(name)
-
-            _mutmut_main.record_trampoline_hit = _patched_record
-        except Exception:
-            pass
+    # Note: record_trampoline_hit no longer needs patching since Patch 1
+    # (env-guide.md) keeps the "src." prefix in meta keys, matching
+    # orig.__module__ which already starts with "src.".
 
     # Force reimport of src package from CWD (mutants/) instead of editable install
     for mod_name in list(sys.modules):
@@ -69,15 +78,13 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Skip tests incompatible with mutmut mutants/ directory.
 
-    mutmut copies source to mutants/ but not templates/static or docker/,
-    causing Jinja2 TemplateNotFound errors and Docker build failures.
-    These tests are unrelated to mutation coverage and are safely skippable.
+    mutmut copies source to mutants/ but not docker/ build context,
+    causing Docker build failures.
+    Templates ARE available (copied via also_copy src/), so test_web_ui runs.
     """
     if os.environ.get("MUTANT_UNDER_TEST") or os.path.basename(os.getcwd()) == "mutants":
-        skip_marker = pytest.mark.skip(reason="Unavailable in mutants/ dir (no templates/docker)")
+        skip_marker = pytest.mark.skip(reason="Unavailable in mutants/ dir (no docker)")
         for item in items:
-            if "test_web_ui" in item.nodeid:
-                item.add_marker(skip_marker)
             if "test_feature_44" in item.nodeid or "test_feature_45" in item.nodeid:
                 item.add_marker(skip_marker)
             if "test_docker" in item.nodeid or "test_container" in item.nodeid:

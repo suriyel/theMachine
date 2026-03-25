@@ -58,7 +58,8 @@ class WebRouter:
                 async with session_factory() as session:
                     from src.shared.models.repository import Repository
                     from sqlalchemy import select
-                    result = await session.execute(select(Repository))
+                    stmt = select(Repository).where(Repository.status == "indexed")
+                    result = await session.execute(stmt)
                     repos = result.scalars().all()
         except Exception:
             log.warning("Failed to load repository list for search page", exc_info=True)

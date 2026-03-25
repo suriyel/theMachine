@@ -8,8 +8,8 @@
       <button type="submit" class="search-btn">Search</button>
     </div>
     <div class="search-form__row">
-      <select name="repo" class="repo-dropdown" aria-label="Repository filter">
-        <option value="">All repositories</option>
+      <select name="repo" class="repo-dropdown" aria-label="Repository filter" required>
+        <option value="" disabled selected>Select a repository</option>
         {% for repo in repos %}
         <option value="{{ repo.id }}">{{ repo.name }}</option>
         {% endfor %}
@@ -40,7 +40,7 @@
   <form class="register-form" hx-post="/register" hx-target="#register-result">
     <div class="register-form__row">
       <input type="url" name="url" placeholder="https://github.com/org/repo" aria-label="Repository URL"
-             hx-get="/branches" hx-trigger="blur" hx-target="#branch-select" hx-include="[name='url']">
+             hx-get="/branches" hx-trigger="blur" hx-target="#branch-select" hx-vals="js:{repo_id: document.querySelector('[name=url]').value}">
       <select name="branch" id="branch-select" aria-label="Branch">
         <option value="">Default branch</option>
       </select>

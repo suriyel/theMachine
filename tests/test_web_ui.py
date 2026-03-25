@@ -72,13 +72,27 @@ def mock_query_handler():
     return handler
 
 
+def _make_repo(name: str, status: str = "indexed", repo_id: str | None = None) -> MagicMock:
+    """Create a mock Repository with the given name and status."""
+    repo = MagicMock()
+    repo.name = name
+    repo.id = repo_id or str(uuid.uuid4())
+    repo.status = status
+    repo.url = f"https://github.com/org/{name}"
+    return repo
+
+
 @pytest.fixture
 def mock_session_factory():
-    """Mock session factory returning an async context manager with mock session."""
+    """Mock session factory returning only indexed repos (simulating WHERE filter)."""
     session = AsyncMock()
-    # Simulate repo list query: return empty list by default
+    # Simulate DB returning only indexed repos (the WHERE clause filters in DB)
+    indexed_repos = [
+        _make_repo("repo-alpha", status="indexed"),
+        _make_repo("repo-beta", status="indexed"),
+    ]
     result_mock = MagicMock()
-    result_mock.scalars.return_value.all.return_value = []
+    result_mock.scalars.return_value.all.return_value = indexed_repos
     session.execute.return_value = result_mock
 
     factory = MagicMock()
@@ -121,6 +135,8 @@ def client(app):
 
 # ---------------------------------------------------------------------------
 # T01: GET / renders search page with form elements and UCD dark theme
+#   - Only indexed repos in dropdown (VS-6)
+#   - No "All repositories" option — repo required (VS-5)
 # ---------------------------------------------------------------------------
 def test_search_page_renders_form(client):
     resp = client.get("/")
@@ -134,6 +150,31 @@ def test_search_page_renders_form(client):
     assert 'type="checkbox"' in html
     # UCD dark theme bg
     assert "#0d1117" in html or "0d1117" in html
+    # VS-5: Repo dropdown is mandatory — no "All repositories" option
+    assert "All repositories" not in html
+    # VS-6: Only indexed repos shown (alpha, beta yes; gamma, delta no)
+    assert "repo-alpha" in html
+    assert "repo-beta" in html
+    assert "repo-gamma" not in html
+    assert "repo-delta" not in html
+    # VS-5: repo dropdown has required attribute
+    assert 'required' in html
+
+
+# ---------------------------------------------------------------------------
+# T01b: GET / — verify SQL query includes indexed-only WHERE clause (VS-6)
+# ---------------------------------------------------------------------------
+def test_search_page_filters_indexed_repos(client, mock_session_factory):
+    """Verify the DB query filters to status='indexed' repos only."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    session = mock_session_factory.return_value.__aenter__.return_value
+    # Inspect the SQL statement passed to session.execute()
+    call_args = session.execute.call_args
+    stmt = call_args[0][0]
+    # Convert the SQLAlchemy statement to string to verify WHERE clause
+    stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "indexed" in stmt_str.lower(), f"Expected 'indexed' filter in SQL: {stmt_str}"
 
 
 # ---------------------------------------------------------------------------
@@ -509,3 +550,61 @@ def test_search_page_no_session_factory(mock_query_handler, mock_git_cloner):
     assert resp.status_code == 200
     # Page renders without crash, search input present
     assert "search" in resp.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# WebRouter.branches — uncovered branch paths
+# ---------------------------------------------------------------------------
+
+
+def test_branches_no_git_cloner_returns_empty(mock_query_handler):
+    """Branch 184->195: git_cloner is None → empty branches list."""
+    test_app = FastAPI()
+    web_router = WebRouter()
+    test_app.include_router(web_router.router)
+    test_app.state.query_handler = mock_query_handler
+    # No git_cloner attribute
+    tc = TestClient(test_app)
+    resp = tc.get("/branches?repo_id=some-url")
+    assert resp.status_code == 200
+
+
+def test_branches_empty_repo_id(client, mock_git_cloner):
+    """Branch 184->195: repo_id is empty → skip branch listing."""
+    resp = client.get("/branches?repo_id=")
+    assert resp.status_code == 200
+
+
+def test_branches_empty_result(client, mock_git_cloner):
+    """Branch 186->195: list_remote_branches returns empty list."""
+    mock_git_cloner.list_remote_branches_by_url.return_value = []
+    resp = client.get("/branches?repo_id=some-url")
+    assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Highlighter coverage — uncovered branches
+# ---------------------------------------------------------------------------
+
+
+def test_highlighter_unknown_language_falls_back_to_text():
+    """ClassNotFound branch: unknown language returns TextLexer output."""
+    hl = CodeHighlighter()
+    result = hl.highlight("hello world", "totally_unknown_lang_xyz")
+    # Should still produce HTML (TextLexer fallback), not raise
+    assert "hello world" in result
+    assert "<" in result  # HTML wrapper present
+
+
+def test_highlighter_none_language_falls_back_to_text():
+    """None language branch: falls back to TextLexer."""
+    hl = CodeHighlighter()
+    result = hl.highlight("x = 1", None)
+    assert "x = 1" in result
+
+
+def test_highlighter_empty_language_falls_back_to_text():
+    """Empty string language branch: falls back to TextLexer."""
+    hl = CodeHighlighter()
+    result = hl.highlight("x = 1", "")
+    assert "x = 1" in result

@@ -26,6 +26,7 @@ from src.query.reranker import Reranker
 from src.query.response_builder import ResponseBuilder
 from src.query.retriever import Retriever
 from src.indexing.embedding_encoder import EmbeddingEncoder
+from src.indexing.git_cloner import GitCloner
 from src.indexing.exceptions import EmbeddingModelError
 from src.shared.clients.elasticsearch import ElasticsearchClient
 from src.shared.clients.qdrant import QdrantClientWrapper
@@ -96,6 +97,8 @@ def build_app():
         redis_client=redis_client,
     )
     query_cache = QueryCache(redis_client=redis_client)
+    clone_storage = os.environ.get("CLONE_STORAGE_PATH", "/tmp/code-context-clones")
+    git_cloner = GitCloner(storage_path=clone_storage)
 
     return create_app(
         query_handler=query_handler,
@@ -106,6 +109,7 @@ def build_app():
         qdrant_client=qdrant_client,
         redis_client=redis_client,
         query_cache=query_cache,
+        git_cloner=git_cloner,
     )
 
 

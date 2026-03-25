@@ -11,7 +11,7 @@
 # To run the query-api service:
 #   source .venv/bin/activate
 #   set -a && source .env && set +a
-#   uvicorn src.query.main:app --host 0.0.0.0 --port 8000
+#   uvicorn --factory src.query.main:build_app --host 0.0.0.0 --port 8000
 #
 # Then open http://localhost:8000/ in your browser.
 #
