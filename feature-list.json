@@ -1173,7 +1173,7 @@
       "name": "Repository Resolution MCP Tool",
       "requirement": "FR-030",
       "wave": 5,
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         17
       ],
@@ -1188,7 +1188,9 @@
       "description": "resolve_repository MCP tool with query+libraryName required params, returns indexed repos with branches (Context7-aligned)",
       "priority": "high",
       "category": "query",
-      "ui": false
+      "ui": false,
+      "st_case_path": "docs/test-cases/feature-46-repository-resolution-mcp-tool.md",
+      "st_case_count": 10
     }
   ],
   "waves": [

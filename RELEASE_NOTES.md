@@ -12,6 +12,9 @@
 - **Starlette migration**: `TemplateResponse` API updated for starlette 1.0 (request as 1st positional arg)
 - **Verdict**: **Go** — see docs/plans/2026-03-24-st-report.md
 
+### Added
+- Feature #46: Repository Resolution MCP Tool — `resolve_repository` enhanced with 5-tier match quality sorting (exact name > exact URL segment > prefix name > prefix URL segment > substring), `available_branches` populated from `GitCloner.list_remote_branches()` when clone exists, graceful degradation on git errors
+
 ### Updated
 - Feature #18: MCP Server — Wave 5 Context7-aligned two-step flow: `resolve_repository(query, libraryName)` replaces `list_repositories`; `repo` now required in `search_code_context`; `@branch` suffix pass-through to QueryHandler; `max_tokens` removed; only `status=indexed` repos returned
 - Feature #17: REST API Endpoints — Wave 5: `repo_id` now required (`str`, not `Optional[str]`); ACL `check_repo_access` enforced for non-admin keys; custom `RequestValidationError` handler returns 400 for malformed JSON (422 for schema errors); 13 new Wave 5 tests; ST traceability corrected; 7 downstream test files updated for required `repo_id`

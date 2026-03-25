@@ -1,13 +1,24 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 44/46 active features passing (2 failing) · Last: #18 MCP Server (2026-03-25) · Next: #46 Repository Resolution MCP Tool
+Progress: 45/46 active features passing (1 failing) · Last: #46 Repository Resolution MCP Tool (2026-03-25) · Next: #19 Web UI Search Page
 
-**Failing features**: #19, #46 — Wave 5 Context7-aligned MCP interface
+**Failing features**: #19 — Wave 5 Web UI
 
 ---
 
 ## Session Log
+
+### Feature #46: Repository Resolution MCP Tool — PASS
+- Completed: 2026-03-25
+- TDD: green ✓
+- Quality Gates: 100% line, 100% branch, 88.5% mutation (69/78 killed)
+- Feature-ST: 10 cases, all PASS
+- Inline Check: PASS (P2: 3/3 methods verified, T2: 36/36 tests found, D3: OK)
+- Git: feat: repository resolution MCP tool — match quality sorting + branches (#46)
+#### Risks
+- ⚠ [Mutant] src/query/mcp_server.py:40 — `select(Repository)` mutated to `select(None)` survives (mock session doesn't validate SQL args)
+- ⚠ [Mutant] src/query/mcp_server.py:56 — `tier >= 0` boundary mutations survive (mock-based tests don't isolate exact-match tier=0)
 
 ### Feature #18: MCP Server — PASS
 - Completed: 2026-03-25
