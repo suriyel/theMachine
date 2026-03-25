@@ -179,35 +179,59 @@ class IndexWriter:
     async def delete_repo_index(self, repo_id: str, branch: str) -> None:
         """Delete all chunks for a repo+branch from all ES indices and Qdrant collections.
 
+        code_chunks and code_embeddings have a branch field → filter by repo_id + branch.
+        doc_chunks, rule_chunks, and doc_embeddings have no branch field → filter by repo_id only.
+
         Raises:
             IndexWriteError: If ES or Qdrant delete fails after 3 retries.
         """
-        query = {"query": {"bool": {"must": [
+        repo_branch_query = {"query": {"bool": {"must": [
             {"term": {"repo_id": repo_id}},
             {"term": {"branch": branch}},
         ]}}}
+        repo_only_query = {"query": {"bool": {"must": [
+            {"term": {"repo_id": repo_id}},
+        ]}}}
 
-        for index in ["code_chunks", "doc_chunks", "rule_chunks"]:
+        # code_chunks has branch field
+        await self._retry_write(
+            lambda: self._es._client.delete_by_query(
+                index="code_chunks", body=repo_branch_query
+            ),
+            "ES code_chunks",
+        )
+        # doc_chunks and rule_chunks have no branch field
+        for index in ["doc_chunks", "rule_chunks"]:
             await self._retry_write(
                 lambda idx=index: self._es._client.delete_by_query(
-                    index=idx, body=query
+                    index=idx, body=repo_only_query
                 ),
                 f"ES {index}",
             )
 
         from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-        qdrant_filter = Filter(must=[
+        qdrant_branch_filter = Filter(must=[
             FieldCondition(key="repo_id", match=MatchValue(value=repo_id)),
             FieldCondition(key="branch", match=MatchValue(value=branch)),
         ])
-        for collection in ["code_embeddings", "doc_embeddings"]:
-            await self._retry_write(
-                lambda coll=collection: self._qdrant._client.delete(
-                    collection_name=coll, points_selector=qdrant_filter
-                ),
-                f"Qdrant {collection}",
-            )
+        qdrant_repo_filter = Filter(must=[
+            FieldCondition(key="repo_id", match=MatchValue(value=repo_id)),
+        ])
+        # code_embeddings has branch field
+        await self._retry_write(
+            lambda: self._qdrant._client.delete(
+                collection_name="code_embeddings", points_selector=qdrant_branch_filter
+            ),
+            "Qdrant code_embeddings",
+        )
+        # doc_embeddings has no branch field
+        await self._retry_write(
+            lambda: self._qdrant._client.delete(
+                collection_name="doc_embeddings", points_selector=qdrant_repo_filter
+            ),
+            "Qdrant doc_embeddings",
+        )
 
     async def _batch_qdrant_upsert(
         self, collection_name: str, points: list[PointStruct], batch_size: int = 100
