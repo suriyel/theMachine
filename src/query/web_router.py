@@ -14,6 +14,10 @@ from src.query.highlighter import CodeHighlighter
 from src.query.exceptions import RetrievalError
 from src.shared.exceptions import ConflictError, ValidationError
 from src.shared.services.repo_manager import RepoManager
+from src.indexing.index_writer import IndexWriter
+from src.indexing.exceptions import IndexWriteError
+from src.indexing.scheduler import reindex_repo_task
+from src.shared.models.index_job import IndexJob
 
 if TYPE_CHECKING:
     pass
@@ -52,6 +56,12 @@ class WebRouter:
         self._router.add_api_route("/search", self.search_results, methods=["GET"], response_class=HTMLResponse)
         self._router.add_api_route("/register", self.register_repo, methods=["POST"], response_class=HTMLResponse)
         self._router.add_api_route("/branches", self.list_branches, methods=["GET"], response_class=HTMLResponse)
+        # Index management routes (FR-031)
+        self._router.add_api_route("/admin/indexes", self.index_management_page, methods=["GET"], response_class=HTMLResponse)
+        self._router.add_api_route("/admin/indexes/{repo_id}/stats", self.index_stats, methods=["GET"], response_class=HTMLResponse)
+        self._router.add_api_route("/admin/indexes/{repo_id}/reindex", self.index_reindex, methods=["POST"], response_class=HTMLResponse)
+        self._router.add_api_route("/admin/indexes/reindex-all", self.index_reindex_all, methods=["POST"], response_class=HTMLResponse)
+        self._router.add_api_route("/admin/indexes/{repo_id}/delete", self.index_delete, methods=["POST"], response_class=HTMLResponse)
 
     # ------------------------------------------------------------------
     # GET / — Search page
@@ -205,6 +215,204 @@ class WebRouter:
             "partials/branches.html",
             branches=branches,
             default_branch=default_branch,
+        )
+
+    # ------------------------------------------------------------------
+    # GET /admin/indexes — Index management page (FR-031)
+    # ------------------------------------------------------------------
+
+    async def index_management_page(self, request: Request) -> HTMLResponse:
+        """Render the index management page listing all registered repos."""
+        repos = []
+        session_factory = getattr(request.app.state, "session_factory", None)
+        if session_factory is not None:
+            try:
+                async with session_factory() as session:
+                    from src.shared.models.repository import Repository
+                    from sqlalchemy import select
+                    stmt = select(Repository).order_by(Repository.name)
+                    result = await session.execute(stmt)
+                    repos = result.scalars().all()
+            except Exception:
+                log.warning("Failed to load repos for index management", exc_info=True)
+
+        return self._templates.TemplateResponse(
+            request,
+            "admin/indexes.html",
+            context={"repos": repos},
+        )
+
+    # ------------------------------------------------------------------
+    # GET /admin/indexes/{repo_id}/stats — Index stats (FR-031)
+    # ------------------------------------------------------------------
+
+    async def index_stats(self, request: Request, repo_id: str) -> HTMLResponse:
+        """Render inline stats showing ES/Qdrant doc counts for a repo."""
+        session_factory = getattr(request.app.state, "session_factory", None)
+        if session_factory is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Database not configured")
+
+        async with session_factory() as session:
+            from src.shared.models.repository import Repository
+            from sqlalchemy import select
+            stmt = select(Repository).where(Repository.id == repo_id)
+            result = await session.execute(stmt)
+            repo = result.scalars().first()
+
+        if repo is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Repository not found")
+
+        es_client = getattr(request.app.state, "es_client", None)
+        if es_client is None or getattr(es_client, "_client", None) is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Search service not configured")
+
+        repo_id_str = str(repo.id)
+        repo_query = {"query": {"term": {"repo_id": repo_id_str}}}
+
+        try:
+            code_chunks = (await es_client._client.count(index="code_chunks", body=repo_query))["count"]
+            doc_chunks = (await es_client._client.count(index="doc_chunks", body=repo_query))["count"]
+            rule_chunks = (await es_client._client.count(index="rule_chunks", body=repo_query))["count"]
+        except Exception:
+            return self._render_partial(request, "partials/index_action_result.html", error="Failed to retrieve index stats")
+
+        code_embeddings = 0
+        doc_embeddings = 0
+        qdrant_client = getattr(request.app.state, "qdrant_client", None)
+        if qdrant_client is not None and getattr(qdrant_client, "_client", None) is not None:
+            try:
+                from qdrant_client.models import FieldCondition, Filter, MatchValue
+                qfilter = Filter(must=[FieldCondition(key="repo_id", match=MatchValue(value=repo_id_str))])
+                code_embeddings = (await qdrant_client._client.count("code_embeddings", count_filter=qfilter)).count
+                doc_embeddings = (await qdrant_client._client.count("doc_embeddings", count_filter=qfilter)).count
+            except Exception:
+                log.warning("Qdrant count failed, using 0", exc_info=True)
+
+        return self._render_partial(
+            request,
+            "partials/index_stats.html",
+            code_chunks=code_chunks,
+            doc_chunks=doc_chunks,
+            rule_chunks=rule_chunks,
+            code_embeddings=code_embeddings,
+            doc_embeddings=doc_embeddings,
+        )
+
+    # ------------------------------------------------------------------
+    # POST /admin/indexes/{repo_id}/reindex — Reindex single (FR-031)
+    # ------------------------------------------------------------------
+
+    async def index_reindex(self, request: Request, repo_id: str) -> HTMLResponse:
+        """Create IndexJob and dispatch Celery reindex task for a single repo."""
+        session_factory = getattr(request.app.state, "session_factory", None)
+        if session_factory is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Database not configured")
+
+        async with session_factory() as session:
+            from src.shared.models.repository import Repository
+            from sqlalchemy import select
+            stmt = select(Repository).where(Repository.id == repo_id)
+            result = await session.execute(stmt)
+            repo = result.scalars().first()
+
+            if repo is None:
+                return self._render_partial(request, "partials/index_action_result.html", error="Repository not found")
+
+            branch = repo.indexed_branch or repo.default_branch or "main"
+            job = IndexJob(repo_id=repo.id, branch=branch, status="pending")
+            session.add(job)
+            await session.commit()
+
+        try:
+            reindex_repo_task.delay(str(repo.id))
+        except Exception:
+            return self._render_partial(request, "partials/index_action_result.html", error="Failed to dispatch reindex task")
+
+        return self._render_partial(
+            request,
+            "partials/index_action_result.html",
+            success=True,
+            message=f"Reindex queued for {repo.name}",
+            job_id=str(job.id),
+        )
+
+    # ------------------------------------------------------------------
+    # POST /admin/indexes/reindex-all — Reindex all repos (FR-031)
+    # ------------------------------------------------------------------
+
+    async def index_reindex_all(self, request: Request) -> HTMLResponse:
+        """Dispatch Celery reindex tasks for all registered repos."""
+        session_factory = getattr(request.app.state, "session_factory", None)
+        if session_factory is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Database not configured")
+
+        async with session_factory() as session:
+            from src.shared.models.repository import Repository
+            from sqlalchemy import select
+            stmt = select(Repository)
+            result = await session.execute(stmt)
+            repos = result.scalars().all()
+
+        if not repos:
+            return self._render_partial(
+                request,
+                "partials/index_action_result.html",
+                message="No repositories registered",
+            )
+
+        queued = 0
+        for repo in repos:
+            try:
+                reindex_repo_task.delay(str(repo.id))
+                queued += 1
+            except Exception:
+                log.warning("Failed to dispatch reindex for %s", repo.name)
+
+        return self._render_partial(
+            request,
+            "partials/index_action_result.html",
+            success=True,
+            message=f"Reindex queued for {queued} repositories",
+        )
+
+    # ------------------------------------------------------------------
+    # POST /admin/indexes/{repo_id}/delete — Delete index (FR-031)
+    # ------------------------------------------------------------------
+
+    async def index_delete(self, request: Request, repo_id: str) -> HTMLResponse:
+        """Delete all index data for a repo and clear last_indexed_at."""
+        session_factory = getattr(request.app.state, "session_factory", None)
+        if session_factory is None:
+            return self._render_partial(request, "partials/index_action_result.html", error="Database not configured")
+
+        async with session_factory() as session:
+            from src.shared.models.repository import Repository
+            from sqlalchemy import select
+            stmt = select(Repository).where(Repository.id == repo_id)
+            result = await session.execute(stmt)
+            repo = result.scalars().first()
+
+            if repo is None:
+                return self._render_partial(request, "partials/index_action_result.html", error="Repository not found")
+
+            branch = repo.indexed_branch or repo.default_branch or "main"
+            es_client = getattr(request.app.state, "es_client", None)
+            qdrant_client = getattr(request.app.state, "qdrant_client", None)
+            index_writer = IndexWriter(es_client, qdrant_client)
+
+            try:
+                await index_writer.delete_repo_index(str(repo.id), branch)
+            except IndexWriteError as e:
+                return self._render_partial(request, "partials/index_action_result.html", error=f"Failed to delete index: {e}")
+
+            repo.last_indexed_at = None
+            await session.commit()
+
+        return self._render_partial(
+            request,
+            "partials/index_action_result.html",
+            success=True,
+            message=f"Index deleted for {repo.name}",
         )
 
     # ------------------------------------------------------------------

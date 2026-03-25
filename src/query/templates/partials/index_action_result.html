@@ -1,0 +1,7 @@
+{% if success %}
+<div class="success-message">{{ message }}{% if job_id %} (Job ID: {{ job_id }}){% endif %}</div>
+{% elif error %}
+<div class="error-message">{{ error }}</div>
+{% else %}
+<div class="info-message">{{ message }}</div>
+{% endif %}

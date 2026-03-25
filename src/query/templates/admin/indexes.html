@@ -1,0 +1,61 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="index-management">
+  <div class="index-management__header">
+    <h2>Index Management</h2>
+    <button class="btn btn--primary"
+            hx-post="/admin/indexes/reindex-all"
+            hx-target="#action-result"
+            hx-confirm="Are you sure you want to reindex all repositories?">
+      Reindex All
+    </button>
+  </div>
+
+  <div id="action-result"></div>
+
+  {% if repos %}
+  <table class="index-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Branch</th>
+        <th>Last Indexed</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for repo in repos %}
+      <tr>
+        <td>{{ repo.name }}</td>
+        <td>{{ repo.status }}</td>
+        <td>{{ repo.indexed_branch or repo.default_branch or "—" }}</td>
+        <td>{{ repo.last_indexed_at if repo.last_indexed_at else "never" }}</td>
+        <td class="index-table__actions">
+          <button class="btn btn--small"
+                  hx-get="/admin/indexes/{{ repo.id }}/stats"
+                  hx-target="#stats-{{ repo.id }}">
+            Stats
+          </button>
+          <button class="btn btn--small"
+                  hx-post="/admin/indexes/{{ repo.id }}/reindex"
+                  hx-target="#action-result">
+            Reindex
+          </button>
+          <button class="btn btn--small btn--danger"
+                  hx-post="/admin/indexes/{{ repo.id }}/delete"
+                  hx-target="#action-result"
+                  hx-confirm="Are you sure you want to delete the index for {{ repo.name }}?">
+            Delete
+          </button>
+        </td>
+      </tr>
+      <tr id="stats-{{ repo.id }}"></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No repositories registered.</p>
+  {% endif %}
+</div>
+{% endblock %}
