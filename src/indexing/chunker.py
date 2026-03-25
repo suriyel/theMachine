@@ -90,7 +90,7 @@ LANGUAGE_NODE_MAPS: dict[str, LanguageNodeMap] = {
         body_delimiter="{",
     ),
     "typescript": LanguageNodeMap(
-        class_nodes=["class_declaration", "interface_declaration", "enum_declaration"],
+        class_nodes=["class_declaration", "interface_declaration", "enum_declaration", "type_alias_declaration"],
         function_nodes=[
             "function_declaration",
             "arrow_function",
@@ -550,9 +550,17 @@ class Chunker:
                                 m_sig if m_sig else m_name
                             )
 
-                content = signature + "\n" + doc_comment
-                if method_sigs:
-                    content += "\n" + "\n".join(method_sigs)
+                # For nodes without a body (e.g. TS type_alias_declaration),
+                # use the full node text so the type definition is searchable.
+                if body is None and not method_sigs:
+                    full_text = child.text.decode("utf-8") if child.text else ""
+                    content = full_text
+                    if doc_comment:
+                        content = doc_comment + "\n" + content
+                else:
+                    content = signature + "\n" + doc_comment
+                    if method_sigs:
+                        content += "\n" + "\n".join(method_sigs)
 
                 chunk_id = (
                     f"{repo_id}:{branch}:{file.path}:"

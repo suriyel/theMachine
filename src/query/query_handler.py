@@ -273,7 +273,7 @@ class QueryHandler:
         # Step 3: ES fuzzy query (fuzziness=AUTO)
         fuzzy_bool: dict = {
             "must": [
-                {"match": {"symbol": {"query": query, "fuzziness": "AUTO"}}}
+                {"match": {"symbol": {"query": query, "fuzziness": "AUTO", "prefix_length": 3}}}
             ],
         }
         if filter_clauses:
