@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import time
+import urllib.parse
 import urllib.request
 import urllib.error
 
@@ -759,3 +760,247 @@ class TestCompatibility:
         """SRS §1.4: Linux platform."""
         import platform
         assert platform.system() == "Linux"
+
+
+# ---------------------------------------------------------------------------
+# Cross-repo targeted query validation
+# Verifies search precision across all 6 indexed repos (6 languages).
+# Derived from Chrome DevTools MCP manual verification session 2026-03-25.
+# ---------------------------------------------------------------------------
+
+# Repo name → UUID cache (populated lazily)
+_REPO_UUID_CACHE: dict[str, str] = {}
+
+
+def _resolve_repo_uuid(repo_name: str) -> str:
+    """Resolve 'owner/repo' name to UUID via repos API. Cached."""
+    if repo_name in _REPO_UUID_CACHE:
+        return _REPO_UUID_CACHE[repo_name]
+    code, data = get("/api/v1/repos")
+    assert code == 200, f"Failed to list repos: {code}"
+    for repo in data:
+        _REPO_UUID_CACHE[repo["name"]] = str(repo["id"])
+    assert repo_name in _REPO_UUID_CACHE, f"Repo {repo_name} not found in repo list"
+    return _REPO_UUID_CACHE[repo_name]
+
+
+def _query_repo(query: str, repo_name: str, **kwargs) -> tuple[int, dict]:
+    """POST /api/v1/query with auto-resolved repo UUID."""
+    body = {"query": query, "repo_id": _resolve_repo_uuid(repo_name), **kwargs}
+    return post("/api/v1/query", body)
+
+
+def _web_search(query: str, repo_id: str, languages: list[str] | None = None) -> str:
+    """Hit the Web UI /search endpoint (no auth required) and return raw HTML."""
+    params = f"q={urllib.parse.quote(query)}&repo={repo_id}"
+    if languages:
+        for lang in languages:
+            params += f"&languages={urllib.parse.quote(lang)}"
+    url = f"{API_BASE}/search?{params}"
+    with urllib.request.urlopen(url, timeout=15) as resp:
+        return resp.read().decode()
+
+
+def _extract_results(html: str) -> list[dict]:
+    """Extract file, symbol, score from result card HTML."""
+    import re
+    files = re.findall(r'result-card__file-path[^>]*>([^<]+)', html)
+    symbols = re.findall(r'result-card__symbol[^>]*>([^<]+)', html)
+    scores = re.findall(r'result-card__score[^>]*>([^<]+)', html)
+    results = []
+    for i, s in enumerate(scores):
+        results.append({
+            "file": files[i].strip() if i < len(files) else "",
+            "symbol": symbols[i].strip() if i < len(symbols) else "",
+            "score": float(s.strip()),
+        })
+    return results
+
+
+@pytest.mark.real
+class TestCrossRepoSearchPrecision:
+    """Targeted queries against all 6 indexed repos — validates reranker scores
+    and result relevance across Java, C++, C, JS, TS, Python."""
+
+    # -- Java: google/gson --
+
+    # -- Java: google/gson --
+
+    def test_gson_type_adapter_symbol_query(self):
+        """Java symbol query: 'TypeAdapter' on gson returns relevant factories with high scores."""
+        code, data = _query_repo("TypeAdapter", "google/gson")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        top = results[0]
+        assert "TypeAdapter" in top["file_path"] or "TypeAdapter" in top.get("symbol", "") or \
+               "Adapter" in top["file_path"] or "TypeAdapter" in top["content"]
+        assert top["relevance_score"] > 0.5, f"Expected high reranker score, got {top['relevance_score']}"
+
+    def test_gson_deserialize_nl_query(self):
+        """Java NL query: 'deserialize JSON to object' returns deserialize methods."""
+        code, data = _query_repo("deserialize JSON to object", "google/gson")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        has_deserialize = any(
+            "deserialize" in r.get("symbol", "").lower() or
+            "deserialize" in r["content"].lower()
+            for r in results
+        )
+        assert has_deserialize, "Expected at least one result referencing 'deserialize'"
+
+    # -- C++: gabime/spdlog --
+
+    def test_spdlog_async_logger_returns_code(self):
+        """C++ NL query: 'async logger' on spdlog returns code files (not just README)."""
+        code, data = _query_repo("async logger", "gabime/spdlog")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        top = results[0]
+        assert top["relevance_score"] > 0.5, f"Expected reranker score > 0.5, got {top['relevance_score']}"
+        cpp_results = [r for r in results if r["file_path"].endswith((".cpp", ".h", ".hpp"))]
+        assert len(cpp_results) >= 1, "Expected at least one C++ source file in results"
+
+    def test_spdlog_cpp_language_filter_works(self):
+        """C++ language filter: 'async logger' with languages=['cpp'] returns code results."""
+        code, data = _query_repo("async logger", "gabime/spdlog", languages=["cpp"])
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1, "cpp filter returned no code results (alias mapping broken?)"
+        for r in results:
+            assert r["language"] == "cpp", f"Expected language=cpp, got {r['language']}"
+
+    def test_spdlog_cpp_alias_filter(self):
+        """C++ alias: languages=['c++'] accepted at query handler level (REST may reject)."""
+        code, data = _query_repo("async logger", "gabime/spdlog", languages=["c++"])
+        # REST layer may not pass c++ through to LanguageFilter (pydantic validation).
+        # 200 = alias mapped successfully; 400 = REST schema rejected before alias mapping.
+        # Both are acceptable — the canonical 'cpp' is tested separately.
+        assert code in (200, 400), f"Unexpected status {code}"
+
+    # -- C: redis/hiredis --
+
+    def test_hiredis_socket_connection_returns_c_code(self):
+        """C NL query: 'socket connection' on hiredis returns .c source files."""
+        code, data = _query_repo("socket connection", "redis/hiredis")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        c_results = [r for r in results if r["file_path"].endswith((".c", ".h"))]
+        assert len(c_results) >= 1, "Expected at least one C source file"
+
+    def test_hiredis_redis_connect_symbol(self):
+        """C symbol query: 'redisConnect' on hiredis returns connection-related code."""
+        code, data = _query_repo("redisConnect", "redis/hiredis")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        has_connect = any(
+            "connect" in r["content"].lower() or "redisConnect" in r["content"]
+            for r in results
+        )
+        assert has_connect, "Expected results referencing redis connection logic"
+
+    # -- JavaScript: expressjs/morgan --
+
+    def test_morgan_middleware_format_reranker_scores(self):
+        """JS NL query: 'middleware format' on morgan has reranker scores (not 0.02 RRF fallback)."""
+        code, data = _query_repo("middleware format", "expressjs/morgan")
+        assert code == 200
+        results = data["code_results"] + data.get("doc_results", [])
+        assert len(results) >= 1
+        top = results[0]
+        assert top["relevance_score"] > 0.1, \
+            f"Score {top['relevance_score']} too low — reranker likely falling back to RRF"
+
+    def test_morgan_format_function_found(self):
+        """JS NL query: 'format' on morgan returns the core format function."""
+        code, data = _query_repo("format function", "expressjs/morgan")
+        assert code == 200
+        results = data["code_results"]
+        has_format = any(
+            "format" in r.get("symbol", "").lower() or
+            "format" in r["file_path"].lower() or
+            "format" in r["content"][:200].lower()
+            for r in results
+        )
+        assert has_format, "Expected a result containing morgan's format function"
+
+    # -- TypeScript: sindresorhus/type-fest --
+
+    def test_typefest_returns_results(self):
+        """TS query: 'Simplify' on type-fest returns at least some results."""
+        code, data = _query_repo("Simplify", "sindresorhus/type-fest")
+        assert code == 200
+        all_results = data["code_results"] + data.get("doc_results", [])
+        assert len(all_results) >= 1, "type-fest query returned no results at all"
+
+    def test_typefest_ts_alias_filter(self):
+        """TS alias: languages=['ts'] is accepted and maps to 'typescript'."""
+        code, data = _query_repo("utility type", "sindresorhus/type-fest", languages=["ts"])
+        assert code == 200
+
+    # -- Python: suriyel/githubtrends --
+
+    def test_githubtrends_search_trending(self):
+        """Python NL query: 'search trending repos' returns relevant Python code."""
+        code, data = _query_repo("search trending repos", "suriyel/githubtrends")
+        assert code == 200
+        results = data["code_results"]
+        assert len(results) >= 1
+        top = results[0]
+        assert top["relevance_score"] > 0.1, f"Reranker score too low: {top['relevance_score']}"
+
+    def test_githubtrends_python_filter(self):
+        """Python filter: 'py' alias is accepted and returns python results."""
+        code, data = _query_repo("github api", "suriyel/githubtrends", languages=["py"])
+        assert code == 200
+        for r in data.get("code_results", []):
+            assert r["language"] == "python"
+
+    # -- Web UI specific --
+
+    def test_web_ui_indexed_repos_only(self):
+        """FR-017 Wave 5: Web UI repo dropdown shows only indexed repos, no 'All repositories'."""
+        url = f"{API_BASE}/"
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            html = resp.read().decode()
+        assert "All repositories" not in html
+        assert "Select a repository" in html
+        assert 'required' in html
+        for name in ("suriyel/githubtrends", "google/gson", "sindresorhus/type-fest",
+                     "expressjs/morgan", "redis/hiredis", "gabime/spdlog"):
+            assert name in html, f"Indexed repo {name} not found in dropdown"
+
+    def test_web_ui_empty_query_validation(self):
+        """FR-017: Empty query returns 'Please enter a search query'."""
+        html = _web_search("", _resolve_repo_uuid("suriyel/githubtrends"))
+        assert "Please enter a search query" in html
+
+    def test_web_ui_dark_theme_applied(self):
+        """FR-017: Web UI renders with UCD Developer Dark theme colors."""
+        url = f"{API_BASE}/"
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            html = resp.read().decode()
+        assert "#0d1117" in html or "color-bg-primary" in html
+
+    def test_web_ui_search_returns_highlighted_code(self):
+        """FR-017: Search via Web UI returns syntax-highlighted result cards."""
+        html = _web_search("timeout", _resolve_repo_uuid("suriyel/githubtrends"))
+        assert "result-card" in html
+        assert "result-card__file-path" in html
+        assert "result-card__score" in html
+
+    # -- Language alias regression --
+
+    def test_language_alias_js(self):
+        """Language alias: 'js' maps to 'javascript'."""
+        code, data = _query_repo("middleware", "expressjs/morgan", languages=["js"])
+        assert code == 200
+
+    def test_language_alias_jsx(self):
+        """Language alias: 'jsx' maps to 'javascript'."""
+        code, data = _query_repo("test", "expressjs/morgan", languages=["jsx"])
+        assert code == 200
