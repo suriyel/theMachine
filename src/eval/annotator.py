@@ -67,6 +67,13 @@ PROVIDERS = {
         "model_env": "ZHIPU_MODEL",
         "model_default": "glm-4",
     },
+    "openai_compatible": {
+        "base_url_env": "OPENAI_COMPAT_BASE_URL",
+        "api_key_env": "OPENAI_COMPAT_API_KEY",
+        "model_env": "OPENAI_COMPAT_MODEL",
+        "model_default": "",
+        "ssl_verify": False,
+    },
 }
 
 
@@ -100,15 +107,25 @@ class LLMAnnotator:
         if provider is None:
             provider = os.environ.get("EVAL_LLM_PROVIDER", "minimax")
 
-        self._base_url, self._api_key, self._model = self._resolve_provider_config(provider)
-        self._client = OpenAI(api_key=self._api_key, base_url=self._base_url)
+        self._base_url, self._api_key, self._model, ssl_verify = (
+            self._resolve_provider_config(provider)
+        )
+        if not ssl_verify:
+            import httpx as _httpx
+            self._client = OpenAI(
+                api_key=self._api_key,
+                base_url=self._base_url,
+                http_client=_httpx.Client(verify=False),
+            )
+        else:
+            self._client = OpenAI(api_key=self._api_key, base_url=self._base_url)
         self._retriever = retriever
 
     @staticmethod
-    def _resolve_provider_config(provider: str) -> tuple[str, str, str]:
+    def _resolve_provider_config(provider: str) -> tuple[str, str, str, bool]:
         """Resolve provider configuration from environment variables.
 
-        Returns (base_url, api_key, model).
+        Returns (base_url, api_key, model, ssl_verify).
         Raises ValueError if provider is unsupported or required env vars are missing.
         """
         if provider not in PROVIDERS:
@@ -126,7 +143,8 @@ class LLMAnnotator:
         if not base_url:
             raise ValueError(f"Missing env var: {cfg['base_url_env']}")
 
-        return base_url, api_key, model
+        ssl_verify: bool = cfg.get("ssl_verify", True)
+        return base_url, api_key, model, ssl_verify
 
     def generate_queries(
         self,
