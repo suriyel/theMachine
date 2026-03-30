@@ -42,3 +42,6 @@ Thumbs.db
 
 # Cloned repositories (indexing work directory)
 repos/
+
+# Celery runtime state
+celerybeat-schedule
