@@ -6,7 +6,7 @@
 
 | Service Name | Port | Start Command | Stop Command | Verify URL |
 |---|---|---|---|---|
-| query-api | 8000 | `uvicorn --factory src.query.app:create_app --host 0.0.0.0 --port 8000` | kill PID | `http://localhost:8000/api/v1/health` |
+| query-api | 8000 | `uvicorn --factory src.query.main:build_app --host 0.0.0.0 --port 8000` | kill PID | `http://localhost:8000/api/v1/health` |
 | mcp-server | 3000 | `python -m src.query.mcp` | kill PID | `http://localhost:3000/health` |
 | index-worker | — | `celery -A src.indexing.celery_app worker --loglevel=info` | kill PID | N/A (check celery inspect active) |
 | celery-beat | — | `celery -A src.indexing.celery_app beat --loglevel=info` | kill PID | N/A |
@@ -34,7 +34,7 @@ source .venv/bin/activate
 set -a && source .env && set +a
 
 # Start query-api
-uvicorn --factory src.query.app:create_app --host 0.0.0.0 --port 8000 > /tmp/svc-query-api-start.log 2>&1 &
+env -u ALL_PROXY -u all_proxy uvicorn --factory src.query.main:build_app --host 0.0.0.0 --port 8000 > /tmp/svc-query-api-start.log 2>&1 &
 sleep 3
 head -30 /tmp/svc-query-api-start.log
 # → Record PID in task-progress.md
@@ -279,9 +279,78 @@ mutmut run --paths-to-mutate=src/
 mutmut run  # no scope = all of src/
 ```
 
+### Troubleshooting
+
+#### 1. Source code corruption after `mutmut run`
+
+**Symptom**: mutmut v3 uses a "trampoline" mechanism that rewrites source files in-place during mutation. If mutmut is interrupted (timeout, SIGKILL, Ctrl-C) or crashes mid-run, the source file may be left in a corrupted/mutated state instead of being restored to the original.
+
+**Detection**:
+```bash
+git diff src/  # if unexpected changes appear after mutmut run, source was corrupted
+```
+
+**Fix**:
+```bash
+git checkout -- src/<corrupted_file>.py
+```
+
+**Prevention**: Always verify source integrity after mutmut completes:
+```bash
+mutmut run --paths-to-mutate=src/foo.py && git diff --quiet src/foo.py || echo "WARNING: source corrupted, restoring" && git checkout -- src/foo.py
+```
+
+#### 2. All mutants report "no tests" (🫥, exit code 33)
+
+**Symptom**: `mutmut results` shows all mutants as 🫥 (untested) even though pytest kills them when run manually.
+
+**Cause**: Patch 1 (line 261) not applied — `strip_prefix('src.')` strips the package prefix causing module name mismatch.
+
+**Fix**: Re-apply Patch 1 (see "Applied Patch" above).
+
+**Verify**:
+```bash
+python -c "
+import mutmut.__main__ as m; import inspect; src = inspect.getsource(m)
+assert \"strip_prefix\" not in src.split(\"\\n\")[260], 'Patch 1 NOT applied'
+print('Patch 1 OK')
+"
+```
+
+#### 3. Mutation run takes >10 minutes for a single file
+
+**Symptom**: `mutmut run --paths-to-mutate=src/foo.py` generates many mutants and each one runs the full test suite.
+
+**Cause**: mutmut runs ALL discovered tests for each mutant by default. Large test files (e.g., `test_index_writer.py` with 25+ tests × 22 mutants = 550 test executions).
+
+**Mitigation**: Scope the test runner to only run feature-relevant tests:
+```bash
+mutmut run --paths-to-mutate=src/indexing/index_writer.py \
+  --runner="python -m pytest tests/test_index_writer.py -x -q"
+```
+The `-x` flag (fail-fast) kills the test run on first failure per mutant, significantly reducing total time.
+
+#### 4. `mutmut results` crashes with KeyError
+
+**Symptom**: `mutmut results` or `mutmut run` crashes with `KeyError` in `tests_by_mangled_function_name`.
+
+**Cause**: Patch 2 (line 702) not applied — third-party `__init__` methods not in the function map.
+
+**Fix**: Re-apply Patch 2 (see "Patch 2" above).
+
+#### 5. Exit code 2 (mutmut internal error)
+
+**Symptom**: `mutmut run` exits with code 2 instead of 0 (all killed) or 1 (survivors).
+
+**Common causes**:
+- `.mutmut-cache` stale or corrupted → delete and re-run: `rm -rf .mutmut-cache && mutmut run ...`
+- Python import errors in mutated code → check that `conftest.py` hook is intact (see "conftest.py Hook" above)
+- Source file syntax error from interrupted run → restore with `git checkout`
+
 ### Equivalent Mutants (expected survivors)
 
 | Mutant | Why equivalent |
 |---|---|
 | `echo=False` → `echo=True` or removed | SQLAlchemy `create_async_engine` defaults to `echo=False` |
 | `version="0.1.0"` removed | FastAPI defaults to `version="0.1.0"` |
+| Error message string mutations (e.g., `"ES code_chunks"` → `"XXXX"`) | Label strings in `_retry_write` error messages; no behavioral change |
