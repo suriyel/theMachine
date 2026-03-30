@@ -4,7 +4,26 @@
       "Bash(mkdir -p \"d:/03PyDemo/theMachine/docs/plans\")",
       "Bash(mkdir -p \"d:/03PyDemo/theMachine/docs/templates\")",
       "Bash(python scripts/init_project.py code-context-retrieval --path . --lang python)",
-      "Bash(python scripts/get_tool_commands.py feature-list.json)"
+      "Bash(python scripts/get_tool_commands.py feature-list.json)",
+      "Bash(git:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:smithery.ai)",
+      "WebFetch(domain:context7.com)",
+      "WebFetch(domain:hub.docker.com)",
+      "WebFetch(domain:context7.mintlify.app)",
+      "WebFetch(domain:upstash.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:medium.com)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)",
+      "Bash(bash init.sh 2>&1)",
+      "Bash(bash init.sh)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pytest tests/test_skeleton.py -v)",
+      "Bash(pip install:*)",
+      "Bash(echo \"EXIT: $?\")"
     ]
   }
 }
