@@ -1,13 +1,31 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 48/50 active features passing (2 failing) · Last: #47 Web UI Index Management Page (2026-03-25) · Next: #49 Fix reindex API Celery dispatch
+Progress: 49/50 active features passing (1 failing) · Last: #49 Fix reindex API Celery dispatch (2026-04-01) · Next: #50 Add psycopg2-binary dependency
 
-**Failing features**: #49 Fix reindex API Celery dispatch, #50 Add psycopg2-binary dependency
+**Failing features**: #50 Add psycopg2-binary dependency
 
 ---
 
 ## Session Log
+
+### Feature #49: Fix reindex API Celery dispatch — PASS
+- Completed: 2026-04-01
+- TDD: green ✓
+- Quality Gates: 100% line, 100% branch, N/A mutation (mutmut cannot mutate async functions)
+- Feature-ST: 5 cases, all PASS
+- Inline Check: PASS (P2: 1/1 methods verified, T2: 8/8 tests found, D3: OK)
+- Git: 8447b60 fix: reindex API endpoint not dispatching Celery task (#49)
+- Service deps: None (TDD mock-based, Feature-ST mock-based)
+#### Risks
+- ⚠ [Mutant] src/query/api/v1/endpoints/repos.py — mutmut 3.2.0 cannot generate mutants for async def functions; mutation gate could not be evaluated
+
+### Feature #49: Fix reindex API Celery dispatch — IN PROGRESS
+- Date: 2026-04-01
+- TDD: green ✓
+- Quality Gates: PASS
+- Feature-ST: 5 cases (3 FUNC, 2 BNDRY), all PASS (all Mock — no services needed)
+- Service deps: None (all tests mock-based via TestClient)
 
 ### Feature #47: Web UI Index Management Page — PASS
 - Completed: 2026-03-25

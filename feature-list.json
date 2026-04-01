@@ -1247,7 +1247,7 @@
       "title": "Fix reindex API endpoint not dispatching Celery task",
       "requirement": "FR-020",
       "wave": 6,
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         22
       ],
@@ -1257,7 +1257,10 @@
       ],
       "description": "Fix reindex API endpoint to dispatch Celery task after creating IndexJob record",
       "priority": "high",
-      "category": "bugfix"
+      "category": "bugfix",
+      "st_case_path": "docs/test-cases/feature-49-fix-reindex-api-celery-dispatch.md",
+      "st_case_count": 5,
+      "git_sha": "8447b60"
     },
     {
       "id": 50,
