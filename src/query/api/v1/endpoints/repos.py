@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 
 from src.indexing.git_cloner import GitCloner
+from src.indexing.scheduler import reindex_repo_task
+
+logger = logging.getLogger(__name__)
 from src.query.api.v1.deps import get_auth_middleware, get_authenticated_key, require_permission
 from src.query.api.v1.schemas import BranchListResponse, RegisterRepoRequest, ReindexResponse, RepoResponse
 from src.shared.exceptions import CloneError, ConflictError, ValidationError
@@ -106,6 +110,11 @@ async def reindex_repo(
         job = IndexJob(repo_id=repo.id, branch=branch, status="pending")
         session.add(job)
         await session.commit()
+
+        try:
+            reindex_repo_task.delay(str(repo.id))
+        except Exception:
+            logger.warning("Failed to dispatch reindex task for repo %s", repo.id)
 
         # Invalidate query cache for this repository
         query_cache = getattr(request.app.state, "query_cache", None)

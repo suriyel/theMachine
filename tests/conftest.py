@@ -31,6 +31,10 @@ if os.path.basename(os.getcwd()) == "mutants":
         if "Editable" not in getattr(h, "__qualname__", "")
     ]
     sys.path[:] = [p for p in sys.path if "__editable__" not in p]
+    # Add project root (parent of mutants/) as fallback for non-mutated modules
+    _project_root = os.path.dirname(_cwd)
+    if _project_root not in sys.path:
+        sys.path.insert(1, _project_root)
     # Clear import caches so PathFinder re-resolves from cleaned sys.path
     import importlib
     sys.path_importer_cache.clear()
