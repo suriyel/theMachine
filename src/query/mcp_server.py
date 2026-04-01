@@ -216,3 +216,64 @@ def create_mcp_server(
         return json.dumps(doc["_source"])
 
     return mcp
+
+
+def main() -> None:
+    """Process entry: wire dependencies and start the MCP server via stdio."""
+    import os
+    import sys
+
+    from src.indexing.embedding_encoder import EmbeddingEncoder
+    from src.indexing.exceptions import EmbeddingModelError
+    from src.indexing.git_cloner import GitCloner
+    from src.query.query_handler import QueryHandler
+    from src.query.rank_fusion import RankFusion
+    from src.query.reranker import Reranker
+    from src.query.response_builder import ResponseBuilder
+    from src.query.retriever import Retriever
+    from src.shared.clients.elasticsearch import ElasticsearchClient
+    from src.shared.clients.qdrant import QdrantClientWrapper
+    from src.shared.database import get_engine, get_session_factory
+
+    required = ("DATABASE_URL", "ELASTICSEARCH_URL", "QDRANT_URL")
+    missing = [v for v in required if v not in os.environ]
+    if missing:
+        print(f"Missing required env vars: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
+
+    es_client = ElasticsearchClient(url=os.environ["ELASTICSEARCH_URL"])
+    qdrant_client = QdrantClientWrapper(url=os.environ["QDRANT_URL"])
+    engine = get_engine(os.environ["DATABASE_URL"])
+    session_factory = get_session_factory(engine)
+
+    try:
+        embedding_encoder = EmbeddingEncoder()
+    except EmbeddingModelError:
+        embedding_encoder = None
+    retriever = Retriever(
+        es_client=es_client,
+        qdrant_client=qdrant_client,
+        embedding_encoder=embedding_encoder,
+    )
+    query_handler = QueryHandler(
+        retriever=retriever,
+        rank_fusion=RankFusion(),
+        reranker=Reranker(),
+        response_builder=ResponseBuilder(),
+        search_timeout=float(os.environ.get("SEARCH_TIMEOUT", "5.0")),
+        pipeline_timeout=float(os.environ.get("PIPELINE_TIMEOUT", "15.0")),
+    )
+    clone_storage = os.environ.get("CLONE_STORAGE_PATH", "/tmp/code-context-clones")
+    git_cloner = GitCloner(storage_path=clone_storage)
+
+    mcp = create_mcp_server(
+        query_handler=query_handler,
+        session_factory=session_factory,
+        es_client=es_client,
+        git_cloner=git_cloner,
+    )
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
