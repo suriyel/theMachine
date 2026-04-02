@@ -1,13 +1,33 @@
 # Task Progress — code-context-retrieval
 
 ## Current State
-Progress: 49/50 active features passing (1 failing) · Last: #49 Fix reindex API Celery dispatch (2026-04-01) · Next: #50 Add psycopg2-binary dependency
+Progress: 50/50 active features passing (0 failing) · Last: #50 Add psycopg2-binary dependency (2026-04-03) · Next: System Testing
 
-**Failing features**: #50 Add psycopg2-binary dependency
+**All active features passing.**
 
 ---
 
 ## Session Log
+
+### Feature #50: Add psycopg2-binary for Celery worker sync DB access — PASS
+- Completed: 2026-04-03
+- TDD: green ✓
+- Quality Gates: 100% line, 100% branch, 88.9% mutation (8/9 killed)
+- Feature-ST: 5 cases, all PASS
+- Inline Check: PASS (P2: 1/1 methods verified, T2: 7/7 tests found, D3: OK)
+- Git: 79bc530 fix: add psycopg2-binary dependency for Celery worker sync DB access (#50)
+#### Risks
+- ⚠ [Mutant] src/indexing/scheduler.py:23 — surviving mutant changes `os.environ.get("DATABASE_URL", "")` default from `""` to `"XXXX"`; equivalent mutant since DATABASE_URL is always set in deployment
+
+### Feature #50: Add psycopg2-binary dependency — Feature-ST
+- Date: 2026-04-03
+- Feature-ST: 5 cases (3 FUNC, 2 BNDRY), all PASS
+  - Real: 3 (ST-FUNC-050-001, ST-FUNC-050-002, ST-BNDRY-050-001) — all PASS
+  - Mock: 2 (ST-FUNC-050-003, ST-BNDRY-050-002) — all PASS
+- Service deps: PostgreSQL (pre-existing, already running)
+- Services started: None (no application services needed)
+- Cleanup: N/A (no services to stop)
+- Verdict: PASS
 
 ### Feature #49: Fix reindex API Celery dispatch — PASS
 - Completed: 2026-04-01

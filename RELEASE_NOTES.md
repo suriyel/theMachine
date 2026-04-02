@@ -6,7 +6,7 @@
 - **New**: Feature #47 — Web UI Index Management Page (`/admin/indexes`) with list, stats, reindex, reindex-all, delete actions and confirmation prompts for destructive operations (Web UI only, not MCP)
 - **Bugfix**: Feature #48 — Fix `delete_repo_index` branch filter on doc/rule indices — split delete queries: `code_chunks`/`code_embeddings` use `repo_id+branch`, `doc_chunks`/`rule_chunks`/`doc_embeddings` use `repo_id` only (root cause: uniform branch filter on branchless indices matched zero docs)
 - **Bugfix**: Feature #49 — Fix reindex API endpoint not dispatching Celery task after creating IndexJob — root cause: `reindex_repo_task.delay()` was never called in the `POST /api/v1/repos/{repo_id}/reindex` endpoint; added dispatch after `session.commit()` with try/except so IndexJob is preserved even if Celery broker is down
-- **Bugfix**: Feature #50 — Add `psycopg2-binary` dependency for Celery worker sync DB access
+- **Bugfix**: Feature #50 — Add `psycopg2-binary>=2.9` dependency for Celery worker sync DB access — root cause: `_get_sync_session()` uses `create_engine()` with `postgresql://` URL requiring psycopg2 driver, but only asyncpg was declared; any Celery task touching the DB crashed with ImportError
 
 ### System Testing (2026-03-24)
 - **ST Completed**: All 45 active features passing; 1126 tests, 95% line coverage

@@ -1268,7 +1268,7 @@
       "title": "Add psycopg2-binary for Celery worker sync DB access",
       "requirement": "FR-019",
       "wave": 6,
-      "status": "failing",
+      "status": "passing",
       "dependencies": [
         21
       ],
@@ -1278,7 +1278,10 @@
       ],
       "description": "Add psycopg2-binary>=2.9 to pyproject.toml dev dependencies for Celery worker sync DB sessions",
       "priority": "high",
-      "category": "bugfix"
+      "category": "bugfix",
+      "st_case_path": "docs/test-cases/feature-50-add-psycopg2-binary-dependency.md",
+      "st_case_count": 5,
+      "git_sha": "79bc530"
     }
   ],
   "waves": [
