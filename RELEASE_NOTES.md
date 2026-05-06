@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Bugfix — MCP container startup (2026-05-06)
+
+- **Breaking (deployment)**: MCP server now uses **streamable-http** transport instead of stdio. The `codecontext-mcp` container is a long-running HTTP service on `MCP_PORT` (default 3000) at path `/mcp`. Run with `docker run -d -p 3000:3000 ...` (no `-i` needed). Stdio integration via `docker run -i` is no longer supported.
+- **Bugfix**: `docker/Dockerfile.mcp` previously could not run as a service — `docker run` without `-i` exited within ~1 s because FastMCP's stdio reader hit EOF; the `pgrep` HEALTHCHECK was also non-functional because `python:3.11-slim` lacks `procps`. Image now installs `git` + `ca-certificates`, declares `EXPOSE 3000`, and uses a `socket.create_connection` HEALTHCHECK probe.
+- **Bugfix**: `src/query/mcp_server.py` and `src/query/main.py` previously read `CLONE_STORAGE_PATH` while `.env.example` documented `REPO_CLONE_PATH` — externally-passed clone paths were silently ignored. Both now read `REPO_CLONE_PATH` consistent with the worker's volume.
+- **Tests**: `tests/test_feature_44_mcp_docker.py` adds T-13 (container stays running detached — regression gate against the silent-stdio-exit bug), T-14 (`git --version` succeeds in image), T-15 (real `POST /mcp` initialize JSON-RPC handshake returns `serverInfo.name=code-context-retrieval`). T-03/T-10 rewritten for the new HEALTHCHECK + EXPOSE shape.
+
 ### Increment Wave 6 — Web UI Index Management + Bugfixes (2026-03-25)
 - **New**: Feature #47 — Web UI Index Management Page (`/admin/indexes`) with list, stats, reindex, reindex-all, delete actions and confirmation prompts for destructive operations (Web UI only, not MCP)
 - **Bugfix**: Feature #48 — Fix `delete_repo_index` branch filter on doc/rule indices — split delete queries: `code_chunks`/`code_embeddings` use `repo_id+branch`, `doc_chunks`/`rule_chunks`/`doc_embeddings` use `repo_id` only (root cause: uniform branch filter on branchless indices matched zero docs)

@@ -97,7 +97,7 @@ def build_app():
         redis_client=redis_client,
     )
     query_cache = QueryCache(redis_client=redis_client)
-    clone_storage = os.environ.get("CLONE_STORAGE_PATH", "/tmp/code-context-clones")
+    clone_storage = os.environ.get("REPO_CLONE_PATH", "/tmp/code-context-clones")
     git_cloner = GitCloner(storage_path=clone_storage)
 
     return create_app(

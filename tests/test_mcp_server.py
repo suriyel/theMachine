@@ -1180,3 +1180,41 @@ async def test_real_get_chunk_from_elasticsearch(
     finally:
         await es.indices.delete(index=test_index, ignore=[404])
         await es.close()
+
+
+# ---------------------------------------------------------------------------
+# Streamable-http transport configuration
+# [unit] — verifies host/port kwargs flow into FastMCP settings
+# ---------------------------------------------------------------------------
+
+def test_create_mcp_server_default_host_port_is_localhost_8000(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """create_mcp_server() defaults to host=127.0.0.1, port=8000.
+
+    Local-dev safety: defaults must NOT bind 0.0.0.0; only main() (Docker
+    entrypoint) overrides to 0.0.0.0 + MCP_PORT.
+    """
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(mock_query_handler, mock_session_factory, mock_es_client)
+    assert mcp.settings.host == "127.0.0.1"
+    assert mcp.settings.port == 8000
+
+
+def test_create_mcp_server_custom_host_port_propagates(
+    mock_query_handler, mock_session_factory, mock_es_client
+):
+    """create_mcp_server(host=..., port=...) propagates to FastMCP settings.
+
+    Kills bug: kwargs accepted but not threaded into FastMCP() — main() would
+    bind defaults instead of MCP_PORT.
+    """
+    from src.query.mcp_server import create_mcp_server
+
+    mcp = create_mcp_server(
+        mock_query_handler, mock_session_factory, mock_es_client,
+        host="0.0.0.0", port=3000,
+    )
+    assert mcp.settings.host == "0.0.0.0"
+    assert mcp.settings.port == 3000

@@ -69,7 +69,7 @@ def _parse_repo(self, repo: str) -> tuple[str, str | None]:
 ### From §4.3.6 — Design Notes
 
 - Uses the `mcp` Python SDK (`FastMCP`) to register three tools.
-- Runs as a separate process (stdio transport for local, SSE for remote).
+- Runs as a separate long-running process (streamable-http transport on `MCP_PORT` (default 3000), path `/mcp`; updated 2026-05-06 from stdio).
 - Shares the same `QueryHandler` and `RepoManager` code but instantiates its own ES/Qdrant/Redis connections.
 - MCP response wraps the same JSON structure as REST API's `content` field of the MCP tool result.
 - `resolve_repository` queries the Repository table directly (no ES/Qdrant needed); `available_branches` from `GitCloner.list_remote_branches()` if clone exists.

@@ -520,12 +520,13 @@ Admin --> UC22
 <!-- Wave 4: Added 2026-03-23 — NFR-012 implementation (release blocker per ST verdict) -->
 
 **Priority**: Shall
-**EARS**: When `docker build` is invoked with `docker/Dockerfile.mcp`, the system shall produce a `codecontext-mcp` image that launches the MCP stdio server via `python -m src.query.mcp_server` using production dependencies only.
+**EARS**: When `docker build` is invoked with `docker/Dockerfile.mcp`, the system shall produce a `codecontext-mcp` image that launches the MCP streamable-http server (port 3000, path `/mcp`) via `python -m src.query.mcp_server` using production dependencies only.
 **Acceptance Criteria**:
 - Given `docker build -f docker/Dockerfile.mcp -t codecontext-mcp .` runs, then the build exits 0 with no errors.
-- Given the built image is run, when the container starts, then `python -m src.query.mcp_server` is the active process.
-- Given the image is built, then it contains a HEALTHCHECK that verifies the mcp_server process is alive.
-- Given the image is built, then it contains only production dependencies and runs as a non-root user.
+- Given the built image is run with required env vars, when the container starts (no `-i` flag, detached), then it stays running and binds port 3000 (`python -m src.query.mcp_server` is the active process).
+- Given the image is built, then it contains a HEALTHCHECK that verifies the streamable-http listener on port 3000 is reachable.
+- Given the image is built, then it contains only production dependencies, the `git` binary, and runs as a non-root user.
+- Given the image is built, then it contains an `EXPOSE 3000` instruction matching `MCP_PORT` default.
 
 ### FR-029: index-worker Docker Image [Wave 4]
 

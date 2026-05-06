@@ -1129,7 +1129,7 @@
       "wave": 4,
       "category": "infrastructure",
       "title": "mcp-server Docker Image",
-      "description": "Dockerfile for the codecontext-mcp image. Builds a Python 3.11-slim image with production deps only, runs python -m src.query.mcp_server (stdio MCP protocol), includes HEALTHCHECK verifying the process is alive.",
+      "description": "Dockerfile for the codecontext-mcp image. Builds a Python 3.11-slim image with production deps + git + ca-certificates, runs python -m src.query.mcp_server (streamable-http MCP protocol on port 3000, path /mcp), EXPOSE 3000, HEALTHCHECK probes the TCP listener.",
       "priority": "high",
       "status": "passing",
       "dependencies": [
@@ -1139,12 +1139,13 @@
       "ui": false,
       "verification_steps": [
         "Given docker/Dockerfile.mcp exists, when docker build -f docker/Dockerfile.mcp -t codecontext-mcp . runs, then the build exits 0",
-        "Given the built image is run, when the container starts, then python -m src.query.mcp_server is the active process",
-        "Given the image is inspected, then a HEALTHCHECK instruction verifying the mcp_server process is alive is present",
-        "Given the image is built, then it contains only production dependencies and runs as a non-root user"
+        "Given the built image is run detached without -i, when the container starts, then it stays running and binds port 3000",
+        "Given the image is inspected, then a HEALTHCHECK that probes the streamable-http listener on port 3000 is present",
+        "Given the image is built, then it contains production dependencies + git, runs as a non-root user, and EXPOSE 3000",
+        "Given the running container receives a POST /mcp initialize JSON-RPC, then it returns serverInfo.name=code-context-retrieval"
       ],
       "st_case_path": "docs/test-cases/feature-44-mcp-server-docker-image.md",
-      "st_case_count": 7
+      "st_case_count": 10
     },
     {
       "id": 45,

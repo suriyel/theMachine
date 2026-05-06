@@ -50,7 +50,7 @@ classDiagram
 ### From §4.3.5 — Design Notes
 
 - Uses `mcp` Python SDK (FastMCP) to register tools
-- Runs as separate process (stdio transport)
+- Runs as separate long-running process (streamable-http transport on port 3000, path /mcp; updated 2026-05-06 from stdio)
 - Shares same `QueryHandler` and `RepoManager` code
 - MCP response wraps same JSON structure as REST API
 - `list_repositories` respects API key repo access control (deferred — no auth in MCP v1)

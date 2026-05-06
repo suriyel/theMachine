@@ -994,7 +994,7 @@ def parse_repo_ref(repo: str) -> tuple[str, str | None]:
 
 #### 4.3.6 Design Notes
 - Uses the `mcp` Python SDK (`FastMCP`) to register three tools.
-- Runs as a separate process (stdio transport for local, SSE for remote).
+- Runs as a separate long-running process using streamable-http transport on `MCP_PORT` (default 3000) at path `/mcp`.
 - Shares the same `QueryHandler` and `RepoManager` code but instantiates its own ES/Qdrant/Redis connections.
 - MCP response wraps the same JSON structure above as the `content` field of the MCP tool result.
 - `resolve_repository` queries the Repository table directly (no ES/Qdrant needed); `available_branches` from `GitCloner.list_remote_branches()` if clone exists.
@@ -1812,7 +1812,7 @@ graph LR
 | Image | Dockerfile | Entrypoint | Ports | Scaling |
 |-------|-----------|-----------|-------|---------|
 | `codecontext-api` | `docker/Dockerfile.api` | `python -m src.query.main` | 8000 | Horizontal (N replicas) |
-| `codecontext-mcp` | `docker/Dockerfile.mcp` | `python -m src.query.mcp_server` | stdio | 1 per client process |
+| `codecontext-mcp` | `docker/Dockerfile.mcp` | `python -m src.query.mcp_server` | streamable-http (port 3000) | 1+ replicas (long-running) |
 | `codecontext-worker` | `docker/Dockerfile.worker` | `celery -A src.indexing.celery_app worker` | — | Horizontal (N workers) |
 
 ### 4.8 Feature Group: Docker Images (FR-027 to FR-029) [Wave 4]
@@ -1856,17 +1856,19 @@ docker/Dockerfile.api
 docker/Dockerfile.mcp
 ├── FROM python:3.11-slim
 ├── WORKDIR /app
+├── RUN apt-get install -y git ca-certificates
 ├── COPY pyproject.toml .
 ├── COPY src/ src/
 ├── RUN pip install --no-cache-dir .
 ├── RUN useradd -u 1000 appuser && chown -R appuser /app
 ├── USER appuser
+├── EXPOSE 3000
 ├── HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-│       CMD pgrep -f "src.query.mcp_server" || exit 1
+│       CMD python -c "import socket; s=socket.create_connection(('localhost',3000),timeout=3); s.close()" || exit 1
 └── CMD ["python", "-m", "src.query.mcp_server"]
 ```
 
-MCP server runs in stdio mode. The container is attached to the AI agent's host process via stdin/stdout piping. No port is exposed.
+MCP server runs in streamable-http mode on `MCP_PORT` (default 3000) at path `/mcp`. The container is a long-running service: clients (AI agents, other services) connect via HTTP. `git` is installed so `available_branches` can be populated by listing the local clone at `REPO_CLONE_PATH` (must be the same volume mounted into the worker).
 
 #### 4.8.4 `codecontext-worker` Image (FR-029)
 

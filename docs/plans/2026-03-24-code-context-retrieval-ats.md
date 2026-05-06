@@ -92,7 +92,7 @@
 
 | Req ID | 需求摘要 | 验收场景 | 必须类别 | 最低用例数 | 优先级 | 备注 |
 |--------|---------|---------|---------|----------|--------|------|
-| IFR-001 | AI 编码代理 (MCP) | MCP tool call → JSON结果 | FUNC,BNDRY | 5 | High | MCP stdio 协议 |
+| IFR-001 | AI 编码代理 (MCP) | MCP tool call → JSON结果 | FUNC,BNDRY | 5 | High | MCP streamable-http 协议（端口 3000，路径 /mcp） |
 | IFR-002 | Web 浏览器 (HTTPS) | 浏览器搜索→HTML+JSON | FUNC,UI,A11Y | 5 | Medium | ui:true→+UI+A11Y |
 | IFR-003 | Git 仓库 | HTTPS/SSH Clone/Fetch | FUNC,BNDRY | 3 | High | Git 协议 |
 | IFR-004 | Elasticsearch | HTTP/REST JSON 连接+降级 | FUNC,BNDRY | 3 | High | 双向 |

@@ -7,9 +7,11 @@
 **Design Reference**: docs/plans/2026-03-21-code-context-retrieval-design.md §4.8.3
 **SRS Reference**: FR-028
 
+> **Updated 2026-05-06 — Bugfix increment**: Original design used **stdio** transport with no `EXPOSE` and a `pgrep` HEALTHCHECK. That image **could not run as a long-running container** (`docker run` without `-i` exited immediately on stdin EOF) and the HEALTHCHECK was always unhealthy because `procps` (pgrep) is not in `python:3.11-slim`. The image now ships **streamable-http** on port 3000 at path `/mcp`, with `git`+`ca-certificates` installed, `EXPOSE 3000`, and a Python `socket.create_connection` HEALTHCHECK probe. The stdio sections below are kept for historical traceability; runtime behavior is described in the parent design §4.8.3.
+
 ## Context
 
-This feature produces `docker/Dockerfile.mcp` — the build definition for the `codecontext-mcp` Docker image. The image packages the MCP stdio server (`src.query.mcp_server`) with production-only Python dependencies into a hardened, non-root container. It is the primary deployment artifact for AI agent integrations (CON-004).
+This feature produces `docker/Dockerfile.mcp` — the build definition for the `codecontext-mcp` Docker image. The image packages the MCP streamable-http server (`src.query.mcp_server`, port 3000, path `/mcp`) with production-only Python dependencies into a hardened, non-root container. `git` is installed so `available_branches` can be populated from local clones at `REPO_CLONE_PATH`. It is the primary deployment artifact for AI agent integrations (CON-004).
 
 ## Design Alignment
 

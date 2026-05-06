@@ -1,7 +1,8 @@
 """MCP Server — Features #18, #46 (Wave 5).
 
 Standalone MCP server exposing resolve_repository, search_code_context, and
-get_chunk tools via the Model Context Protocol.  Delegates to the same
+get_chunk tools via the Model Context Protocol over streamable-http
+transport on MCP_PORT (default 3000, path /mcp). Delegates to the same
 QueryHandler used by the REST API.
 
 Wave 5: Context7-aligned two-step flow (resolve → search).
@@ -74,6 +75,9 @@ def create_mcp_server(
     session_factory,
     es_client,
     git_cloner=None,
+    *,
+    host: str = "127.0.0.1",
+    port: int = 8000,
 ) -> FastMCP:
     """Create and configure the MCP server with 3 tools.
 
@@ -82,12 +86,15 @@ def create_mcp_server(
         session_factory: Async session factory for DB access.
         es_client: ElasticsearchClient for chunk retrieval.
         git_cloner: Optional GitCloner for populating available_branches.
+        host: Bind address for streamable-http transport. Default 127.0.0.1
+            for local dev; main() overrides to 0.0.0.0 for container.
+        port: Listening port for streamable-http transport.
 
     Returns:
         Configured FastMCP instance with resolve_repository,
         search_code_context, and get_chunk tools registered.
     """
-    mcp = FastMCP("code-context-retrieval")
+    mcp = FastMCP("code-context-retrieval", host=host, port=port)
 
     @mcp.tool()
     async def resolve_repository(query: str, libraryName: str) -> str:
@@ -219,7 +226,11 @@ def create_mcp_server(
 
 
 def main() -> None:
-    """Process entry: wire dependencies and start the MCP server via stdio."""
+    """Process entry: wire dependencies and start the MCP server.
+
+    Listens on MCP_PORT (default 3000) at path /mcp via streamable-http
+    transport. Binds 0.0.0.0 so the container is reachable from outside.
+    """
     import os
     import sys
 
@@ -263,7 +274,7 @@ def main() -> None:
         search_timeout=float(os.environ.get("SEARCH_TIMEOUT", "5.0")),
         pipeline_timeout=float(os.environ.get("PIPELINE_TIMEOUT", "15.0")),
     )
-    clone_storage = os.environ.get("CLONE_STORAGE_PATH", "/tmp/code-context-clones")
+    clone_storage = os.environ.get("REPO_CLONE_PATH", "/tmp/code-context-clones")
     git_cloner = GitCloner(storage_path=clone_storage)
 
     mcp = create_mcp_server(
@@ -271,8 +282,10 @@ def main() -> None:
         session_factory=session_factory,
         es_client=es_client,
         git_cloner=git_cloner,
+        host="0.0.0.0",
+        port=int(os.environ.get("MCP_PORT", "3000")),
     )
-    mcp.run()
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

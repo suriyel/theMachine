@@ -15,10 +15,14 @@ Security: N/A — Dockerfile is a declarative build spec with no user-facing inp
 # [mutation-exempt] — Dockerfile-only feature (docker/Dockerfile.mcp); zero Python src/ code added.
 # Mutation testing (mutmut) is N/A: no Python source to mutate. All test assertions verify
 # Docker behavior via subprocess; mutmut sandbox (mutants/) cannot run Docker integration tests.
+#
+# 2026-05-06 update: now includes runtime E2E (T-13 detached-stays-running, T-14 git available,
+# T-15 streamable-http MCP initialize handshake) — see test docstrings for traceability.
 
 from __future__ import annotations
 
 import json
+import socket
 import subprocess
 import time
 
@@ -139,28 +143,32 @@ def test_t02_cmd_is_mcp_server(built_mcp_image):
 
 
 # ===========================================================================
-# T-03: HEALTHCHECK contains pgrep -f "src.query.mcp_server"
+# T-03: HEALTHCHECK probes the streamable-http TCP listener on port 3000
 # ===========================================================================
 
 
 @pytest.mark.real
-def test_t03_healthcheck_uses_pgrep(built_mcp_image):
-    """T-03: Image HEALTHCHECK.Test contains 'pgrep -f' and 'src.query.mcp_server'.
+def test_t03_healthcheck_uses_socket_probe(built_mcp_image):
+    """T-03: Image HEALTHCHECK.Test probes localhost:3000 with socket.create_connection.
 
     feature-44
     Traces: VS-3, FR-028 AC-3
-    Kills bug: Missing HEALTHCHECK instruction.
+    Kills bug: HEALTHCHECK still uses pgrep (which is absent from python:3.11-slim).
     """
     info = docker_inspect(built_mcp_image)
     healthcheck = info["Config"].get("Healthcheck", {})
     assert healthcheck, "No HEALTHCHECK defined in image config"
     test_cmd = healthcheck.get("Test", [])
     assert test_cmd, "HEALTHCHECK.Test is empty"
-    # Test field is e.g. ["CMD", "pgrep -f \"src.query.mcp_server\" || exit 1"]
     full_cmd = " ".join(test_cmd)
-    assert "pgrep" in full_cmd, f"HEALTHCHECK does not use pgrep: {test_cmd}"
-    assert "src.query.mcp_server" in full_cmd, (
-        f"HEALTHCHECK does not reference src.query.mcp_server: {test_cmd}"
+    assert "socket.create_connection" in full_cmd, (
+        f"HEALTHCHECK does not use socket probe: {test_cmd}"
+    )
+    assert "3000" in full_cmd, (
+        f"HEALTHCHECK does not reference port 3000: {test_cmd}"
+    )
+    assert "pgrep" not in full_cmd, (
+        f"HEALTHCHECK still references pgrep (procps not in slim image): {test_cmd}"
     )
 
 
@@ -322,22 +330,23 @@ def test_t09_pytest_not_installed(built_mcp_image):
 
 
 # ===========================================================================
-# T-10: No EXPOSE instruction
+# T-10: EXPOSE 3000 is declared (streamable-http port)
 # ===========================================================================
 
 
 @pytest.mark.real
-def test_t10_no_exposed_ports(built_mcp_image):
-    """T-10: Image has no EXPOSE instruction (ExposedPorts is null or empty).
+def test_t10_exposes_port_3000(built_mcp_image):
+    """T-10: Image declares EXPOSE 3000 to match MCP_PORT default.
 
     feature-44
-    Traces: §Algorithm Boundary: no EXPOSE
-    Kills bug: Spurious EXPOSE instruction added (MCP is stdio-only, no port needed).
+    Traces: §Algorithm Boundary: EXPOSE matches MCP_PORT
+    Kills bug: EXPOSE missing or wrong port — clients in same docker network
+    cannot discover the streamable-http listener.
     """
     info = docker_inspect(built_mcp_image)
-    exposed = info["Config"].get("ExposedPorts")
-    assert not exposed, (
-        f"Expected no exposed ports for stdio MCP server, got: {exposed}"
+    exposed = info["Config"].get("ExposedPorts") or {}
+    assert "3000/tcp" in exposed, (
+        f"Expected EXPOSE 3000/tcp for streamable-http MCP server, got: {exposed}"
     )
 
 
@@ -348,15 +357,17 @@ def test_t10_no_exposed_ports(built_mcp_image):
 
 @pytest.mark.real
 def test_t11_healthcheck_detects_crash(built_mcp_image):
-    """T-11: Container becomes unhealthy when mcp_server process is not running.
+    """T-11: Container becomes unhealthy when streamable-http listener is absent.
 
-    Runs image with an entrypoint override (sleep) so that pgrep -f src.query.mcp_server
-    finds no process. Uses fast health-check overrides (2s interval, 1s timeout, 2 retries)
-    so the test completes in ~10 seconds instead of 90s.
+    Runs image with an entrypoint override (sleep) so that mcp_server never
+    starts and port 3000 stays unbound — socket.create_connection fails →
+    healthcheck returns non-zero. Uses fast health-check overrides (2s
+    interval, 1s timeout, 2 retries) so the test completes in ~10 seconds
+    instead of 90s.
 
     feature-44
-    Traces: §Algorithm Error Handling: process alive check
-    Kills bug: HEALTHCHECK command wrong (never detects crash).
+    Traces: §Algorithm Error Handling: listener-down check
+    Kills bug: HEALTHCHECK command wrong (never detects unbound port).
     """
     container_name = "codecontext-mcp-test-healthcheck"
     # Clean up any lingering container from previous run
@@ -436,3 +447,215 @@ def test_t12_cmd_is_exec_form_array(built_mcp_image):
     assert "/bin/sh" not in cmd, (
         f"CMD appears to be shell-form (contains /bin/sh): {cmd}"
     )
+
+
+# ===========================================================================
+# T-13: Container stays running detached (no -i) — regression gate for the
+#       silent-stdio-exit bug
+# ===========================================================================
+
+
+@pytest.mark.real
+def test_t13_container_stays_running_detached(built_mcp_image):
+    """T-13: ``docker run -d`` (no ``-i``) keeps the container alive.
+
+    Hard regression gate: prior to 2026-05-06 the image used stdio transport
+    and exited within ~1 s when stdin was closed. With streamable-http the
+    container must remain running and pass health checks. Uses a fast
+    health-check override (2s interval, 1s timeout, 2 retries) so the assert
+    fires within ~10 s instead of 90 s.
+
+    feature-44
+    Traces: VS-2 (rewritten) — container stays running detached
+    Kills bug: Reverting mcp.run() to stdio.
+    """
+    container_name = "codecontext-mcp-test-detached"
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+    run_result = subprocess.run(
+        [
+            "docker", "run", "--detach",
+            "--name", container_name,
+            "--health-interval=2s",
+            "--health-timeout=1s",
+            "--health-retries=2",
+            "-e", "DATABASE_URL=postgresql+asyncpg://x:x@127.0.0.1/db",
+            "-e", "ELASTICSEARCH_URL=http://127.0.0.1:9200",
+            "-e", "QDRANT_URL=http://127.0.0.1:6333",
+            built_mcp_image,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert run_result.returncode == 0, (
+        f"Failed to start container detached: {run_result.stderr}"
+    )
+
+    try:
+        # Allow time for the streamable-http listener + first health probe
+        time.sleep(8)
+        inspect_result = subprocess.run(
+            ["docker", "inspect", container_name],
+            capture_output=True, text=True, check=True,
+        )
+        info = json.loads(inspect_result.stdout)[0]
+        state = info["State"]
+        assert state["Status"] == "running", (
+            f"Container exited unexpectedly. Status={state['Status']}, "
+            f"ExitCode={state.get('ExitCode')}, "
+            f"Logs:\n{_container_logs(container_name)}"
+        )
+        health = state.get("Health", {}).get("Status")
+        assert health in ("healthy", "starting"), (
+            f"Container health is {health!r} (expected healthy/starting). "
+            f"Logs:\n{_container_logs(container_name)}"
+        )
+    finally:
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+
+def _container_logs(name: str) -> str:
+    r = subprocess.run(
+        ["docker", "logs", "--tail", "40", name],
+        capture_output=True, text=True,
+    )
+    return (r.stdout or "") + (r.stderr or "")
+
+
+# ===========================================================================
+# T-14: git binary is installed (required by GitCloner.list_remote_branches
+#       used to populate available_branches)
+# ===========================================================================
+
+
+@pytest.mark.real
+def test_t14_git_available_in_image(built_mcp_image):
+    """T-14: ``git --version`` succeeds inside the image.
+
+    feature-44
+    Traces: VS-4 (rewritten) — git in production deps
+    Kills bug: ``apt-get install git`` removed → available_branches always
+    silently empty (FileNotFoundError swallowed by ``except Exception``).
+    """
+    result = subprocess.run(
+        ["docker", "run", "--rm", built_mcp_image, "git", "--version"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, (
+        f"git not available in image: rc={result.returncode}, "
+        f"stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+    assert "git version" in result.stdout, (
+        f"Unexpected git --version output: {result.stdout!r}"
+    )
+
+
+# ===========================================================================
+# T-15: End-to-end MCP initialize JSON-RPC handshake over streamable-http
+# ===========================================================================
+
+
+def _wait_for_port(port: int, timeout: float = 15.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return True
+        except OSError:
+            time.sleep(0.5)
+    return False
+
+
+@pytest.mark.real
+def test_t15_mcp_initialize_handshake(built_mcp_image):
+    """T-15: POST /mcp initialize returns serverInfo.name=code-context-retrieval.
+
+    Genuine end-to-end test: starts the container with port 3000 published,
+    waits for the listener, then performs a real MCP JSON-RPC handshake via
+    HTTP. This is the strongest evidence that the container is usable, not
+    just structurally correct.
+
+    feature-44
+    Traces: VS-5 (new) — runtime MCP handshake works
+    Kills bug: Wrong transport / wrong path / handler import failure.
+    """
+    import http.client
+
+    container_name = "codecontext-mcp-test-e2e"
+    host_port = "33700"  # avoid conflict with any local 3000
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+    run_result = subprocess.run(
+        [
+            "docker", "run", "--detach",
+            "--name", container_name,
+            "-p", f"{host_port}:3000",
+            "-e", "DATABASE_URL=postgresql+asyncpg://x:x@127.0.0.1/db",
+            "-e", "ELASTICSEARCH_URL=http://127.0.0.1:9200",
+            "-e", "QDRANT_URL=http://127.0.0.1:6333",
+            built_mcp_image,
+        ],
+        capture_output=True, text=True,
+    )
+    assert run_result.returncode == 0, (
+        f"Failed to start container: {run_result.stderr}"
+    )
+
+    try:
+        assert _wait_for_port(int(host_port), timeout=20.0), (
+            f"streamable-http listener never came up on :{host_port}\n"
+            f"Logs:\n{_container_logs(container_name)}"
+        )
+
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {"name": "feature-44-test", "version": "0.0.0"},
+            },
+        })
+        # The TCP listener accepts connections slightly before the
+        # StreamableHTTP session manager is ready; the first POST can RST.
+        # Retry up to 3 times with short backoff before failing.
+        last_err: Exception | None = None
+        resp = None
+        raw = ""
+        for attempt in range(3):
+            conn = http.client.HTTPConnection(
+                "127.0.0.1", int(host_port), timeout=10,
+            )
+            try:
+                conn.request(
+                    "POST", "/mcp", body=body,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json, text/event-stream",
+                    },
+                )
+                resp = conn.getresponse()
+                raw = resp.read().decode("utf-8", errors="replace")
+                break
+            except (ConnectionResetError, http.client.RemoteDisconnected) as exc:
+                last_err = exc
+                time.sleep(1.0 + attempt)
+            finally:
+                conn.close()
+        assert resp is not None, (
+            f"All 3 POST /mcp attempts reset. last_err={last_err!r}\n"
+            f"Logs:\n{_container_logs(container_name)}"
+        )
+
+        assert resp.status == 200, (
+            f"Expected 200 from /mcp initialize, got {resp.status}.\n"
+            f"Body: {raw[:500]}\nLogs:\n{_container_logs(container_name)}"
+        )
+        # streamable-http may return JSON or SSE-framed event(s); both
+        # contain the JSON-RPC payload.
+        assert "code-context-retrieval" in raw, (
+            f"serverInfo.name not in response. Body: {raw[:500]}"
+        )
+    finally:
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
